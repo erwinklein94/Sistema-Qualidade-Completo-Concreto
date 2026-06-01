@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prévia · Tooltips dos cards (KPIs) do Dashboard</title>
+  <link rel="stylesheet" href="css/style.css?v=20260601-tooltip-kpis-v1">
+  <style>
+    /* só para a página de prévia (não faz parte do sistema) */
+    body { padding: 28px; }
+    .prev-topo { max-width: 1180px; margin: 0 auto 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .prev-topo h1 { font-size: 20px; color: var(--azul-escuro); margin: 0; }
+    .prev-topo p { margin: 4px 0 0; font-size: 13px; color: var(--cinza-texto); }
+    .prev-wrap { max-width: 1180px; margin: 0 auto; }
+    .prev-dica { max-width: 1180px; margin: 14px auto 0; font-size: 13px; color: var(--cinza-texto-claro); }
+  </style>
+</head>
+<body data-tema="claro">
+  <div class="prev-topo">
+    <div>
+      <h1>Prévia dos tooltips dos cards (KPIs)</h1>
+      <p>Passe o mouse (ou use Tab) sobre cada card para ver o resumo. Esta página é só para conferência — pode apagar.</p>
+    </div>
+    <button class="btn btn-secundario btn-sm" type="button" onclick="document.body.setAttribute('data-tema', document.body.getAttribute('data-tema')==='escuro'?'claro':'escuro')">Alternar tema claro/escuro</button>
+  </div>
+
+  <div class="prev-wrap">
+    <div class="grid-kpi" id="kpis"></div>
+  </div>
+  <p class="prev-dica">Dados fictícios apenas para demonstração visual.</p>
+
+  <!-- Stubs para reaproveitar o dashboard.js real sem login/Supabase -->
+  <script>
+    window.Auth = { exigirLogin: async () => false };
+    window.App  = { montarLayout(){}, acoesTopo(){}, cssVar:(_,f)=>f, alternarTema(){}, temaAtual:()=>document.body.getAttribute('data-tema')||'claro' };
+    window.ICN  = new Proxy({}, { get:()=> '' });
+    window.CFG  = { listas:{ fornecedores:[], projetos:[], bitolas:[] }, statusBadge:{} };
+    window.U = {
+      opcoes(){return '';},
+      dataBR(iso){ if(!iso) return '—'; const p=String(iso).slice(0,10).split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso; },
+      num(v){ const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; },
+      int(v){ const n=parseInt(v,10); return isNaN(n)?0:n; },
+      esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); },
+      norm(v){ return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase(); },
+      bitolaDe(r){ const t=this.norm(typeof r==='string'?r:`${r?.bitola||''} ${r?.tipo||''} ${r?.projeto||''}`); if(t.includes('BITOLA MISTA')||/(^|\s)BM($|\s)/.test(t))return 'Bitola Mista'; if(t.includes('BITOLA LARGA')||/(^|\s)BL($|\s)/.test(t))return 'Bitola Larga'; return 'Sem bitola definida'; },
+      bitolaCodigo(r){ const b=this.bitolaDe(r); return b==='Bitola Larga'?'BL':b==='Bitola Mista'?'BM':'SB'; },
+    };
+  </script>
+  <script src="js/dashboard.js?v=20260601-tooltip-kpis-v1"></script>
+
+  <script>
+    // --- Dados fictícios (parecidos com a produção real) ---
+    const prod = [
+      { lote:'21', total:980,  projeto:'MALHA PAULISTA BITOLA LARGA', bitola:'Larga' },
+      { lote:'22', total:1240, projeto:'MALHA PAULISTA BITOLA LARGA', bitola:'Larga' },
+      { lote:'23', total:760,  projeto:'FERRO NORTE', bitola:'Mista' },
+      { lote:'24', total:1100, projeto:'FERRO NORTE', bitola:'Mista' },
+      { lote:'25', total:540,  projeto:'FMT', bitola:'Larga' },
+      { lote:'26', total:300,  projeto:'FMT', bitola:'Larga' },
+      { lote:'27', total:420,  projeto:'MALHA PAULISTA BITOLA MISTA', bitola:'Mista' },
+      { lote:'28', total:180,  projeto:'MALHA PAULISTA BITOLA MISTA', bitola:'Mista' },
+    ];
+    const rep = [
+      { lote:'22', totalRefugos:4, motivoIndicador:'Trinca',        projeto:'MALHA PAULISTA BITOLA LARGA' },
+      { lote:'22', totalRefugos:1, motivoIndicador:'Trinca',        projeto:'MALHA PAULISTA BITOLA LARGA' },
+      { lote:'24', totalRefugos:3, motivoIndicador:'Desplacamento', projeto:'FERRO NORTE' },
+      { lote:'26', totalRefugos:2, motivoIndicador:'Falha de cura', projeto:'FMT' },
+      { lote:'28', totalRefugos:1, motivoIndicador:'Empenamento',   projeto:'MALHA PAULISTA BITOLA MISTA' },
+    ];
+    const ens = [
+      { lote:'21', serieLiberada:'A1', resultado:'Aprovado' },
+      { lote:'23', serieLiberada:'C2', resultado:'Aprovado' },
+      { lote:'25', serieLiberada:'D3', resultado:'Pendente' },
+      { lote:'27', serieLiberada:'E1', resultado:'Reprovado' },
+    ];
+
+    const totalProd     = prod.reduce((s,r)=>s+U.int(r.total),0);
+    const reprovadosKpi = rep.reduce((s,r)=>s+U.int(r.totalRefugos||1),0);
+    const totalAprov    = Math.max(0,totalProd-reprovadosKpi);
+    const taxaReprova   = totalProd ? ((reprovadosKpi/totalProd)*100).toFixed(1) : '0,0';
+    const ensAprov      = ens.filter(r=>r.resultado==='Aprovado').length;
+
+    const det = detalhesKpis(prod, rep, ens, { totalProd, totalAprov, reprovadosKpi, taxaReprova, ensAprov });
+
+    document.getElementById('kpis').innerHTML = `
+      <div class="kpi escuro"><div class="rotulo">Produção total</div><div class="valor">${totalProd.toLocaleString('pt-BR')}</div><div class="extra">${prod.length} lotes · 28/05/2026 a 03/06/2026</div>${det[0]}</div>
+      <div class="kpi verde"><div class="rotulo">Aprovados</div><div class="valor">${totalAprov.toLocaleString('pt-BR')}</div><div class="extra">produção total - reprovas da aba Reprovas</div>${det[1]}</div>
+      <div class="kpi vermelho"><div class="rotulo">Reprovados (refugos)</div><div class="valor">${reprovadosKpi.toLocaleString('pt-BR')}</div><div class="extra">${rep.length} ocorrência(s) da aba Reprovas</div>${det[2]}</div>
+      <div class="kpi amarelo"><div class="rotulo">Taxa de reprova</div><div class="valor">${String(taxaReprova).replace('.', ',')}%</div><div class="extra">reprovas da aba Reprovas / produção</div>${det[3]}</div>
+      <div class="kpi"><div class="rotulo">Ensaios de liberação</div><div class="valor">${ens.length}</div><div class="extra">${ensAprov} aprovado(s)</div>${det[4]}</div>`;
+
+    ligarTooltipsKpi();
+  </script>
+</body>
+</html>

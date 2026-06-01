@@ -370,13 +370,16 @@ function render() {
   const taxaReprova = totalProd ? ((reprovadosKpi / totalProd) * 100).toFixed(1) : '0,0';
   const periodoTxt = filtros.ini && filtros.fim ? `${U.dataBR(filtros.ini)} a ${U.dataBR(filtros.fim)}` : 'período completo';
   const ensAprov = ens.filter(r => r.resultado === 'Aprovado').length;
+  const det = detalhesKpis(prod, rep, ens, { totalProd, totalAprov, reprovadosKpi, taxaReprova, ensAprov });
 
   kpis.innerHTML = `
-    <div class="kpi escuro"><div class="rotulo">Produção total</div><div class="valor">${totalProd.toLocaleString('pt-BR')}</div><div class="extra">${prod.length} lotes · ${periodoTxt}</div></div>
-    <div class="kpi verde"><div class="rotulo">Aprovados</div><div class="valor">${totalAprov.toLocaleString('pt-BR')}</div><div class="extra">produção total - reprovas da aba Reprovas</div></div>
-    <div class="kpi vermelho"><div class="rotulo">Reprovados (refugos)</div><div class="valor">${reprovadosKpi.toLocaleString('pt-BR')}</div><div class="extra">${rep.length} ocorrência(s) da aba Reprovas</div></div>
-    <div class="kpi amarelo"><div class="rotulo">Taxa de reprova</div><div class="valor">${String(taxaReprova).replace('.', ',')}%</div><div class="extra">reprovas da aba Reprovas / produção</div></div>
-    <div class="kpi"><div class="rotulo">Ensaios de liberação</div><div class="valor">${ens.length}</div><div class="extra">${ensAprov} aprovado(s)</div></div>`;
+    <div class="kpi escuro"><div class="rotulo">Produção total</div><div class="valor">${totalProd.toLocaleString('pt-BR')}</div><div class="extra">${prod.length} lotes · ${periodoTxt}</div>${det[0]}</div>
+    <div class="kpi verde"><div class="rotulo">Aprovados</div><div class="valor">${totalAprov.toLocaleString('pt-BR')}</div><div class="extra">produção total - reprovas da aba Reprovas</div>${det[1]}</div>
+    <div class="kpi vermelho"><div class="rotulo">Reprovados (refugos)</div><div class="valor">${reprovadosKpi.toLocaleString('pt-BR')}</div><div class="extra">${rep.length} ocorrência(s) da aba Reprovas</div>${det[2]}</div>
+    <div class="kpi amarelo"><div class="rotulo">Taxa de reprova</div><div class="valor">${String(taxaReprova).replace('.', ',')}%</div><div class="extra">reprovas da aba Reprovas / produção</div>${det[3]}</div>
+    <div class="kpi"><div class="rotulo">Ensaios de liberação</div><div class="valor">${ens.length}</div><div class="extra">${ensAprov} aprovado(s)</div>${det[4]}</div>`;
+
+  ligarTooltipsKpi();
 
   registrarExportacaoDashboard(prod, rep, ens, filtros, {
     totalProd,
@@ -396,6 +399,197 @@ function destruir() {
 
 function totalRefugosReprovas(reprovas) {
   return (reprovas || []).reduce((s, r) => s + U.int(r.totalRefugos || 1), 0);
+}
+
+/* =====================================================================
+   TOOLTIPS DE DETALHE DOS CARDS (KPIs)
+   Ao passar o mouse (ou focar) em cada card, mostra uma caixa resumida
+   com os detalhes daquele indicador. O conteúdo é gerado aqui, embutido
+   oculto dentro do card (.kpi-det) e exibido por uma caixa flutuante
+   posicionada via JS (ligarTooltipsKpi), que escapa do recorte do card.
+   ===================================================================== */
+function kpiNum(n) { return Number(n || 0).toLocaleString('pt-BR'); }
+function kpiPct(v) { return String(v).replace('.', ','); }
+
+function kpiTipLinha(rotulo, valor, classe) {
+  return `<div class="kpi-tip-linha ${classe || ''}"><span class="l">${rotulo}</span><span class="v">${valor}</span></div>`;
+}
+
+function kpiLoteRotulo(r) {
+  const bit = U.bitolaCodigo(r);
+  return `Lote ${U.esc(r.lote || '—')} · ${U.esc(r.projeto || '—')}${bit && bit !== 'SB' ? ' · ' + bit : ''}`;
+}
+
+function detalhesKpis(prod, rep, ens, m) {
+  const LIM = 9; // nº máximo de linhas de lista antes de resumir o restante
+  const cab = (cor, titulo, sub) =>
+    `<div class="kpi-tip-cabe"><span class="kpi-tip-pnt" style="--c:${cor}"></span><span class="kpi-tip-tit">${titulo}</span>${sub ? `<span class="kpi-tip-sub">${sub}</span>` : ''}</div>`;
+  const vazio = txt => `<div class="kpi-tip-vazio">${txt}</div>`;
+  const env = html => `<div class="kpi-det" hidden>${html}</div>`;
+
+  /* 1) PRODUÇÃO TOTAL — lista de lotes produzidos */
+  let d1;
+  {
+    const itens = [...prod].sort((a, b) => compararLote(String(a.lote || ''), String(b.lote || '')));
+    let corpo = itens.slice(0, LIM).map(r => kpiTipLinha(kpiLoteRotulo(r), kpiNum(r.total) + ' dorm.')).join('');
+    if (itens.length > LIM) corpo += `<div class="kpi-tip-rodape">+ ${itens.length - LIM} outro(s) lote(s)</div>`;
+    if (!itens.length) corpo = vazio('Sem lotes no período.');
+    d1 = env(cab('var(--azul-escuro)', 'Produção total', `${prod.length} lote(s) · ${kpiNum(m.totalProd)} dorm.`) +
+      `<div class="kpi-tip-corpo">${corpo}</div>`);
+  }
+
+  /* 2) APROVADOS — conta da KPI + aprovados por projeto */
+  let d2;
+  {
+    const prodProj = {}, repProj = {};
+    prod.forEach(r => { const k = r.projeto || '—'; prodProj[k] = (prodProj[k] || 0) + U.int(r.total); });
+    rep.forEach(r => { const k = r.projeto || '—'; repProj[k] = (repProj[k] || 0) + U.int(r.totalRefugos || 1); });
+    const projs = Object.keys(prodProj).sort((a, b) =>
+      ((prodProj[b] || 0) - (repProj[b] || 0)) - ((prodProj[a] || 0) - (repProj[a] || 0)));
+    const conta =
+      kpiTipLinha('Produção total', kpiNum(m.totalProd)) +
+      kpiTipLinha('− Refugos (reprovas)', kpiNum(m.reprovadosKpi)) +
+      kpiTipLinha('= Aprovados', kpiNum(m.totalAprov), 'forte');
+    const linhasProj = projs.slice(0, LIM).map(k =>
+      kpiTipLinha(U.esc(k), kpiNum(Math.max(0, (prodProj[k] || 0) - (repProj[k] || 0))))).join('');
+    const blocoProj = projs.length ? `<div class="kpi-tip-secao">Aprovados por projeto</div>${linhasProj}` : '';
+    d2 = env(cab('var(--verde)', 'Aprovados', `${kpiNum(m.totalAprov)} dorm.`) +
+      `<div class="kpi-tip-corpo">${conta}${blocoProj}</div>`);
+  }
+
+  /* 3) REPROVADOS (REFUGOS) — por motivo + lotes afetados */
+  let d3;
+  {
+    const porMotivo = {};
+    rep.forEach(r => {
+      const k = r.motivoIndicador || 'Outros';
+      (porMotivo[k] = porMotivo[k] || { ref: 0, oc: 0 });
+      porMotivo[k].ref += U.int(r.totalRefugos || 1);
+      porMotivo[k].oc += 1;
+    });
+    const motivos = Object.keys(porMotivo).sort((a, b) => porMotivo[b].ref - porMotivo[a].ref);
+    let corpo = motivos.slice(0, LIM).map(k =>
+      kpiTipLinha(U.esc(k), kpiNum(porMotivo[k].ref) + (porMotivo[k].oc > 1 ? ` <i>(${porMotivo[k].oc})</i>` : ''))).join('');
+    if (motivos.length > LIM) corpo += `<div class="kpi-tip-rodape">+ ${motivos.length - LIM} outro(s) motivo(s)</div>`;
+    if (!motivos.length) corpo = vazio('Nenhuma reprova no período.');
+    const lotes = [...new Set(rep.map(r => String(r.lote || '')).filter(Boolean))].sort((a, b) => compararLote(a, b));
+    const tagsLotes = lotes.length
+      ? `<div class="kpi-tip-secao">Lotes afetados</div><div class="kpi-tip-tags">${lotes.slice(0, 12).map(l => `<span>${U.esc(l)}</span>`).join('')}${lotes.length > 12 ? `<span>+${lotes.length - 12}</span>` : ''}</div>`
+      : '';
+    d3 = env(cab('var(--erro)', 'Reprovados (refugos)', `${kpiNum(m.reprovadosKpi)} refugos · ${rep.length} ocorr.`) +
+      `<div class="kpi-tip-corpo">${corpo}${tagsLotes}</div>`);
+  }
+
+  /* 4) TAXA DE REPROVA — conta + maiores taxas por lote */
+  let d4;
+  {
+    const porLote = {};
+    prod.forEach(r => { const k = String(r.lote || '—'); (porLote[k] = porLote[k] || { prod: 0, rep: 0, projeto: r.projeto || '—' }).prod += U.int(r.total); });
+    rep.forEach(r => {
+      const k = String(r.lote || '—');
+      (porLote[k] = porLote[k] || { prod: 0, rep: 0, projeto: r.projeto || '—' }).rep += U.int(r.totalRefugos || 1);
+      if (porLote[k].projeto === '—') porLote[k].projeto = r.projeto || '—';
+    });
+    const comRep = Object.keys(porLote).filter(k => porLote[k].rep > 0)
+      .map(k => ({ lote: k, projeto: porLote[k].projeto, taxa: porLote[k].prod ? (porLote[k].rep / porLote[k].prod) * 100 : 100 }))
+      .sort((a, b) => b.taxa - a.taxa);
+    const conta =
+      kpiTipLinha('Refugos ÷ Produção', `${kpiNum(m.reprovadosKpi)} ÷ ${kpiNum(m.totalProd)}`) +
+      kpiTipLinha('= Taxa de reprova', `${kpiPct(m.taxaReprova)}%`, 'forte');
+    const bloco = comRep.length
+      ? `<div class="kpi-tip-secao">Maiores taxas por lote</div>` +
+        comRep.slice(0, LIM).map(o => kpiTipLinha(`Lote ${U.esc(o.lote)} · ${U.esc(o.projeto)}`, kpiPct(o.taxa.toFixed(1)) + '%')).join('')
+      : `<div class="kpi-tip-secao">Por lote</div>${vazio('Nenhum lote com reprova.')}`;
+    d4 = env(cab('var(--amarelo)', 'Taxa de reprova', `${kpiPct(m.taxaReprova)}%`) +
+      `<div class="kpi-tip-corpo">${conta}${bloco}</div>`);
+  }
+
+  /* 5) ENSAIOS DE LIBERAÇÃO — por resultado + lista de ensaios */
+  let d5;
+  {
+    const aprov = ens.filter(r => r.resultado === 'Aprovado').length;
+    const recus = ens.filter(r => r.resultado === 'Reprovado').length;
+    const pend = ens.filter(r => r.resultado === 'Pendente').length;
+    const outros = ens.length - aprov - recus - pend;
+    const status =
+      kpiTipLinha('Aprovados', kpiNum(aprov), 'ok') +
+      kpiTipLinha('Reprovados', kpiNum(recus), 'ruim') +
+      kpiTipLinha('Pendentes', kpiNum(pend), 'neutro') +
+      (outros > 0 ? kpiTipLinha('Outros', kpiNum(outros)) : '');
+    const lista = ens.slice(0, LIM).map(r => {
+      const cls = r.resultado === 'Aprovado' ? 'ok' : r.resultado === 'Reprovado' ? 'ruim' : 'neutro';
+      const nome = `Lote ${U.esc(r.lote || '—')}${r.serieLiberada ? ' · Sér. ' + U.esc(r.serieLiberada) : ''}`;
+      return kpiTipLinha(nome, `<span class="kpi-tip-tag ${cls}">${U.esc(r.resultado || '—')}</span>`);
+    }).join('');
+    let bloco = ens.length ? `<div class="kpi-tip-secao">Ensaios do período</div>${lista}` : vazio('Sem ensaios no período.');
+    if (ens.length > LIM) bloco += `<div class="kpi-tip-rodape">+ ${ens.length - LIM} outro(s) ensaio(s)</div>`;
+    d5 = env(cab('var(--azul-claro)', 'Ensaios de liberação', `${ens.length} ensaio(s)`) +
+      `<div class="kpi-tip-corpo">${status}${bloco}</div>`);
+  }
+
+  return [d1, d2, d3, d4, d5];
+}
+
+/* ---- Caixa flutuante do tooltip (posicionamento + eventos) ---- */
+let kpiTipGlobaisLigados = false;
+
+function kpiTipEl() {
+  let tip = document.getElementById('kpiTip');
+  if (!tip) {
+    tip = document.createElement('div');
+    tip.id = 'kpiTip';
+    tip.className = 'kpi-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+  }
+  return tip;
+}
+
+function abrirKpiTip(card) {
+  const fonte = card.querySelector('.kpi-det');
+  if (!fonte) return;
+  const tip = kpiTipEl();
+  tip.innerHTML = fonte.innerHTML;
+  tip.classList.add('aberto');
+  tip.style.visibility = 'hidden';           // mede sem piscar
+  const r = card.getBoundingClientRect();
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  const margem = 12, gap = 12;
+  let left = r.left + r.width / 2 - tw / 2;
+  left = Math.max(margem, Math.min(left, window.innerWidth - tw - margem));
+  let top = r.bottom + gap, acima = false;
+  if (top + th > window.innerHeight - margem && r.top - gap - th > margem) {
+    top = r.top - gap - th;
+    acima = true;
+  }
+  tip.classList.toggle('acima', acima);
+  const setaX = Math.max(18, Math.min(tw - 18, r.left + r.width / 2 - left));
+  tip.style.setProperty('--seta-x', setaX + 'px');
+  tip.style.left = Math.round(left) + 'px';
+  tip.style.top = Math.round(top) + 'px';
+  tip.style.visibility = '';
+}
+
+function fecharKpiTip() {
+  const tip = document.getElementById('kpiTip');
+  if (tip) tip.classList.remove('aberto', 'acima');
+}
+
+function ligarTooltipsKpi() {
+  if (!kpiTipGlobaisLigados) {
+    kpiTipGlobaisLigados = true;
+    window.addEventListener('scroll', fecharKpiTip, true);
+    window.addEventListener('resize', fecharKpiTip);
+  }
+  document.querySelectorAll('#kpis .kpi').forEach(card => {
+    if (!card.querySelector('.kpi-det') || card.dataset.tip) return;
+    card.dataset.tip = '1';
+    card.tabIndex = 0; // permite focar pelo teclado
+    card.addEventListener('mouseenter', () => abrirKpiTip(card));
+    card.addEventListener('mouseleave', fecharKpiTip);
+    card.addEventListener('focus', () => abrirKpiTip(card));
+    card.addEventListener('blur', fecharKpiTip);
+  });
 }
 
 

@@ -6389,3 +6389,150 @@ body[data-tema="escuro"] .especificacao-card { background: rgba(255,255,255,.04)
   line-height: 1.35;
   white-space: normal;
 }
+
+/* =====================================================================
+   TOOLTIPS DE DETALHE DOS CARDS (KPIs) — Dashboard
+   Caixa flutuante (anexada ao <body>) com o resumo de cada indicador.
+   Conteúdo gerado em dashboard.js (detalhesKpis) e exibido por
+   ligarTooltipsKpi. Usa os tokens da marca, adaptando ao tema escuro.
+   ===================================================================== */
+#kpis .kpi { cursor: help; }
+
+.kpi-tip {
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  min-width: 240px;
+  max-width: 320px;
+  padding: 14px 16px 16px;
+  background: var(--cinza-card);
+  color: var(--cinza-texto);
+  border: 1px solid rgba(0, 53, 103, 0.12);
+  border-radius: var(--raio-sm, 12px);
+  box-shadow: 0 10px 32px rgba(0, 53, 103, 0.20);
+  font-size: 12.5px;
+  line-height: 1.4;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity .16s ease, transform .16s ease;
+  pointer-events: none; /* nunca rouba o hover do card */
+}
+.kpi-tip.aberto { opacity: 1; visibility: visible; transform: translateY(0); }
+
+/* seta apontando para o card */
+.kpi-tip::before {
+  content: '';
+  position: absolute;
+  left: var(--seta-x, 28px);
+  top: -7px;
+  width: 12px;
+  height: 12px;
+  background: var(--cinza-card);
+  border-left: 1px solid rgba(0, 53, 103, 0.12);
+  border-top: 1px solid rgba(0, 53, 103, 0.12);
+  transform: translateX(-50%) rotate(45deg);
+}
+.kpi-tip.acima::before { top: auto; bottom: -7px; transform: translateX(-50%) rotate(225deg); }
+
+.kpi-tip-cabe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 9px;
+  margin-bottom: 9px;
+  border-bottom: 1px solid rgba(0, 53, 103, 0.10);
+}
+.kpi-tip-pnt {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--c, var(--azul-claro));
+  box-shadow: 0 0 0 4px rgba(50, 166, 230, 0.16);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c, var(--azul-claro)) 20%, transparent);
+}
+.kpi-tip-tit { font-weight: 800; font-size: 13px; letter-spacing: .1px; color: var(--azul-escuro); }
+.kpi-tip-sub { margin-left: auto; font-size: 11.5px; font-weight: 700; color: var(--cinza-texto-claro); }
+
+.kpi-tip-corpo { display: flex; flex-direction: column; gap: 3px; }
+.kpi-tip-linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+}
+.kpi-tip-linha .l {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cinza-texto);
+}
+.kpi-tip-linha .v {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-weight: 800;
+  color: var(--azul-escuro);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-tip-linha .v i { font-style: normal; font-weight: 600; font-size: 11px; color: var(--cinza-texto-claro); }
+.kpi-tip-linha.forte {
+  margin-top: 3px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0, 53, 103, 0.16);
+}
+.kpi-tip-linha.forte .l,
+.kpi-tip-linha.forte .v { font-weight: 900; color: var(--verde); }
+.kpi-tip-linha.ok .l { color: var(--verde); }
+.kpi-tip-linha.ruim .l { color: var(--erro); }
+.kpi-tip-linha.neutro .l { color: var(--cinza-texto-claro); }
+
+.kpi-tip-secao {
+  margin: 9px 0 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--cinza-texto-claro);
+}
+.kpi-tip-rodape { margin-top: 5px; font-size: 11px; font-style: italic; color: var(--cinza-texto-claro); }
+.kpi-tip-vazio { padding: 4px 0; font-size: 12px; color: var(--cinza-texto-claro); }
+
+.kpi-tip-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.kpi-tip-tags span {
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  color: var(--azul-escuro);
+  background: rgba(50, 166, 230, 0.14);
+  background: color-mix(in srgb, var(--azul-claro) 14%, transparent);
+}
+
+.kpi-tip-tag {
+  padding: 1px 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  border-radius: 999px;
+}
+.kpi-tip-tag.ok { color: #0a6b46; background: #dff3e8; background: color-mix(in srgb, var(--verde) 20%, transparent); }
+.kpi-tip-tag.ruim { color: #fff; background: var(--erro); }
+.kpi-tip-tag.neutro { color: #5a4b00; background: #fbeeb0; background: color-mix(in srgb, var(--amarelo) 40%, transparent); }
+
+/* tema escuro: bordas, sombra e textos adaptados */
+body[data-tema="escuro"] .kpi-tip {
+  border-color: rgba(127, 224, 108, 0.22);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
+}
+body[data-tema="escuro"] .kpi-tip::before { border-color: rgba(127, 224, 108, 0.22); }
+body[data-tema="escuro"] .kpi-tip-cabe { border-bottom-color: rgba(255, 255, 255, 0.12); }
+body[data-tema="escuro"] .kpi-tip-tit,
+body[data-tema="escuro"] .kpi-tip-linha .v { color: #fff; }
+body[data-tema="escuro"] .kpi-tip-linha.forte { border-top-color: rgba(255, 255, 255, 0.18); }
+body[data-tema="escuro"] .kpi-tip-tag.neutro { color: #1a1a1a; }
+body[data-tema="escuro"] .kpi-tip-tags span { color: #fff; }
