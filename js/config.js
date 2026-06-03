@@ -8,7 +8,7 @@ const CFG = {
   listas: {
     fornecedores: ['Cavan SP', 'Conprem MG'],
     pedidos: ['N/A', '4501971179', '4501971181', '4501971186', '4501977441', '4501985412', '4920122050', '4920122051', '361'],
-    projetos: ['FMT', 'FERRO NORTE', 'MALHA PAULISTA BITOLA MISTA', 'MALHA PAULISTA BITOLA LARGA'],
+    projetos: ['FMT', 'FERRO NORTE', 'MALHA PAULISTA BITOLA MISTA', 'MALHA PAULISTA BITOLA LARGA', 'MALHA CENTRAL'],
     tipos: ['Bitola Larga FMT USP', 'Bitola Larga MP', 'Bitola Mista MP - USP', 'Bitola Larga FN', 'Bitola Mista', 'Contra Trilho', 'PN', 'AMV'],
     bitolas: ['Bitola Larga', 'Bitola Mista', 'Sem bitola definida'],
     comUsp: ['SIM', 'NÃO'],

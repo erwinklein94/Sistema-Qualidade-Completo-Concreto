@@ -12,6 +12,7 @@ const AUDITORIA_ACAO_META = {
 
 const AUDITORIA_TABELA_META = {
   producao_lotes: { rotulo: 'Produção', classe: 'auditoria-area-producao' },
+  pedidos_dormentes: { rotulo: 'Pedidos', classe: 'auditoria-area-producao' },
   reprovados: { rotulo: 'Reprovados', classe: 'auditoria-area-reprovados' },
   ensaios_liberacao: { rotulo: 'Ensaios de Liberação', classe: 'auditoria-area-ensaios' },
   empresas_subcomponentes: { rotulo: 'Subcomponentes · Empresas', classe: 'auditoria-area-subcomponentes' },
@@ -110,6 +111,7 @@ function textoAuditoriaBusca(r) {
     r.registro_id,
     o.lote,
     o.lote_ensaiado,
+    o.numero_pedido,
     o.projeto,
     o.serie,
     o.serie_liberada,

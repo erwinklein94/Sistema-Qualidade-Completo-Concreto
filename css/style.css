@@ -6536,3 +6536,162 @@ body[data-tema="escuro"] .kpi-tip-linha .v { color: #fff; }
 body[data-tema="escuro"] .kpi-tip-linha.forte { border-top-color: rgba(255, 255, 255, 0.18); }
 body[data-tema="escuro"] .kpi-tip-tag.neutro { color: #1a1a1a; }
 body[data-tema="escuro"] .kpi-tip-tags span { color: #fff; }
+
+/* ===================== PEDIDOS DE DORMENTES ===================== */
+.pagina-pedidos .pedidos-intro-card { margin-bottom: 18px; }
+.pedidos-intro-texto { font-size: 13.5px; max-width: 980px; line-height: 1.55; }
+.pedidos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+.pedidos-grid-full { grid-column: 1 / -1; }
+.pedido-card {
+  margin-bottom: 0;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pedido-card-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.pedido-label {
+  display: block;
+  color: var(--cinza-texto-claro);
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.pedido-card h3 {
+  color: var(--azul-escuro);
+  font-size: 23px;
+  font-weight: 900;
+  letter-spacing: -.4px;
+}
+.pedido-badges,
+.pedido-lotes,
+.pedido-card-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.pedido-card-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.pedido-card-kpis > div {
+  border: 1px solid var(--cinza-borda);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,.62);
+}
+.pedido-card-kpis span {
+  display: block;
+  color: var(--cinza-texto-claro);
+  font-size: 10.5px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.pedido-card-kpis strong {
+  display: block;
+  color: var(--azul-escuro);
+  font-size: 20px;
+  font-weight: 900;
+  margin-top: 3px;
+}
+.pedido-progresso {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--cinza-bg);
+  overflow: hidden;
+  border: 1px solid rgba(215,224,229,.9);
+}
+.pedido-progresso span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--azul-claro), var(--verde-claro));
+}
+.pedido-secao {
+  border-top: 1px dashed var(--cinza-borda);
+  padding-top: 12px;
+}
+.pedido-secao > strong {
+  display: block;
+  color: var(--azul-escuro);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .45px;
+  margin-bottom: 8px;
+}
+.pedido-lote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: #eef6fc;
+  color: var(--azul-escuro);
+  font-size: 12px;
+  font-weight: 850;
+  border: 1px solid rgba(50,166,230,.18);
+}
+.pedido-lote-chip.produzido {
+  align-items: flex-start;
+  flex-direction: column;
+  border-radius: 14px;
+  background: #e5f9c2;
+  color: #125f4c;
+  gap: 1px;
+}
+.pedido-lote-chip small {
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: .78;
+}
+.pedido-observacao {
+  color: var(--cinza-texto);
+  background: rgba(255,255,255,.66);
+  border: 1px solid var(--cinza-borda);
+  border-radius: 16px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.pedido-card-acoes {
+  margin-top: auto;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+body[data-tema="escuro"] .pedido-card h3,
+body[data-tema="escuro"] .pedido-secao > strong,
+body[data-tema="escuro"] .pedido-card-kpis strong { color: #fff; }
+body[data-tema="escuro"] .pedido-card-kpis > div,
+body[data-tema="escuro"] .pedido-observacao {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.12);
+}
+body[data-tema="escuro"] .pedido-lote-chip {
+  background: rgba(255,255,255,.10);
+  color: #fff;
+  border-color: rgba(255,255,255,.14);
+}
+body[data-tema="escuro"] .pedido-lote-chip.produzido {
+  background: rgba(127,224,108,.18);
+  color: var(--verde-claro);
+}
+@media (max-width: 760px) {
+  .pedidos-grid { grid-template-columns: 1fr; }
+  .pedido-card-kpis { grid-template-columns: 1fr; }
+}

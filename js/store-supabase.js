@@ -81,6 +81,53 @@ const StoreSupabase = (() => {
     return true;
   }
 
+  async function listarPedidosDormentes(filtros = {}) {
+    let q = db()
+      .from('pedidos_dormentes')
+      .select('*')
+      .order('criado_em', { ascending: false, nullsFirst: false })
+      .order('numero_pedido', { ascending: true, nullsFirst: false })
+      .limit(filtros.limite || 5000);
+
+    if (filtros.id) q = q.eq('id', filtros.id);
+    if (filtros.fornecedor) q = q.eq('fornecedor', filtros.fornecedor);
+    if (filtros.projeto) q = q.eq('projeto', filtros.projeto);
+    if (filtros.numeroPedido) q = q.eq('numero_pedido', filtros.numeroPedido);
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function salvarPedidoDormente(registro) {
+    const [acao, descricao] = acaoSalvar(registro);
+    exigirPermissao(acao, descricao);
+    const user = await usuarioAtual();
+    const payload = { ...registro, atualizado_por: user?.id || null };
+    const id = payload.id;
+
+    let query;
+    if (id) {
+      delete payload.id;
+      query = db().from('pedidos_dormentes').update(payload).eq('id', id);
+    } else {
+      delete payload.id;
+      payload.criado_por = user?.id || null;
+      query = db().from('pedidos_dormentes').insert(payload);
+    }
+
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function removerPedidoDormente(id) {
+    exigirPermissao('excluir', 'excluir registros');
+    const { error } = await db().from('pedidos_dormentes').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
   async function listarReprovados(filtros = {}) {
     let q = db()
       .from('reprovados')
@@ -354,6 +401,9 @@ const StoreSupabase = (() => {
     listarProducao,
     salvarProducao,
     removerProducao,
+    listarPedidosDormentes,
+    salvarPedidoDormente,
+    removerPedidoDormente,
     listarReprovados,
     salvarReprovado,
     removerReprovado,

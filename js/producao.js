@@ -74,6 +74,7 @@ const CAMPOS_STATUS_AUTOMATICO = [
 ];
 
 let PRODUCAO_ENSAIOS_LIBERACAO = [];
+let PRODUCAO_PEDIDOS = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('pagina-producao');
@@ -85,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   `);
 
   sel('fornecedor', CFG.listas.fornecedores, '');
-  sel('pedido', CFG.listas.pedidos, '');
+  atualizarOpcoesPedidoProducao();
   sel('projeto', CFG.listas.projetos, 'Selecione...');
   sel('tipo', CFG.listas.tipos, 'Selecione...');
   sel('comUsp', CFG.listas.comUsp, '');
@@ -112,11 +113,40 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('dataFabricacao')?.addEventListener('change', atualizarCurasPelaFabricacao);
 
+  await carregarPedidosProducao();
   render();
   await carregarProducao();
 });
 
 function sel(id, arr, ph) { document.getElementById(id).innerHTML = U.opcoes(arr, '', ph); }
+
+async function carregarPedidosProducao() {
+  try {
+    if (!StoreSupabase.listarPedidosDormentes) return;
+    const pedidos = await StoreSupabase.listarPedidosDormentes({ limite: 5000 });
+    PRODUCAO_PEDIDOS = (pedidos || []).map(mapPedidoDormenteDoBancoSimples);
+    atualizarOpcoesPedidoProducao(document.getElementById('pedido')?.value || '');
+  } catch (err) {
+    console.warn('Pedidos não carregados para o seletor de produção. Usando lista fixa.', err);
+    atualizarOpcoesPedidoProducao(document.getElementById('pedido')?.value || '');
+  }
+}
+
+function atualizarOpcoesPedidoProducao(selecionado = '') {
+  const el = document.getElementById('pedido');
+  if (!el) return;
+  const base = Array.isArray(CFG?.listas?.pedidos) ? CFG.listas.pedidos : [];
+  const dinamicos = (PRODUCAO_PEDIDOS || []).map(p => p.numeroPedido).filter(Boolean);
+  const opcoes = Array.from(new Set([...base, ...dinamicos]));
+  el.innerHTML = U.opcoes(opcoes, selecionado, '');
+  if (selecionado && !opcoes.includes(selecionado)) {
+    const opt = document.createElement('option');
+    opt.value = selecionado;
+    opt.textContent = selecionado;
+    el.appendChild(opt);
+    el.value = selecionado;
+  }
+}
 
 function chaveStatus(status) {
   return U.norm(status).replace(/[^A-Z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -626,6 +656,16 @@ function dentroPeriodoData(iso, ini, fim) {
   if (ini && iso < ini) return false;
   if (fim && iso > fim) return false;
   return true;
+}
+
+function mapPedidoDormenteDoBancoSimples(r) {
+  return {
+    id: r.id,
+    fornecedor: r.fornecedor || '',
+    projeto: r.projeto || '',
+    numeroPedido: r.numero_pedido || '',
+    quantidade: valorBanco(r.quantidade_dormentes),
+  };
 }
 
 function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
