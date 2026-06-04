@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reprovados · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
-  <link rel="stylesheet" href="css/style.css?v=20260531-topo-limpo-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260604-glossario-v1">
 </head>
 <body>
   <div class="app" id="app">
@@ -85,6 +85,66 @@
     </div>
   </div>
 
+  <!-- ===================== GLOSSÁRIO DE DEFEITOS (página suspensa) ===================== -->
+  <div class="glossario-overlay" id="glossarioOverlay">
+    <div class="glossario-painel">
+      <div class="glossario-cab">
+        <div class="glossario-cab-id">
+          <div class="topo-kicker">Rumo · Dormentes de Concreto</div>
+          <h2>Glossário de defeitos</h2>
+          <div class="glossario-sub">Referência visual dos defeitos que levam à reprova de dormentes</div>
+        </div>
+        <div class="glossario-cab-acoes">
+          <button class="btn btn-verde" id="btnNovoDefeito" type="button" onclick="abrirNovoDefeito()" data-glossario-admin hidden>Adicionar defeito</button>
+          <button class="fechar-modal glossario-fechar" type="button" onclick="fecharGlossario()" title="Fechar glossário" aria-label="Fechar glossário">⨯</button>
+        </div>
+      </div>
+      <div class="glossario-corpo" id="glossarioLista"></div>
+    </div>
+  </div>
+
+  <!-- Formulário de defeito (somente admin) -->
+  <div class="modal-overlay glossario-form-overlay" id="glossarioForm">
+    <div class="modal glossario-form-modal">
+      <div class="modal-cab">
+        <h2 id="glossarioFormTitulo">Novo defeito</h2>
+        <button class="fechar-modal" type="button" onclick="fecharFormDefeito()">⨯</button>
+      </div>
+      <div class="modal-corpo">
+        <form id="formDefeito" onsubmit="return false">
+          <input type="hidden" id="defeitoId">
+          <div class="form-grid">
+            <div class="form-secao">Defeito</div>
+            <div class="campo full">
+              <label>Título do defeito <span class="obrig">*</span></label>
+              <input id="defeitoTitulo" type="text" maxlength="160" placeholder="Ex.: Fissura na ombreira">
+            </div>
+            <div class="campo full">
+              <label>Descrição</label>
+              <textarea id="defeitoDescricao" rows="4" placeholder="Como identificar, causa provável e critério de reprova..."></textarea>
+            </div>
+
+            <div class="form-secao">Foto (WEBP)</div>
+            <div class="campo full">
+              <label>Imagem do defeito <span class="dica">(formato .webp, até 2 MB)</span></label>
+              <input id="defeitoArquivo" type="file" accept="image/webp" onchange="aoSelecionarFotoDefeito(event)">
+              <small>A imagem é gravada no banco do Supabase junto com o título e a descrição.</small>
+            </div>
+            <div class="campo full">
+              <div class="defeito-preview" id="defeitoPreview">
+                <div class="defeito-preview-vazio">Nenhuma imagem selecionada</div>
+              </div>
+            </div>
+          </div>
+          <div class="form-acoes">
+            <button type="button" class="btn btn-secundario" onclick="fecharFormDefeito()">Cancelar</button>
+            <button type="button" class="btn btn-primario" onclick="salvarDefeito()">Salvar defeito</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260523-2"></script>
@@ -95,6 +155,6 @@
   <script src="js/store-supabase.js?v=20260523-3"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260531-topo-limpo-v1"></script>
-  <script src="js/reprovados.js?v=20260523-3"></script>
+  <script src="js/reprovados.js?v=20260604-glossario-v1"></script>
 </body>
 </html>

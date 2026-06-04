@@ -6695,3 +6695,145 @@ body[data-tema="escuro"] .pedido-lote-chip.produzido {
   .pedidos-grid { grid-template-columns: 1fr; }
   .pedido-card-kpis { grid-template-columns: 1fr; }
 }
+
+/* =====================================================================
+   GLOSSÁRIO DE DEFEITOS — página suspensa sobre a tela de Reprovados
+   ===================================================================== */
+.glossario-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 38, 77, 0.55);
+  display: none;
+  align-items: center; justify-content: center;
+  z-index: 600;
+  padding: 24px;
+  backdrop-filter: blur(2px);
+}
+.glossario-overlay.aberto { display: flex; }
+body.glossario-aberto { overflow: hidden; }
+
+.glossario-painel {
+  background: var(--branco);
+  border-radius: var(--raio);
+  width: 100%;
+  max-width: 1200px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 38, 77, 0.34);
+}
+
+.glossario-cab {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  background: var(--azul-escuro);
+  color: var(--branco);
+}
+.glossario-cab .topo-kicker {
+  font-size: 11px;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--verde-claro);
+  margin-bottom: 4px;
+}
+.glossario-cab h2 { font-size: 20px; font-weight: 800; color: var(--branco); }
+.glossario-cab .glossario-sub { font-size: 13px; color: rgba(255, 255, 255, 0.78); margin-top: 4px; }
+.glossario-cab-acoes { display: flex; align-items: center; gap: 12px; }
+
+.glossario-fechar {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 26px;
+  line-height: 1;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.glossario-fechar:hover { background: rgba(255, 255, 255, 0.15); color: var(--branco); }
+
+.glossario-corpo { padding: 24px; overflow-y: auto; }
+
+.defeitos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+.defeito-card {
+  background: var(--cinza-card);
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--sombra);
+  transition: var(--transicao);
+}
+.defeito-card:hover { box-shadow: var(--sombra-hover); transform: translateY(-2px); }
+
+.defeito-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  background: var(--cinza-bg);
+  display: block;
+}
+.defeito-img-vazia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--cinza-texto-claro);
+  font-size: 12px;
+}
+.defeito-img-vazia .ic { width: 40px; height: 40px; opacity: .4; }
+
+.defeito-corpo { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+.defeito-card-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.defeito-card-topo h3 { font-size: 15px; font-weight: 700; color: var(--azul-escuro); line-height: 1.3; }
+.defeito-acoes { display: flex; gap: 4px; flex-shrink: 0; }
+.defeito-desc { font-size: 13px; color: var(--cinza-texto); line-height: 1.5; white-space: pre-wrap; }
+
+/* Formulário de defeito acima da página suspensa */
+.glossario-form-overlay { z-index: 700; }
+
+.defeito-preview {
+  border: 1.5px dashed var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--cinza-bg);
+}
+.defeito-preview img { max-width: 100%; max-height: 320px; border-radius: var(--raio-sm); object-fit: contain; }
+.defeito-preview-vazio { color: var(--cinza-texto-claro); font-size: 13px; }
+.campo input[type="file"] {
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .glossario-overlay { padding: 0; }
+  .glossario-painel { max-width: 100%; max-height: 100vh; height: 100vh; border-radius: 0; }
+  .glossario-cab { flex-direction: column; }
+  .glossario-cab-acoes { width: 100%; justify-content: space-between; }
+}
+
+/* Tema escuro */
+body[data-tema="escuro"] .glossario-painel,
+body[data-tema="escuro"] .defeito-card {
+  background: linear-gradient(180deg, rgba(8,42,77,0.98), rgba(7,31,58,0.98));
+  border-color: var(--cinza-borda);
+  color: var(--branco);
+}
+body[data-tema="escuro"] .defeito-card-topo h3 { color: var(--branco); }
+body[data-tema="escuro"] .defeito-desc { color: var(--cinza-texto-claro); }
+body[data-tema="escuro"] .defeito-img { background: rgba(255,255,255,.04); }
+body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); border-color: var(--cinza-borda); }

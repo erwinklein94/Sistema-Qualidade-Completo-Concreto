@@ -17,6 +17,19 @@ Projeto: Sistema de Qualidade Completo — Concreto / DM de Concreto.
 
 A Cera Pro é uma fonte licenciada. O projeto **não embute arquivos de fonte**. A declaração CSS usa Cera Pro apenas caso esteja licenciada/instalada no ambiente; caso contrário, cai para Verdana, fallback indicado no manual.
 
+## Glossário de defeitos (aba Reprovados) — jun/2026
+
+Novo componente "Glossário de defeitos" na página de Reprovados, mantendo o padrão Rumo
+**reaproveitando os tokens e classes já existentes** (sem cor nova hardcoded):
+
+- Página suspensa (`.glossario-overlay` / `.glossario-painel`) com cabeçalho em azul âncora
+  `var(--azul-escuro)` e texto branco, kicker em verde-claro como acento — contraste AA/AAA.
+- Cards de defeito reutilizam `--cinza-card`, `--cinza-borda`, `--raio-sm`, `--sombra`/`--sombra-hover`,
+  com cantos de raio sutil e sombra tingida de azul, no mesmo padrão dos demais cards.
+- Botão "Adicionar defeito" em verde (`btn-verde`) sobre o cabeçalho azul (confirmação/ação),
+  botão "Glossário de defeitos" em `btn-secundario`; tema escuro espelha o tratamento de `.card`.
+- Sem novos arquivos de fonte; tipografia herda a família Rumo já declarada.
+
 ## Checklist
 
 - [x] Azul `#003865` como cor dominante.

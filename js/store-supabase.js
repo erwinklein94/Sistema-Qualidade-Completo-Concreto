@@ -395,6 +395,17 @@ const StoreSupabase = (() => {
   const salvarEquipamento = (registro) => gravarAdmin('equipamentos_medicao', registro);
   const removerEquipamento = (id) => removerAdmin('equipamentos_medicao', id);
 
+  async function listarGlossarioDefeitos() {
+    const { data, error } = await db()
+      .from('glossario_defeitos')
+      .select('*')
+      .order('criado_em', { ascending: true, nullsFirst: true });
+    if (error) throw error;
+    return data || [];
+  }
+  const salvarGlossarioDefeito = (registro) => gravarAdmin('glossario_defeitos', registro);
+  const removerGlossarioDefeito = (id) => removerAdmin('glossario_defeitos', id);
+
   return {
     perfil,
     usuarioAtual,
@@ -425,6 +436,9 @@ const StoreSupabase = (() => {
     listarEquipamentos,
     salvarEquipamento,
     removerEquipamento,
+    listarGlossarioDefeitos,
+    salvarGlossarioDefeito,
+    removerGlossarioDefeito,
   };
 })();
 

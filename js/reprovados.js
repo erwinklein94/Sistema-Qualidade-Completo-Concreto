@@ -19,9 +19,10 @@ const CAMPOS = [
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   App.montarLayout('reprovados', 'Dormentes Reprovados', 'Registro de refugos por molde, cavidade, motivo e período operacional');
-  App.acoesTopo(Auth.pode('criar')
+  const btnGlossario = `<button class="btn btn-secundario" onclick="abrirGlossario()">${ICN.olho}Glossário de defeitos</button>`;
+  App.acoesTopo(`${btnGlossario}${Auth.pode('criar')
     ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo registro</button>`
-    : App.avisoModoConsulta());
+    : App.avisoModoConsulta()}`);
 
   preencherSelect('fornecedor', CFG.listas.fornecedores, '');
   preencherSelect('projeto', CFG.listas.projetos, 'Selecione...');
@@ -622,3 +623,222 @@ function linhaPlanilhaAntigaReprovados(r) {
     totalRefugos: r.totalRefugos || ''
   };
 }
+
+/* =====================================================================
+   GLOSSÁRIO DE DEFEITOS — página suspensa sobre a tela de Reprovados.
+   Leitura: todos os perfis. Criar/editar/excluir: somente admin.
+   Foto WEBP é gravada como data URL base64 na tabela glossario_defeitos.
+   ===================================================================== */
+
+let GLOSSARIO_REGISTROS = [];
+let GLOSSARIO_CARREGADO = false;
+let GLOSSARIO_CARREGANDO = false;
+let GLOSSARIO_ERRO = '';
+let defeitoImagemAtual = '';
+
+const DEFEITO_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+
+function ehAdminGlossario() {
+  return !!window.Auth?.permissoesAtuais?.()?.admin;
+}
+
+function abrirGlossario() {
+  const overlay = document.getElementById('glossarioOverlay');
+  if (!overlay) return;
+  const btn = document.getElementById('btnNovoDefeito');
+  if (btn) btn.hidden = !ehAdminGlossario();
+  overlay.classList.add('aberto');
+  document.body.classList.add('glossario-aberto');
+  if (!GLOSSARIO_CARREGADO) carregarGlossario();
+  else renderGlossario();
+}
+
+function fecharGlossario() {
+  fecharFormDefeito();
+  document.getElementById('glossarioOverlay')?.classList.remove('aberto');
+  document.body.classList.remove('glossario-aberto');
+}
+
+async function carregarGlossario() {
+  GLOSSARIO_CARREGANDO = true;
+  GLOSSARIO_ERRO = '';
+  renderGlossario();
+  try {
+    const dados = await StoreSupabase.listarGlossarioDefeitos();
+    GLOSSARIO_REGISTROS = (dados || []).map(mapDefeitoDoBanco);
+    GLOSSARIO_CARREGADO = true;
+  } catch (err) {
+    console.error('Erro ao carregar glossário de defeitos', err);
+    GLOSSARIO_ERRO = mensagemErroBanco(err, 'Não foi possível carregar o glossário de defeitos do Supabase.');
+  } finally {
+    GLOSSARIO_CARREGANDO = false;
+    renderGlossario();
+  }
+}
+
+function renderGlossario() {
+  const cont = document.getElementById('glossarioLista');
+  if (!cont) return;
+  const admin = ehAdminGlossario();
+  const btn = document.getElementById('btnNovoDefeito');
+  if (btn) btn.hidden = !admin;
+
+  if (GLOSSARIO_CARREGANDO) {
+    cont.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Carregando glossário</h3><p>Buscando defeitos no Supabase...</p></div>`;
+    return;
+  }
+  if (GLOSSARIO_ERRO) {
+    cont.innerHTML = `<div class="vazio">${ICN.alerta}<h3>Erro ao carregar</h3><p>${U.esc(GLOSSARIO_ERRO)}</p>
+      <button class="btn btn-secundario" onclick="carregarGlossario()">Tentar novamente</button></div>`;
+    return;
+  }
+  if (!GLOSSARIO_REGISTROS.length) {
+    cont.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhum defeito cadastrado</h3>
+      <p>${admin ? 'Use o botão "Adicionar defeito" para incluir a primeira foto, título e descrição.' : 'O administrador ainda não cadastrou defeitos no glossário.'}</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = `<div class="defeitos-grid">${GLOSSARIO_REGISTROS.map(d => {
+    const img = (d.imagem || '').startsWith('data:image/')
+      ? `<img class="defeito-img" src="${d.imagem}" alt="${U.esc(d.titulo)}" loading="lazy">`
+      : `<div class="defeito-img defeito-img-vazia">${ICN.vazioBox}<span>Sem imagem</span></div>`;
+    const acoes = admin
+      ? `<div class="defeito-acoes">
+          <button class="icone-btn" title="Editar" onclick="editarDefeito('${d.id}')">${ICN.edit}</button>
+          <button class="icone-btn del" title="Excluir" onclick="excluirDefeito('${d.id}')">${ICN.del}</button>
+        </div>`
+      : '';
+    return `<article class="defeito-card">
+      ${img}
+      <div class="defeito-corpo">
+        <div class="defeito-card-topo">
+          <h3>${U.esc(d.titulo || 'Sem título')}</h3>
+          ${acoes}
+        </div>
+        ${d.descricao ? `<p class="defeito-desc">${U.esc(d.descricao)}</p>` : '<p class="defeito-desc txt-cinza">Sem descrição.</p>'}
+      </div>
+    </article>`;
+  }).join('')}</div>`;
+}
+
+function abrirNovoDefeito() {
+  if (!ehAdminGlossario()) { App.toast(Auth.mensagemSemPermissao('cadastrar defeitos'), 'aviso'); return; }
+  document.getElementById('formDefeito').reset();
+  document.getElementById('defeitoId').value = '';
+  defeitoImagemAtual = '';
+  atualizarPreviewDefeito();
+  document.getElementById('glossarioFormTitulo').textContent = 'Novo defeito';
+  document.getElementById('glossarioForm').classList.add('aberto');
+}
+
+function editarDefeito(id) {
+  if (!ehAdminGlossario()) { App.toast(Auth.mensagemSemPermissao('editar defeitos'), 'aviso'); return; }
+  const d = GLOSSARIO_REGISTROS.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('formDefeito').reset();
+  document.getElementById('defeitoId').value = d.id;
+  document.getElementById('defeitoTitulo').value = d.titulo || '';
+  document.getElementById('defeitoDescricao').value = d.descricao || '';
+  defeitoImagemAtual = d.imagem || '';
+  atualizarPreviewDefeito();
+  document.getElementById('glossarioFormTitulo').textContent = `Editar defeito — ${d.titulo || ''}`;
+  document.getElementById('glossarioForm').classList.add('aberto');
+}
+
+function fecharFormDefeito() {
+  document.getElementById('glossarioForm')?.classList.remove('aberto');
+}
+
+function aoSelecionarFotoDefeito(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.type !== 'image/webp') {
+    App.toast('Selecione um arquivo no formato WEBP (.webp).', 'aviso');
+    input.value = '';
+    return;
+  }
+  if (file.size > DEFEITO_MAX_BYTES) {
+    App.toast('A imagem WEBP deve ter no máximo 2 MB.', 'aviso');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    defeitoImagemAtual = String(reader.result || '');
+    atualizarPreviewDefeito();
+  };
+  reader.onerror = () => App.toast('Não foi possível ler a imagem selecionada.', 'erro');
+  reader.readAsDataURL(file);
+}
+
+function atualizarPreviewDefeito() {
+  const alvo = document.getElementById('defeitoPreview');
+  if (!alvo) return;
+  alvo.innerHTML = (defeitoImagemAtual || '').startsWith('data:image/')
+    ? `<img src="${defeitoImagemAtual}" alt="Pré-visualização do defeito">`
+    : '<div class="defeito-preview-vazio">Nenhuma imagem selecionada</div>';
+}
+
+async function salvarDefeito() {
+  if (!ehAdminGlossario()) { App.toast(Auth.mensagemSemPermissao('cadastrar defeitos'), 'aviso'); return; }
+  const titulo = document.getElementById('defeitoTitulo').value.trim();
+  if (!titulo) { App.toast('Informe o título do defeito.', 'aviso'); return; }
+
+  const registro = {
+    id: document.getElementById('defeitoId').value || undefined,
+    titulo,
+    descricao: document.getElementById('defeitoDescricao').value.trim() || null,
+    imagem: defeitoImagemAtual || null,
+  };
+
+  const btn = document.querySelector('#glossarioForm .form-acoes .btn-primario');
+  const textoOriginal = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando...'; }
+
+  try {
+    const salvo = mapDefeitoDoBanco(await StoreSupabase.salvarGlossarioDefeito(registro));
+    const idx = GLOSSARIO_REGISTROS.findIndex(x => x.id === salvo.id);
+    if (idx >= 0) GLOSSARIO_REGISTROS[idx] = salvo;
+    else GLOSSARIO_REGISTROS.push(salvo);
+    App.toast('Defeito salvo no Supabase.');
+    fecharFormDefeito();
+    renderGlossario();
+  } catch (err) {
+    console.error('Erro ao salvar defeito', err);
+    App.toast(mensagemErroBanco(err, 'Não foi possível salvar o defeito no Supabase.'), 'erro');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal || 'Salvar defeito'; }
+  }
+}
+
+async function excluirDefeito(id) {
+  if (!ehAdminGlossario()) { App.toast(Auth.mensagemSemPermissao('excluir defeitos'), 'aviso'); return; }
+  const d = GLOSSARIO_REGISTROS.find(x => x.id === id);
+  if (!d) return;
+  if (!App.confirmar(`Excluir o defeito "${d.titulo || ''}" do glossário?`)) return;
+  try {
+    await StoreSupabase.removerGlossarioDefeito(id);
+    GLOSSARIO_REGISTROS = GLOSSARIO_REGISTROS.filter(x => x.id !== id);
+    App.toast('Defeito excluído do Supabase.', 'aviso');
+    renderGlossario();
+  } catch (err) {
+    console.error('Erro ao excluir defeito', err);
+    App.toast(mensagemErroBanco(err, 'Não foi possível excluir o defeito no Supabase.'), 'erro');
+  }
+}
+
+function mapDefeitoDoBanco(r) {
+  return {
+    id: r.id,
+    titulo: r.titulo || '',
+    descricao: r.descricao || '',
+    imagem: r.imagem || '',
+  };
+}
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape') return;
+  if (document.getElementById('glossarioForm')?.classList.contains('aberto')) { fecharFormDefeito(); return; }
+  if (document.getElementById('glossarioOverlay')?.classList.contains('aberto')) fecharGlossario();
+});
