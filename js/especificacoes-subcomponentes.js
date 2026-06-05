@@ -197,10 +197,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.montarLayout('especSubcomponentes', 'Medidas e Tolerâncias — Subcomponentes',
     'Tabela de referência com medidas e tolerâncias pré-preenchidas por subcomponente.');
 
-  App.acoesTopo(ehAdmin()
+  const btnGlossario = `<button class="btn btn-secundario" onclick="abrirGlossarioSub()">${ICN.olho}<span>Glossário de subcomponentes</span></button>`;
+  App.acoesTopo(`${btnGlossario}${ehAdmin()
     ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}<span>Novo subcomponente</span></button>
        <button class="btn btn-secundario" onclick="carregar()">Atualizar</button>`
-    : `${App.avisoModoConsulta()} <button class="btn btn-secundario" onclick="carregar()">Atualizar</button>`);
+    : `${App.avisoModoConsulta()} <button class="btn btn-secundario" onclick="carregar()">Atualizar</button>`}`);
 
   ['busca', 'fSubcomponente'].forEach(id => {
     const el = document.getElementById(id);
@@ -443,3 +444,238 @@ window.salvar = salvar;
 window.fecharModal = fecharModal;
 window.carregar = carregar;
 window.aplicarPadraoSubcomponente = aplicarPadraoSubcomponente;
+
+/* =====================================================================
+   GLOSSÁRIO DE SUBCOMPONENTES — página suspensa sobre Medidas e Tolerâncias.
+   Leitura: todos os perfis. Criar/editar/excluir: somente admin.
+   Foto WEBP é gravada como data URL base64 na tabela glossario_subcomponentes.
+   Espelha o "Glossário de defeitos" da aba Reprovados.
+   ===================================================================== */
+
+let GLOS_SUB_REGISTROS = [];
+let GLOS_SUB_CARREGADO = false;
+let GLOS_SUB_CARREGANDO = false;
+let GLOS_SUB_ERRO = '';
+let glosSubImagemAtual = '';
+
+const GLOS_SUB_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+
+function mensagemErroGlosSub(err, padrao) {
+  const msg = err?.message || err?.details || '';
+  if (!msg) return padrao;
+  if (/row-level security|violates row-level security/i.test(msg)) return 'Acesso bloqueado pelas regras de segurança do Supabase. Este glossário só pode ser editado por Admin.';
+  if (/relation .* does not exist|could not find the table|schema cache/i.test(msg)) return 'Tabela ainda não criada no Supabase. Rode supabase/2026-06-05-glossario-subcomponentes.sql.';
+  if (/JWT|token|auth/i.test(msg)) return 'Sessão expirada ou inválida. Saia e faça login novamente.';
+  return msg;
+}
+
+function abrirGlossarioSub() {
+  const overlay = document.getElementById('glosSubOverlay');
+  if (!overlay) return;
+  const btn = document.getElementById('btnNovoGlosSub');
+  if (btn) btn.hidden = !ehAdmin();
+  overlay.classList.add('aberto');
+  document.body.classList.add('glossario-aberto');
+  if (!GLOS_SUB_CARREGADO) carregarGlossarioSub();
+  else renderGlossarioSub();
+}
+
+function fecharGlossarioSub() {
+  fecharFormGlosSub();
+  document.getElementById('glosSubOverlay')?.classList.remove('aberto');
+  document.body.classList.remove('glossario-aberto');
+}
+
+async function carregarGlossarioSub() {
+  GLOS_SUB_CARREGANDO = true;
+  GLOS_SUB_ERRO = '';
+  renderGlossarioSub();
+  try {
+    const dados = await StoreSupabase.listarGlossarioSubcomponentes();
+    GLOS_SUB_REGISTROS = (dados || []).map(mapGlosSubDoBanco);
+    GLOS_SUB_CARREGADO = true;
+  } catch (err) {
+    console.error('Erro ao carregar glossário de subcomponentes', err);
+    GLOS_SUB_ERRO = mensagemErroGlosSub(err, 'Não foi possível carregar o glossário de subcomponentes do Supabase.');
+  } finally {
+    GLOS_SUB_CARREGANDO = false;
+    renderGlossarioSub();
+  }
+}
+
+function renderGlossarioSub() {
+  const cont = document.getElementById('glosSubLista');
+  if (!cont) return;
+  const admin = ehAdmin();
+  const btn = document.getElementById('btnNovoGlosSub');
+  if (btn) btn.hidden = !admin;
+
+  if (GLOS_SUB_CARREGANDO) {
+    cont.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Carregando glossário</h3><p>Buscando subcomponentes no Supabase...</p></div>`;
+    return;
+  }
+  if (GLOS_SUB_ERRO) {
+    cont.innerHTML = `<div class="vazio">${ICN.alerta}<h3>Erro ao carregar</h3><p>${U.esc(GLOS_SUB_ERRO)}</p>
+      <button class="btn btn-secundario" onclick="carregarGlossarioSub()">Tentar novamente</button></div>`;
+    return;
+  }
+  if (!GLOS_SUB_REGISTROS.length) {
+    cont.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhum subcomponente cadastrado</h3>
+      <p>${admin ? 'Use o botão "Adicionar subcomponente" para incluir a primeira foto, título e descrição.' : 'O administrador ainda não cadastrou subcomponentes no glossário.'}</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = `<div class="defeitos-grid">${GLOS_SUB_REGISTROS.map(d => {
+    const img = (d.imagem || '').startsWith('data:image/')
+      ? `<img class="defeito-img" src="${d.imagem}" alt="${U.esc(d.titulo)}" loading="lazy">`
+      : `<div class="defeito-img defeito-img-vazia">${ICN.vazioBox}<span>Sem imagem</span></div>`;
+    const acoes = admin
+      ? `<div class="defeito-acoes">
+          <button class="icone-btn" title="Editar" onclick="editarGlosSub('${d.id}')">${ICN.edit}</button>
+          <button class="icone-btn del" title="Excluir" onclick="excluirGlosSub('${d.id}')">${ICN.del}</button>
+        </div>`
+      : '';
+    return `<article class="defeito-card">
+      ${img}
+      <div class="defeito-corpo">
+        <div class="defeito-card-topo">
+          <h3>${U.esc(d.titulo || 'Sem título')}</h3>
+          ${acoes}
+        </div>
+        ${d.descricao ? `<p class="defeito-desc">${U.esc(d.descricao)}</p>` : '<p class="defeito-desc txt-cinza">Sem descrição.</p>'}
+      </div>
+    </article>`;
+  }).join('')}</div>`;
+}
+
+function abrirNovoGlosSub() {
+  if (!ehAdmin()) { App.toast(Auth.mensagemSemPermissao('cadastrar subcomponentes'), 'aviso'); return; }
+  document.getElementById('formGlosSub').reset();
+  document.getElementById('glosSubId').value = '';
+  glosSubImagemAtual = '';
+  atualizarPreviewGlosSub();
+  document.getElementById('glosSubFormTitulo').textContent = 'Novo subcomponente';
+  document.getElementById('glosSubForm').classList.add('aberto');
+}
+
+function editarGlosSub(id) {
+  if (!ehAdmin()) { App.toast(Auth.mensagemSemPermissao('editar subcomponentes'), 'aviso'); return; }
+  const d = GLOS_SUB_REGISTROS.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('formGlosSub').reset();
+  document.getElementById('glosSubId').value = d.id;
+  document.getElementById('glosSubTitulo').value = d.titulo || '';
+  document.getElementById('glosSubDescricao').value = d.descricao || '';
+  glosSubImagemAtual = d.imagem || '';
+  atualizarPreviewGlosSub();
+  document.getElementById('glosSubFormTitulo').textContent = `Editar subcomponente — ${d.titulo || ''}`;
+  document.getElementById('glosSubForm').classList.add('aberto');
+}
+
+function fecharFormGlosSub() {
+  document.getElementById('glosSubForm')?.classList.remove('aberto');
+}
+
+function aoSelecionarFotoGlosSub(event) {
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.type !== 'image/webp') {
+    App.toast('Selecione um arquivo no formato WEBP (.webp).', 'aviso');
+    input.value = '';
+    return;
+  }
+  if (file.size > GLOS_SUB_MAX_BYTES) {
+    App.toast('A imagem WEBP deve ter no máximo 2 MB.', 'aviso');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    glosSubImagemAtual = String(reader.result || '');
+    atualizarPreviewGlosSub();
+  };
+  reader.onerror = () => App.toast('Não foi possível ler a imagem selecionada.', 'erro');
+  reader.readAsDataURL(file);
+}
+
+function atualizarPreviewGlosSub() {
+  const alvo = document.getElementById('glosSubPreview');
+  if (!alvo) return;
+  alvo.innerHTML = (glosSubImagemAtual || '').startsWith('data:image/')
+    ? `<img src="${glosSubImagemAtual}" alt="Pré-visualização do subcomponente">`
+    : '<div class="defeito-preview-vazio">Nenhuma imagem selecionada</div>';
+}
+
+async function salvarGlosSub() {
+  if (!ehAdmin()) { App.toast(Auth.mensagemSemPermissao('cadastrar subcomponentes'), 'aviso'); return; }
+  const titulo = document.getElementById('glosSubTitulo').value.trim();
+  if (!titulo) { App.toast('Informe o título do subcomponente.', 'aviso'); return; }
+
+  const registro = {
+    id: document.getElementById('glosSubId').value || undefined,
+    titulo,
+    descricao: document.getElementById('glosSubDescricao').value.trim() || null,
+    imagem: glosSubImagemAtual || null,
+  };
+
+  const btn = document.querySelector('#glosSubForm .form-acoes .btn-primario');
+  const textoOriginal = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando...'; }
+
+  try {
+    const salvo = mapGlosSubDoBanco(await StoreSupabase.salvarGlossarioSubcomponente(registro));
+    const idx = GLOS_SUB_REGISTROS.findIndex(x => x.id === salvo.id);
+    if (idx >= 0) GLOS_SUB_REGISTROS[idx] = salvo;
+    else GLOS_SUB_REGISTROS.push(salvo);
+    App.toast('Subcomponente salvo no Supabase.');
+    fecharFormGlosSub();
+    renderGlossarioSub();
+  } catch (err) {
+    console.error('Erro ao salvar subcomponente do glossário', err);
+    App.toast(mensagemErroGlosSub(err, 'Não foi possível salvar o subcomponente no Supabase.'), 'erro');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal || 'Salvar subcomponente'; }
+  }
+}
+
+async function excluirGlosSub(id) {
+  if (!ehAdmin()) { App.toast(Auth.mensagemSemPermissao('excluir subcomponentes'), 'aviso'); return; }
+  const d = GLOS_SUB_REGISTROS.find(x => x.id === id);
+  if (!d) return;
+  if (!App.confirmar(`Excluir o subcomponente "${d.titulo || ''}" do glossário?`)) return;
+  try {
+    await StoreSupabase.removerGlossarioSubcomponente(id);
+    GLOS_SUB_REGISTROS = GLOS_SUB_REGISTROS.filter(x => x.id !== id);
+    App.toast('Subcomponente excluído do Supabase.', 'aviso');
+    renderGlossarioSub();
+  } catch (err) {
+    console.error('Erro ao excluir subcomponente do glossário', err);
+    App.toast(mensagemErroGlosSub(err, 'Não foi possível excluir o subcomponente no Supabase.'), 'erro');
+  }
+}
+
+function mapGlosSubDoBanco(r) {
+  return {
+    id: r.id,
+    titulo: r.titulo || '',
+    descricao: r.descricao || '',
+    imagem: r.imagem || '',
+  };
+}
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape') return;
+  if (document.getElementById('glosSubForm')?.classList.contains('aberto')) { fecharFormGlosSub(); return; }
+  if (document.getElementById('glosSubOverlay')?.classList.contains('aberto')) fecharGlossarioSub();
+});
+
+window.abrirGlossarioSub = abrirGlossarioSub;
+window.fecharGlossarioSub = fecharGlossarioSub;
+window.carregarGlossarioSub = carregarGlossarioSub;
+window.abrirNovoGlosSub = abrirNovoGlosSub;
+window.editarGlosSub = editarGlosSub;
+window.fecharFormGlosSub = fecharFormGlosSub;
+window.aoSelecionarFotoGlosSub = aoSelecionarFotoGlosSub;
+window.salvarGlosSub = salvarGlosSub;
+window.excluirGlosSub = excluirGlosSub;

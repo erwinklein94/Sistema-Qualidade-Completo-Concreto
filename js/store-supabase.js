@@ -406,6 +406,17 @@ const StoreSupabase = (() => {
   const salvarGlossarioDefeito = (registro) => gravarAdmin('glossario_defeitos', registro);
   const removerGlossarioDefeito = (id) => removerAdmin('glossario_defeitos', id);
 
+  async function listarGlossarioSubcomponentes() {
+    const { data, error } = await db()
+      .from('glossario_subcomponentes')
+      .select('*')
+      .order('criado_em', { ascending: true, nullsFirst: true });
+    if (error) throw error;
+    return data || [];
+  }
+  const salvarGlossarioSubcomponente = (registro) => gravarAdmin('glossario_subcomponentes', registro);
+  const removerGlossarioSubcomponente = (id) => removerAdmin('glossario_subcomponentes', id);
+
   return {
     perfil,
     usuarioAtual,
@@ -439,6 +450,9 @@ const StoreSupabase = (() => {
     listarGlossarioDefeitos,
     salvarGlossarioDefeito,
     removerGlossarioDefeito,
+    listarGlossarioSubcomponentes,
+    salvarGlossarioSubcomponente,
+    removerGlossarioSubcomponente,
   };
 })();
 
