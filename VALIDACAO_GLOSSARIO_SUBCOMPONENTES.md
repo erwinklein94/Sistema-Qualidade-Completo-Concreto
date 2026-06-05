@@ -1,58 +1,57 @@
 # Validação — Glossário de Subcomponentes
 
-Aba **Medidas e Tolerâncias** (área de Subcomponentes) · `especificacoes-subcomponentes.html`
+Botão **"Glossário de subcomponentes"** disponível em **duas abas** da área de
+Subcomponentes, mostrando **a mesma informação** (mesma tabela do Supabase):
 
-## O que foi entregue
-Botão **"Glossário de subcomponentes"** na barra de ações do topo da página. Ao
-clicar, abre uma **página suspensa** (overlay) por cima de Medidas e Tolerâncias,
-fechada apenas pelo **X** (ou tecla Esc). Dentro dela:
+1. **Medidas e Tolerâncias** — `especificacoes-subcomponentes.html`
+2. **Materiais Subcomponentes** — `subcomponentes.html#materiais`
 
-- **Admin**: adiciona quantos subcomponentes quiser, cada um com **foto WEBP**,
-  **título** e **descrição**; pode **editar** e **excluir**.
-- **Consulta / Fiscalização**: apenas **visualizam**; sem botões de adicionar,
-  editar ou excluir (e bloqueio reforçado no banco via RLS).
+Ao clicar (em qualquer das duas), abre a **mesma página suspensa** (overlay),
+fechada pelo **X** (ou tecla Esc).
 
-Espelha a funcionalidade já existente do **"Glossário de defeitos"** (aba Reprovados).
+## Sem duplicação — módulo único compartilhado
+Toda a lógica **e** o markup do glossário ficam num só arquivo:
+**`js/glossario-subcomponentes.js`**. Ele:
+- injeta o overlay + formulário no `body` via JS (nenhuma página repete o HTML);
+- expõe `window.abrirGlossarioSub()` e os handlers do formulário;
+- lê/grava na mesma tabela `glossario_subcomponentes` via `StoreSupabase`.
+
+As duas páginas apenas **carregam o módulo** e **adicionam um botão** que chama
+`abrirGlossarioSub()`. Editar o conteúdo numa aba reflete na outra (mesma fonte).
+
+## Permissões
+- **Admin**: adiciona/edita/exclui (foto WEBP + título + descrição).
+- **Consulta / Fiscalização**: apenas visualizam (sem botões de escrita; bloqueio
+  reforçado no banco por RLS).
 
 ## Persistência no Supabase
-Tabela nova **`public.glossario_subcomponentes`** (mesma estrutura de
-`glossario_defeitos`):
+Tabela **`public.glossario_subcomponentes`** (`titulo`, `descricao`, `imagem` WEBP
+em base64, + auditoria). RLS: `SELECT` para usuário ativo; escrita só admin.
 
-| coluna | uso |
-|---|---|
-| `titulo` | nome do subcomponente (obrigatório) |
-| `descricao` | texto explicativo |
-| `imagem` | foto WEBP como data URL base64 (gravada no próprio banco) |
-| `criado_em` / `atualizado_em` / `criado_por` / `atualizado_por` | auditoria automática |
+-> Rodar uma vez no Supabase: `supabase/2026-06-05-glossario-subcomponentes.sql`.
 
-**RLS**: `SELECT` para qualquer usuário ativo; `INSERT/UPDATE/DELETE` somente admin
-(`public.eh_admin()`).
-
-➡️ **Rodar no Supabase antes de usar:** `supabase/2026-06-05-glossario-subcomponentes.sql`
-(pré-requisito já existente: `supabase/2026-05-26-perfis-e-rls.sql`).
-
-## Arquivos alterados / criados
-- **+** `supabase/2026-06-05-glossario-subcomponentes.sql` — tabela + RLS + gatilho.
-- **~** `js/store-supabase.js` — `listarGlossarioSubcomponentes`,
-  `salvarGlossarioSubcomponente`, `removerGlossarioSubcomponente`.
-- **~** `especificacoes-subcomponentes.html` — overlay do glossário + modal de
-  formulário (admin); cache-bust do JS para `?v=20260605-glossario-subcomponentes`.
-- **~** `js/especificacoes-subcomponentes.js` — botão no topo + módulo do glossário.
+## Arquivos
+- (+) `js/glossario-subcomponentes.js` — módulo único (lógica + markup injetado).
+- (+) `supabase/2026-06-05-glossario-subcomponentes.sql` — tabela + RLS + gatilho.
+- (~) `js/store-supabase.js` — funções listar/salvar/remover do glossário.
+- (~) `especificacoes-subcomponentes.html` — carrega o módulo; markup inline removido.
+- (~) `js/especificacoes-subcomponentes.js` — só o botão no topo (módulo extraído).
+- (~) `subcomponentes.html` — carrega o módulo; cache-bust atualizado.
+- (~) `js/subcomponentes.js` — botão na aba Materiais + binding ao módulo.
 
 ## Padrão Rumo (marca-rumo)
-Nenhum CSS novo: o módulo reutiliza as classes já existentes em `css/style.css`
-(`glossario-overlay`, `glossario-painel`, `glossario-cab`, `defeitos-grid`,
-`defeito-card`, `defeito-preview`, `btn-verde`...), que já usam os tokens da marca
-— cabeçalho em azul `#003865`, kicker em verde-claro, botão de ação em verde,
-cards brancos com chanfro. Logo, herda a identidade Rumo sem reescrever estilo.
+Sem CSS novo: reuso das classes já existentes (`glossario-overlay`, `defeito-card`,
+`btn-verde`...), que já carregam os tokens da marca (azul #003865, verde-claro,
+botão verde, cards com chanfro).
 
 ## Karpathy (guidelines)
-- **Simplicidade / cirúrgico**: clonado o padrão validado do glossário de defeitos;
-  zero refatoração de código adjacente; sem CSS novo (reuso de classes).
-- **Sem colisões**: variáveis/funções com prefixo `glosSub` / `GLOS_SUB_`; reuso de
-  `ehAdmin()` já existente na página.
+- Sem duplicação: lógica e markup num único módulo; as abas só acrescentam um botão.
+- Cirúrgico: nas páginas existentes só entraram o <script> e o botão.
+- Sem colisão de escopo: módulo em IIFE, expondo apenas a API window.*GlosSub*.
 
 ## Verificações feitas
-- `node -c` em `store-supabase.js` e `especificacoes-subcomponentes.js` — OK.
-- Handlers `onclick`/`onchange` do HTML ↔ funções globais do JS — todos presentes.
-- Todos os `getElementById('glosSub*')` do JS ↔ IDs no HTML — todos presentes.
+- node -c em glossario-subcomponentes.js, store-supabase.js,
+  especificacoes-subcomponentes.js e subcomponentes.js — OK.
+- Módulo carregado nas duas páginas; ambos os botões chamam abrirGlossarioSub().
+- Handlers do markup injetado <-> API pública do módulo — todos presentes.
+- Markup inline antigo removido de especificacoes-subcomponentes.html (0 ocorrências).

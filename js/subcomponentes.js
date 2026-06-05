@@ -298,6 +298,7 @@ const SubcomponentesApp = {
   },
   bindTopActions() {
     document.getElementById('subRefreshBtn')?.addEventListener('click', () => this.refreshData());
+    document.getElementById('topGlossarioSub')?.addEventListener('click', () => window.abrirGlossarioSub?.());
     document.querySelectorAll('[data-top-modal]').forEach((btn) => {
       btn.addEventListener('click', () => openModal(btn.dataset.topModal));
     });
@@ -819,6 +820,7 @@ function topActions() {
     actions.push(canWrite() ? `<button class="btn btn-primario btn-sm" type="button" data-top-modal="empresa">${add}<span>Nova empresa</span></button>` : readonly);
   }
   if (state.active === 'materiais') {
+    actions.push(`<button class="btn btn-secundario btn-sm" type="button" id="topGlossarioSub">${window.ICN?.olho || ''}<span>Glossário de subcomponentes</span></button>`);
     actions.push(canWrite() ? `<button class="btn btn-primario btn-sm" type="button" data-top-modal="material">${add}<span>Novo material</span></button>` : readonly);
   }
   if (state.active === 'estoque') {

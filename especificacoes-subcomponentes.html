@@ -72,65 +72,8 @@
     </div>
   </div>
 
-  <!-- ===================== GLOSSÁRIO DE SUBCOMPONENTES (página suspensa) ===================== -->
-  <div class="glossario-overlay" id="glosSubOverlay">
-    <div class="glossario-painel">
-      <div class="glossario-cab">
-        <div class="glossario-cab-id">
-          <div class="topo-kicker">Rumo · Subcomponentes</div>
-          <h2>Glossário de subcomponentes</h2>
-          <div class="glossario-sub">Referência visual dos subcomponentes — foto, título e descrição</div>
-        </div>
-        <div class="glossario-cab-acoes">
-          <button class="btn btn-verde" id="btnNovoGlosSub" type="button" onclick="abrirNovoGlosSub()" data-glossario-admin hidden>Adicionar subcomponente</button>
-          <button class="fechar-modal glossario-fechar" type="button" onclick="fecharGlossarioSub()" title="Fechar glossário" aria-label="Fechar glossário">⨯</button>
-        </div>
-      </div>
-      <div class="glossario-corpo" id="glosSubLista"></div>
-    </div>
-  </div>
-
-  <!-- Formulário de subcomponente (somente admin) -->
-  <div class="modal-overlay glossario-form-overlay" id="glosSubForm">
-    <div class="modal glossario-form-modal">
-      <div class="modal-cab">
-        <h2 id="glosSubFormTitulo">Novo subcomponente</h2>
-        <button class="fechar-modal" type="button" onclick="fecharFormGlosSub()">⨯</button>
-      </div>
-      <div class="modal-corpo">
-        <form id="formGlosSub" onsubmit="return false">
-          <input type="hidden" id="glosSubId">
-          <div class="form-grid">
-            <div class="form-secao">Subcomponente</div>
-            <div class="campo full">
-              <label>Título do subcomponente <span class="obrig">*</span></label>
-              <input id="glosSubTitulo" type="text" maxlength="160" placeholder="Ex.: Palmilha Branca TR68 FAST-CLIP">
-            </div>
-            <div class="campo full">
-              <label>Descrição</label>
-              <textarea id="glosSubDescricao" rows="4" placeholder="Função, característica visual, ponto de atenção na inspeção..."></textarea>
-            </div>
-
-            <div class="form-secao">Foto (WEBP)</div>
-            <div class="campo full">
-              <label>Imagem do subcomponente <span class="dica">(formato .webp, até 2 MB)</span></label>
-              <input id="glosSubArquivo" type="file" accept="image/webp" onchange="aoSelecionarFotoGlosSub(event)">
-              <small>A imagem é gravada no banco do Supabase junto com o título e a descrição.</small>
-            </div>
-            <div class="campo full">
-              <div class="defeito-preview" id="glosSubPreview">
-                <div class="defeito-preview-vazio">Nenhuma imagem selecionada</div>
-              </div>
-            </div>
-          </div>
-          <div class="form-acoes">
-            <button type="button" class="btn btn-secundario" onclick="fecharFormGlosSub()">Cancelar</button>
-            <button type="button" class="btn btn-primario" onclick="salvarGlosSub()">Salvar subcomponente</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+  <!-- O glossário de subcomponentes (overlay + formulário) é injetado pelo módulo
+       compartilhado js/glossario-subcomponentes.js, reutilizado também na aba Materiais. -->
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
@@ -138,8 +81,9 @@
   <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
   <script>Auth.exigirLogin();</script>
   <script src="js/config.js?v=20260531-topo-limpo-v1"></script>
-  <script src="js/store-supabase.js?v=20260531-especificacoes"></script>
+  <script src="js/store-supabase.js?v=20260605-glossario-subcomponentes"></script>
   <script src="js/comum.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/glossario-subcomponentes.js?v=20260605-glossario-subcomponentes"></script>
   <script src="js/especificacoes-subcomponentes.js?v=20260605-glossario-subcomponentes"></script>
 </body>
 </html>
