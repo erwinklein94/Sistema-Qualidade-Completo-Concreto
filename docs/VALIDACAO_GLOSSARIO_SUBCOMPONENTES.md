@@ -55,3 +55,13 @@ botão verde, cards com chanfro).
 - Módulo carregado nas duas páginas; ambos os botões chamam abrirGlossarioSub().
 - Handlers do markup injetado <-> API pública do módulo — todos presentes.
 - Markup inline antigo removido de especificacoes-subcomponentes.html (0 ocorrências).
+
+## Atualização — Link do relatório (2026-06-07)
+- Campo **"Link do relatório"** no formulário (admin). Salvo na coluna nova
+  `link_relatorio` da tabela `glossario_subcomponentes`.
+- No card aparece o botão **"Ver relatório"** (abre em nova aba), visível a todos
+  os perfis. Só renderiza para URLs http(s) — `javascript:` e afins são ignorados.
+- Migração: `supabase/2026-06-07-glossario-subcomponentes-link.sql` (1 coluna).
+- `store-supabase.js` não mudou: repassa o objeto inteiro e lê `*`.
+- Testado em DOM simulado: admin (link+editar/excluir), consulta (só link),
+  bloqueio de `javascript:`, e ausência de botão sem link.

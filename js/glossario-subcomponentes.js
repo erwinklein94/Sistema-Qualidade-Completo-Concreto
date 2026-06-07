@@ -22,6 +22,10 @@
   function esc(v) { return (typeof U !== 'undefined' && U.esc) ? U.esc(v == null ? '' : v) : String(v == null ? '' : v); }
   function ic(nome) { return (typeof ICN !== 'undefined' && ICN[nome]) ? ICN[nome] : ''; }
   function ehAdmin() { return !!(Auth?.permissoesAtuais?.().admin); }
+  function urlSegura(v) {
+    const s = String(v == null ? '' : v).trim();
+    return /^https?:\/\//i.test(s) ? s : '';
+  }
 
   function mensagemErro(err, padrao) {
     const msg = err?.message || err?.details || '';
@@ -70,6 +74,11 @@
                 <div class="campo full">
                   <label>Descrição</label>
                   <textarea id="glosSubDescricao" rows="4" placeholder="Função, característica visual, ponto de atenção na inspeção..."></textarea>
+                </div>
+                <div class="campo full">
+                  <label>Link do relatório <span class="dica">(opcional)</span></label>
+                  <input id="glosSubLink" type="url" inputmode="url" maxlength="2000" placeholder="https://... (cole o endereço do relatório do subcomponente)">
+                  <small>Aparece como o botão "Ver relatório" no card, que abre o relatório em nova aba.</small>
                 </div>
 
                 <div class="form-secao">Foto (WEBP)</div>
@@ -172,6 +181,7 @@
             ${acoes}
           </div>
           ${d.descricao ? `<p class="defeito-desc">${esc(d.descricao)}</p>` : '<p class="defeito-desc txt-cinza">Sem descrição.</p>'}
+          ${urlSegura(d.link) ? `<a class="btn btn-secundario btn-sm" style="align-self:flex-start" href="${esc(urlSegura(d.link))}" target="_blank" rel="noopener noreferrer">${ic('olho')}<span>Ver relatório</span></a>` : ''}
         </div>
       </article>`;
     }).join('')}</div>`;
@@ -195,6 +205,7 @@
     document.getElementById('glosSubId').value = d.id;
     document.getElementById('glosSubTitulo').value = d.titulo || '';
     document.getElementById('glosSubDescricao').value = d.descricao || '';
+    document.getElementById('glosSubLink').value = d.link || '';
     imagemAtual = d.imagem || '';
     atualizarPreview();
     document.getElementById('glosSubFormTitulo').textContent = `Editar subcomponente — ${d.titulo || ''}`;
@@ -241,10 +252,17 @@
     const titulo = document.getElementById('glosSubTitulo').value.trim();
     if (!titulo) { App?.toast('Informe o título do subcomponente.', 'aviso'); return; }
 
+    const linkInformado = document.getElementById('glosSubLink').value.trim();
+    if (linkInformado && !urlSegura(linkInformado)) {
+      App?.toast('O link do relatório deve começar com http:// ou https://', 'aviso');
+      return;
+    }
+
     const registro = {
       id: document.getElementById('glosSubId').value || undefined,
       titulo,
       descricao: document.getElementById('glosSubDescricao').value.trim() || null,
+      link_relatorio: linkInformado || null,
       imagem: imagemAtual || null,
     };
 
@@ -289,6 +307,7 @@
       id: r.id,
       titulo: r.titulo || '',
       descricao: r.descricao || '',
+      link: r.link_relatorio || '',
       imagem: r.imagem || '',
     };
   }
