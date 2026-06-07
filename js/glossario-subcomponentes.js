@@ -19,9 +19,9 @@
 
   const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 
-  function esc(v) { return window.U?.esc ? window.U.esc(v) : String(v == null ? '' : v); }
-  function ic(nome) { return window.ICN?.[nome] || ''; }
-  function ehAdmin() { return !!(window.Auth?.permissoesAtuais?.().admin); }
+  function esc(v) { return (typeof U !== 'undefined' && U.esc) ? U.esc(v == null ? '' : v) : String(v == null ? '' : v); }
+  function ic(nome) { return (typeof ICN !== 'undefined' && ICN[nome]) ? ICN[nome] : ''; }
+  function ehAdmin() { return !!(Auth?.permissoesAtuais?.().admin); }
 
   function mensagemErro(err, padrao) {
     const msg = err?.message || err?.details || '';
@@ -120,7 +120,7 @@
     ERRO = '';
     render();
     try {
-      const dados = await window.StoreSupabase.listarGlossarioSubcomponentes();
+      const dados = await StoreSupabase.listarGlossarioSubcomponentes();
       REGISTROS = (dados || []).map(mapDoBanco);
       CARREGADO = true;
     } catch (err) {
@@ -178,7 +178,7 @@
   }
 
   function abrirNovo() {
-    if (!ehAdmin()) { window.App?.toast(window.Auth?.mensagemSemPermissao('cadastrar subcomponentes'), 'aviso'); return; }
+    if (!ehAdmin()) { App?.toast(Auth?.mensagemSemPermissao('cadastrar subcomponentes'), 'aviso'); return; }
     document.getElementById('formGlosSub').reset();
     document.getElementById('glosSubId').value = '';
     imagemAtual = '';
@@ -188,7 +188,7 @@
   }
 
   function editar(id) {
-    if (!ehAdmin()) { window.App?.toast(window.Auth?.mensagemSemPermissao('editar subcomponentes'), 'aviso'); return; }
+    if (!ehAdmin()) { App?.toast(Auth?.mensagemSemPermissao('editar subcomponentes'), 'aviso'); return; }
     const d = REGISTROS.find(x => x.id === id);
     if (!d) return;
     document.getElementById('formGlosSub').reset();
@@ -210,12 +210,12 @@
     const file = input.files && input.files[0];
     if (!file) return;
     if (file.type !== 'image/webp') {
-      window.App?.toast('Selecione um arquivo no formato WEBP (.webp).', 'aviso');
+      App?.toast('Selecione um arquivo no formato WEBP (.webp).', 'aviso');
       input.value = '';
       return;
     }
     if (file.size > MAX_BYTES) {
-      window.App?.toast('A imagem WEBP deve ter no máximo 2 MB.', 'aviso');
+      App?.toast('A imagem WEBP deve ter no máximo 2 MB.', 'aviso');
       input.value = '';
       return;
     }
@@ -224,7 +224,7 @@
       imagemAtual = String(reader.result || '');
       atualizarPreview();
     };
-    reader.onerror = () => window.App?.toast('Não foi possível ler a imagem selecionada.', 'erro');
+    reader.onerror = () => App?.toast('Não foi possível ler a imagem selecionada.', 'erro');
     reader.readAsDataURL(file);
   }
 
@@ -237,9 +237,9 @@
   }
 
   async function salvar() {
-    if (!ehAdmin()) { window.App?.toast(window.Auth?.mensagemSemPermissao('cadastrar subcomponentes'), 'aviso'); return; }
+    if (!ehAdmin()) { App?.toast(Auth?.mensagemSemPermissao('cadastrar subcomponentes'), 'aviso'); return; }
     const titulo = document.getElementById('glosSubTitulo').value.trim();
-    if (!titulo) { window.App?.toast('Informe o título do subcomponente.', 'aviso'); return; }
+    if (!titulo) { App?.toast('Informe o título do subcomponente.', 'aviso'); return; }
 
     const registro = {
       id: document.getElementById('glosSubId').value || undefined,
@@ -253,34 +253,34 @@
     if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando...'; }
 
     try {
-      const salvo = mapDoBanco(await window.StoreSupabase.salvarGlossarioSubcomponente(registro));
+      const salvo = mapDoBanco(await StoreSupabase.salvarGlossarioSubcomponente(registro));
       const idx = REGISTROS.findIndex(x => x.id === salvo.id);
       if (idx >= 0) REGISTROS[idx] = salvo;
       else REGISTROS.push(salvo);
-      window.App?.toast('Subcomponente salvo no Supabase.');
+      App?.toast('Subcomponente salvo no Supabase.');
       fecharForm();
       render();
     } catch (err) {
       console.error('Erro ao salvar subcomponente do glossário', err);
-      window.App?.toast(mensagemErro(err, 'Não foi possível salvar o subcomponente no Supabase.'), 'erro');
+      App?.toast(mensagemErro(err, 'Não foi possível salvar o subcomponente no Supabase.'), 'erro');
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = textoOriginal || 'Salvar subcomponente'; }
     }
   }
 
   async function excluir(id) {
-    if (!ehAdmin()) { window.App?.toast(window.Auth?.mensagemSemPermissao('excluir subcomponentes'), 'aviso'); return; }
+    if (!ehAdmin()) { App?.toast(Auth?.mensagemSemPermissao('excluir subcomponentes'), 'aviso'); return; }
     const d = REGISTROS.find(x => x.id === id);
     if (!d) return;
-    if (!window.App?.confirmar(`Excluir o subcomponente "${d.titulo || ''}" do glossário?`)) return;
+    if (!App?.confirmar(`Excluir o subcomponente "${d.titulo || ''}" do glossário?`)) return;
     try {
-      await window.StoreSupabase.removerGlossarioSubcomponente(id);
+      await StoreSupabase.removerGlossarioSubcomponente(id);
       REGISTROS = REGISTROS.filter(x => x.id !== id);
-      window.App?.toast('Subcomponente excluído do Supabase.', 'aviso');
+      App?.toast('Subcomponente excluído do Supabase.', 'aviso');
       render();
     } catch (err) {
       console.error('Erro ao excluir subcomponente do glossário', err);
-      window.App?.toast(mensagemErro(err, 'Não foi possível excluir o subcomponente no Supabase.'), 'erro');
+      App?.toast(mensagemErro(err, 'Não foi possível excluir o subcomponente no Supabase.'), 'erro');
     }
   }
 
