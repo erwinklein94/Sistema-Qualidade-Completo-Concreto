@@ -134,15 +134,37 @@ const App = {
     const jaAberto = painel && painel.classList.contains('aberto');
     this.fecharDropdowns();
     if (painel && !jaAberto) {
+      this.posicionarDropdownMobile(painel);
       painel.classList.add('aberto');
       const botao = painel.previousElementSibling;
       if (botao) botao.setAttribute('aria-expanded', 'true');
     }
   },
 
+  posicionarDropdownMobile(painel) {
+    if (!painel) return;
+    painel.removeAttribute('style');
+    if (!window.matchMedia || !window.matchMedia('(max-width: 820px)').matches) return;
+
+    const topo = document.querySelector('.topo');
+    const rect = topo ? topo.getBoundingClientRect() : null;
+    const margem = 10;
+    const top = Math.max(margem, Math.round((rect?.bottom || 88) + 8));
+
+    painel.style.position = 'fixed';
+    painel.style.left = `${margem}px`;
+    painel.style.right = `${margem}px`;
+    painel.style.top = `${top}px`;
+    painel.style.width = 'auto';
+    painel.style.minWidth = '0';
+    painel.style.maxWidth = 'none';
+    painel.style.maxHeight = `calc(100vh - ${top + margem}px)`;
+  },
+
   fecharDropdowns() {
     document.querySelectorAll('.menu-dd-painel.aberto').forEach(p => {
       p.classList.remove('aberto');
+      p.removeAttribute('style');
       const botao = p.previousElementSibling;
       if (botao) botao.setAttribute('aria-expanded', 'false');
     });
@@ -185,7 +207,7 @@ const App = {
           ${this.menuDropdownsHtml()}
           <button class="btn btn-secundario btn-sm tema-toggle" id="botaoTema" type="button" onclick="App.alternarTema()" aria-pressed="false" title="Alternar tema">${ICN.tema}<span>Tema escuro</span></button>
           <div class="usuario-auth" id="areaUsuario"></div>
-          <div class="topo-acoes" id="topoAcoes">${window.Exportacoes && paginaAtiva !== 'banco' ? window.Exportacoes.botoes() : ''}</div>
+          <div class="topo-pagina-acoes" id="topoAcoes">${window.Exportacoes && paginaAtiva !== 'banco' ? window.Exportacoes.botoes() : ''}</div>
         </div>
       </header>`;
 

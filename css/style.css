@@ -6427,3 +6427,148 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .login-page::before { display: none; }
 /* garante o card sempre acima da foto */
 .login-card { position: relative; z-index: 1; }
+
+/* =====================================================================
+   CORREÇÃO MOBILE GLOBAL — topo/menu padronizados e logout visível
+   2026-06-09
+   ===================================================================== */
+@media (max-width: 820px) {
+  .topo {
+    overflow: visible !important;
+    z-index: 120 !important;
+    gap: 10px !important;
+  }
+
+  .topo > .flex {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .topo-identidade {
+    min-width: 0;
+  }
+
+  .topo-acoes {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .menu-dropdowns {
+    grid-column: 1 / -1;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  .menu-dd {
+    min-width: 0;
+    width: 100%;
+    position: static;
+  }
+
+  .menu-dd-botao,
+  .topo .tema-toggle,
+  .usuario-auth > .btn,
+  #topoAcoes > .btn,
+  #topoAcoes > a.btn,
+  .exportacoes-grupo .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    text-align: center;
+    white-space: normal !important;
+    line-height: 1.15;
+  }
+
+  .menu-dd-botao span,
+  .topo .tema-toggle span {
+    display: inline !important;
+  }
+
+  .menu-dd-botao .ic,
+  .topo .tema-toggle .ic,
+  .usuario-auth .btn .ic,
+  #topoAcoes .btn .ic,
+  #topoAcoes a.btn .ic {
+    flex-shrink: 0;
+  }
+
+  .usuario-auth {
+    display: flex !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .usuario-auth .usuario-pill {
+    display: none !important;
+  }
+
+  .topo-pagina-acoes,
+  #topoAcoes {
+    grid-column: 1 / -1;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .exportacoes-grupo {
+    grid-column: 1 / -1;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .menu-dd-painel {
+    z-index: 1000 !important;
+    border-radius: 18px !important;
+    padding: 10px !important;
+    max-width: none !important;
+    box-shadow: 0 18px 50px rgba(0, 38, 77, .28) !important;
+  }
+
+  .menu-dd-link {
+    white-space: normal !important;
+    font-size: 13px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 460px) {
+  .topo-acoes,
+  .menu-dropdowns,
+  .topo-pagina-acoes,
+  #topoAcoes {
+    gap: 7px !important;
+  }
+
+  .topo .btn,
+  .menu-dd-botao,
+  .usuario-auth > .btn,
+  #topoAcoes > .btn,
+  #topoAcoes > a.btn,
+  .exportacoes-grupo .btn {
+    min-height: 38px !important;
+    padding: 8px 9px !important;
+    font-size: 12px !important;
+  }
+
+  .menu-dd-botao {
+    gap: 6px !important;
+  }
+
+  .menu-dd-botao .ic,
+  .topo .tema-toggle .ic {
+    width: 16px;
+    height: 16px;
+  }
+}
