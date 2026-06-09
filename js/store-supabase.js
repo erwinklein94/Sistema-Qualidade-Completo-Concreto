@@ -502,6 +502,35 @@ const StoreSupabase = (() => {
     return data;
   }
 
+  async function obterConfiguracaoSistema(chave) {
+    const { data, error } = await db()
+      .from('configuracoes_sistema')
+      .select('*')
+      .eq('chave', chave)
+      .maybeSingle();
+    if (error) throw error;
+    return data || null;
+  }
+
+  async function salvarConfiguracaoSistema(registro = {}) {
+    exigirAdmin('editar configurações do sistema');
+    const user = await usuarioAtual();
+    const payload = {
+      chave: String(registro.chave || '').trim(),
+      valor: registro.valor == null ? '' : String(registro.valor).trim(),
+      atualizado_por: user?.id || null,
+    };
+    if (!payload.chave) throw new Error('Informe a chave da configuração.');
+
+    const { data, error } = await db()
+      .from('configuracoes_sistema')
+      .upsert(payload, { onConflict: 'chave' })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async function listarUsuariosApp() {
     exigirPermissao('gerenciarUsuarios', 'administrar usuários');
     const { data, error } = await db()
@@ -670,6 +699,8 @@ const StoreSupabase = (() => {
     removerInspecaoPista,
     obterAvisoDashboard,
     salvarAvisoDashboard,
+    obterConfiguracaoSistema,
+    salvarConfiguracaoSistema,
     listarUsuariosApp,
     salvarUsuarioApp,
     listarAuditoria,

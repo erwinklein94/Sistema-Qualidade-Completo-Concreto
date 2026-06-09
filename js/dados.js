@@ -1,5 +1,8 @@
 /* =====================================================================
    DADOS.JS — Administração sem importação de massa
+   20260609-custo-nao-qualidade: configuração do custo unitário do
+   dormente (tabela configuracoes_sistema), usado pelo Indicador Semanal
+   para calcular o Custo da Não Qualidade.
    ===================================================================== */
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
@@ -35,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('fSemanaDados')?.addEventListener('change', renderResumoSemanaDados);
   atualizarKpis();
   renderResumoSemanaDados();
+  carregarCustoDormente();
 });
 
 function atualizarKpis() {
@@ -134,4 +138,62 @@ function registrarExportacaoDadosResumo(periodo, totalProd, prod, totalRef, reps
       ]
     }]
   });
+}
+
+/* ---------------------------------------------------------------------
+   Custo da Não Qualidade — custo unitário do dormente (admin)
+   --------------------------------------------------------------------- */
+async function carregarCustoDormente() {
+  const campo = document.getElementById('custoDormente');
+  const status = document.getElementById('custoDormenteStatus');
+  if (!campo) return;
+  if (status) status.textContent = 'Carregando valor configurado...';
+  try {
+    const cfg = await StoreSupabase.obterConfiguracaoSistema('custo_dormente');
+    const custo = numeroCustoDormente(cfg?.valor);
+    campo.value = custo > 0 ? String(cfg.valor) : '';
+    if (status) {
+      status.textContent = custo > 0
+        ? `Valor atual: ${moedaBRDados(custo)}${cfg?.atualizado_em ? ` · atualizado em ${new Date(cfg.atualizado_em).toLocaleString('pt-BR')}` : ''}`
+        : 'Nenhum custo configurado. O Indicador Semanal passa a exibir o custo da não qualidade após o cadastro.';
+    }
+  } catch (err) {
+    console.error('Erro ao carregar custo do dormente', err);
+    if (status) {
+      status.textContent = /configuracoes_sistema|Could not find the table|schema cache/i.test(err?.message || '')
+        ? 'A tabela configuracoes_sistema ainda não existe no Supabase. Rode o arquivo supabase/2026-06-09-configuracoes-sistema.sql no SQL Editor.'
+        : (err?.message || 'Não foi possível carregar o custo configurado.');
+    }
+  }
+}
+
+async function salvarCustoDormente() {
+  if (!Auth.pode('gerenciarSistema')) { App.toast(Auth.mensagemSemPermissao('configurar o custo do dormente'), 'aviso'); return; }
+  const campo = document.getElementById('custoDormente');
+  const custo = numeroCustoDormente(campo?.value);
+  if (!(custo > 0)) { App.toast('Informe um custo unitário válido, maior que zero. Ex.: 850,00', 'aviso'); return; }
+  const btn = document.getElementById('btnSalvarCusto');
+  if (btn) btn.disabled = true;
+  try {
+    await StoreSupabase.salvarConfiguracaoSistema({ chave: 'custo_dormente', valor: custo.toFixed(2).replace('.', ',') });
+    App.toast('Custo unitário do dormente salvo. O Indicador Semanal já usa o novo valor.');
+    await carregarCustoDormente();
+  } catch (err) {
+    console.error('Erro ao salvar custo do dormente', err);
+    App.toast(err?.message || 'Não foi possível salvar o custo do dormente.', 'erro');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function numeroCustoDormente(txt) {
+  let s = String(txt ?? '').trim().replace(/[R$\s]/g, '');
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function moedaBRDados(v) {
+  return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }

@@ -241,3 +241,24 @@ Arquivos adicionados/alterados nesta integração:
 Esta versão adiciona a aba **Fluxo de Liberação**, que cruza automaticamente Produção e Ensaios de Liberação para mostrar, por fábrica/projeto/bitola/série, em qual etapa cada conjunto de lotes está: formação da série, cura 14 dias, aguardando ensaio 14 dias, cura 28 dias, aguardando ensaio 28 dias, contraensaios, liberado para transporte ou travado para decisão da coordenação/especialistas.
 
 Consulte `docs/README_FLUXO_LIBERACAO_AUTOMATICO.md` para detalhes da regra implementada.
+
+## Custo da Não Qualidade — Indicador Semanal
+
+O **Indicador Semanal** agora exibe o Custo da Não Qualidade da semana: total de dormentes reprovados no recorte filtrado multiplicado pelo custo unitário do dormente.
+
+- O custo unitário é configurado somente pelo perfil **admin**, na tela **Sistema → Dados do Sistema**, card "Custo da não qualidade".
+- O valor fica salvo na tabela `configuracoes_sistema` (chave `custo_dormente`) e é lido automaticamente pelo Indicador Semanal.
+- Enquanto o custo não estiver configurado, o KPI mostra "—" com a orientação de configurar em Dados do Sistema.
+
+Antes de usar, rode no Supabase SQL Editor:
+
+```text
+supabase/2026-06-09-configuracoes-sistema.sql
+```
+
+A página **Indicador Semanal** também passou a espelhar, respeitando os mesmos filtros de fornecedor/projeto/bitola/semana/período:
+
+- a tabela completa de **Dormentes Reprovados** da semana (mesmas colunas da aba Reprovados: semana, período operacional, data, lote, projeto, bitola, molde, cavidade, motivo, detalhe e refugos);
+- a tabela de **Ensaios de Liberação** realizados na semana (data, semana, fornecedor, projeto, bitola, lote ensaiado, série liberada, resultado, quantidade, responsável e relatório).
+
+As exportações Excel/PDF do Indicador Semanal incluem as duas novas seções e a coluna de Custo da Não Qualidade por linha consolidada.
