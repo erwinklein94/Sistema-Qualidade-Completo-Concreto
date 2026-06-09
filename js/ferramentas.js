@@ -15,32 +15,6 @@ const FERRAMENTAS_CONFIG = {
       ['Validação automática', 'Área preparada para regras de conferência e inconsistências.'],
       ['Relatórios', 'Futuramente poderá gerar resumo, PDF ou planilha de conferência.']
     ]
-  },
-  databooks: {
-    ativa: 'ferramenta-databooks',
-    titulo: 'Data books',
-    subtitulo: 'Área reservada para organização e geração de data books do controle de qualidade.',
-    etiqueta: 'Documentação técnica',
-    acaoPrincipal: 'Novo data book',
-    descricao: 'Esta página foi criada como estrutura inicial para centralizar data books. Depois você poderá adicionar geração de documentos, filtros por lote, anexos, histórico e exportações.',
-    proximos: [
-      ['Cadastro de data books', 'Espaço para criar e acompanhar pacotes documentais.'],
-      ['Vínculo com lotes', 'Preparado para relacionar data books a dormentes, subcomponentes ou fornecedores.'],
-      ['Exportação', 'Área pronta para futuramente emitir PDF, Excel ou pacote de arquivos.']
-    ]
-  },
-  flashcards: {
-    ativa: 'ferramenta-flashcards',
-    titulo: 'Flash-Cards',
-    subtitulo: 'Área reservada para treinamento rápido, revisão e padronização de conhecimento dos fiscais.',
-    etiqueta: 'Treinamento e padronização',
-    acaoPrincipal: 'Novo flash-card',
-    descricao: 'Esta página foi criada como base para flash-cards de inspeção, normas, critérios de aceitação, não conformidades e orientações rápidas para o time de campo.',
-    proximos: [
-      ['Cards de estudo', 'Espaço para perguntas e respostas rápidas.'],
-      ['Categorias', 'Preparado para separar por concreto, subcomponentes, ensaios e auditoria.'],
-      ['Controle de aprendizado', 'Futuramente poderá registrar acertos, revisões e dificuldade por usuário.']
-    ]
   }
 };
 

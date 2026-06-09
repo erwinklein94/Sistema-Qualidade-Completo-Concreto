@@ -1,26 +1,23 @@
 # Navegação por menus dropdown no topo
 
-O antigo botão "Menu" (que abria a barra lateral) foi **removido**. A navegação
-agora é feita por botões dropdown no canto superior direito do cabeçalho:
+O antigo botão "Menu" (que abria a barra lateral) foi removido. A navegação é
+feita por botões dropdown no canto superior direito do cabeçalho:
 
-- **Menu Concreto** — todas as abas do grupo Concreto.
-- **Menu Subcomponente** — todas as abas de Subcomponentes.
-- **Ferramentas** — todas as abas de Ferramentas.
-- **Administração** — páginas de administração (Conexão Supabase, Usuários e
-  Perfis, Auditoria Geral, Dados do Sistema). **Só aparece para administradores**;
-  usuários comuns veem apenas os três botões acima.
+- **Menu Concreto** — abas do grupo Concreto.
+- **Menu Subcomponente** — abas de Subcomponentes.
+- **Ferramentas** — Leitor de Iauditor, Controle de Equipamentos e Guia do Inspetor Padrão.
+- **Administração** — só para administradores (Conexão Supabase, Usuários e Perfis,
+  Auditoria Geral, Dados do Sistema).
 
-Comportamento: apenas um painel aberto por vez; fecha ao clicar fora ou apertar
-Esc; o item da página atual fica destacado; itens restritos só aparecem com permissão.
+Apenas um painel aberto por vez; fecha ao clicar fora ou apertar Esc; item da
+página atual destacado; itens restritos só aparecem com permissão.
 
-A barra lateral e seu botão de abertura foram retirados do layout. As funções
-internas de menu permanecem definidas (com encadeamento opcional) para não
-quebrar chamadas existentes.
+## Remoção de Data Books e Flash-Cards (site mais leve)
+As ferramentas **Data books** e **Flash-Cards** foram totalmente removidas do site:
+- Páginas: `data-books.html`, `flash-cards.html`.
+- Scripts: `js/data-books.js`, `js/flash-cards.js`, `js/flash-cards-dados.js` (este sozinho ~154 KB).
+- Estilo: `css/flash-cards-integrado.css`.
+- Entradas de menu em `js/comum.js`; blocos de config em `js/ferramentas.js`;
+  bloco de CSS de Data Books em `css/style.css`; rótulo de auditoria em `js/auditoria.js`.
 
-## Arquivos alterados
-- `js/comum.js` — dropdowns (`gruposDropdown`, `menuDropdownsHtml`,
-  `alternarDropdown`, `fecharDropdowns`); remoção do botão "Menu" e da sidebar
-  do `montarLayout`; fechamento por Esc/clique fora.
-- `css/style.css` — estilos `.menu-dropdowns`/`.menu-dd*` (tema claro e escuro,
-  com acento de cor por grupo) e ajuste de `.topo` (`overflow: visible` + faixa
-  de gradiente arredondada) para os painéis não serem cortados.
+Total removido: ~234 KB de assets do front-end (sem contar a limpeza no `style.css`).
