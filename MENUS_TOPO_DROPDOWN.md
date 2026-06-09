@@ -1,24 +1,26 @@
-# Menus dropdown no topo (Concreto / Subcomponente / Ferramentas)
+# Navegação por menus dropdown no topo
 
-Foram adicionados três botões de menu no canto superior direito do cabeçalho,
-lado a lado e próximos entre si:
+O antigo botão "Menu" (que abria a barra lateral) foi **removido**. A navegação
+agora é feita por botões dropdown no canto superior direito do cabeçalho:
 
-- **Menu Concreto** — todas as abas do grupo Concreto (Dashboard, Indicador Semanal,
-  Fluxo de Liberação, Painel de Séries, Produção de Dormentes, Pedidos, Ensaios de
-  Liberação, Dormentes Reprovados, Especificações e Limites).
+- **Menu Concreto** — todas as abas do grupo Concreto.
 - **Menu Subcomponente** — todas as abas de Subcomponentes.
 - **Ferramentas** — todas as abas de Ferramentas.
+- **Administração** — páginas de administração (Conexão Supabase, Usuários e
+  Perfis, Auditoria Geral, Dados do Sistema). **Só aparece para administradores**;
+  usuários comuns veem apenas os três botões acima.
 
-Cada botão abre um painel suspenso com os respectivos links. Comportamento:
-apenas um painel aberto por vez; fecha ao clicar fora ou apertar Esc; o item da
-página atual fica destacado; itens restritos (admin) só aparecem com permissão.
+Comportamento: apenas um painel aberto por vez; fecha ao clicar fora ou apertar
+Esc; o item da página atual fica destacado; itens restritos só aparecem com permissão.
 
-O menu lateral original (botão "Menu" à esquerda) continua funcionando e mantém
-o acesso à seção "Administração do Sistema".
+A barra lateral e seu botão de abertura foram retirados do layout. As funções
+internas de menu permanecem definidas (com encadeamento opcional) para não
+quebrar chamadas existentes.
 
 ## Arquivos alterados
-- `js/comum.js` — métodos `gruposDropdown`, `menuDropdownsHtml`, `alternarDropdown`,
-  `fecharDropdowns`; inserção no topo e fechamento por Esc/clique fora.
-- `css/style.css` — estilos `.menu-dropdowns`/`.menu-dd*` (claro e escuro) e ajuste
-  de `.topo` (`overflow: visible` + faixa de gradiente arredondada) para os painéis
-  não serem cortados.
+- `js/comum.js` — dropdowns (`gruposDropdown`, `menuDropdownsHtml`,
+  `alternarDropdown`, `fecharDropdowns`); remoção do botão "Menu" e da sidebar
+  do `montarLayout`; fechamento por Esc/clique fora.
+- `css/style.css` — estilos `.menu-dropdowns`/`.menu-dd*` (tema claro e escuro,
+  com acento de cor por grupo) e ajuste de `.topo` (`overflow: visible` + faixa
+  de gradiente arredondada) para os painéis não serem cortados.

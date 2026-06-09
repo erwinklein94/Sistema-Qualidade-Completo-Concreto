@@ -99,6 +99,7 @@ const App = {
       { grupo: 'concreto', titulo: 'Menu Concreto', ic: ICN.producao },
       { grupo: 'subcomponentes', titulo: 'Menu Subcomponente', ic: ICN.vazioBox },
       { grupo: 'ferramentas', titulo: 'Ferramentas', ic: ICN.config },
+      { grupo: 'sistema', titulo: 'Administração', ic: ICN.config },
     ];
   },
 
@@ -165,26 +166,13 @@ const App = {
     return '<span class="badge badge-amarelo">Modo consulta: somente visualização</span>';
   },
 
-  // monta sidebar + topo. paginaAtiva: chave do menu
+  // monta topo. paginaAtiva: chave do menu
   montarLayout(paginaAtiva, titulo, subtitulo) {
     this.paginaAtiva = paginaAtiva;
-    const nav = this.navHtml();
-
-    const sidebar = `
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-logo">
-          <img class="logo-rumo logo-rumo-negativo" src="assets/rumo/logos/rumo-logo-branco.png" alt="Rumo">
-          <div class="sub">Somos o Brasil em movimento</div>
-        </div>
-        <nav class="nav">${nav}</nav>
-        <div class="sidebar-rodape"><span>Qualidade ferroviária</span><strong>Concreto + Subcomponentes + Ferramentas</strong><small>RLS · Auditoria · Supabase</small></div>
-      </aside>
-      <div class="backdrop-mobile" id="backdrop" onclick="App.fecharMenu()"></div>`;
 
     const topo = `
       <header class="topo">
         <div class="flex" style="align-items:center;gap:14px;">
-          <button class="btn btn-secundario btn-sm menu-toggle" id="botaoMenu" onclick="App.alternarMenu()" aria-controls="sidebar" aria-expanded="false">${ICN.menu}<span>Menu</span></button>
           <div class="topo-identidade">
             <div class="topo-kicker">Rumo · Qualidade Ferroviária</div>
             <h1>${titulo}</h1>
@@ -199,7 +187,6 @@ const App = {
         </div>
       </header>`;
 
-    document.getElementById('app').insertAdjacentHTML('afterbegin', sidebar);
     document.getElementById('conteudo').insertAdjacentHTML('afterbegin', topo);
     this.aplicarTemaInicial();
     setTimeout(() => {

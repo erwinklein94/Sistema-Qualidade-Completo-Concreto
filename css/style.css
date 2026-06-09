@@ -6865,6 +6865,7 @@ body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); borde
 .menu-dd--concreto .menu-dd-botao::before { background: var(--azul-claro, #32A6E6); }
 .menu-dd--subcomponentes .menu-dd-botao::before { background: var(--verde, #1E9F7F); }
 .menu-dd--ferramentas .menu-dd-botao::before { background: #9966ff; }
+.menu-dd--sistema .menu-dd-botao::before { background: #FBD300; }
 
 .menu-dd-botao .ic-chevron {
   width: 14px;
@@ -6881,6 +6882,7 @@ body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); borde
 }
 .menu-dd--subcomponentes .menu-dd-botao.ativo { border-color: var(--verde); color: var(--verde); }
 .menu-dd--ferramentas .menu-dd-botao.ativo { border-color: #9966ff; color: #9966ff; }
+.menu-dd--sistema .menu-dd-botao.ativo { border-color: #c9a800; color: #8a7400; }
 
 /* Painel suspenso */
 .menu-dd-painel {
@@ -6931,6 +6933,10 @@ body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); borde
 .menu-dd-link.nav-link--ferramentas.ativo {
   background: linear-gradient(90deg, rgba(153,102,255,.16), transparent);
   border-color: rgba(153,102,255,.45);
+}
+.menu-dd-link.nav-link--sistema.ativo {
+  background: linear-gradient(90deg, rgba(251,211,0,.20), transparent);
+  border-color: rgba(251,211,0,.50);
 }
 .menu-dd-link[data-external="true"] span::after { content: ' ↗'; font-weight: 900; opacity: .75; }
 
