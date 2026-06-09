@@ -219,8 +219,8 @@ function renderTabela(lista, total) {
 
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
-      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th><th>Molde/Cav.</th>
-      <th>Slump</th><th>Temp.</th><th>Resultado</th><th>Relatório</th><th>Ações</th>
+      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th>
+      <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataInspecao)}</td>
@@ -228,10 +228,8 @@ function renderTabela(lista, total) {
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.pista || '—')}</td>
-      <td>${U.esc([r.molde && `Molde ${r.molde}`, r.cavidade && `Cav. ${r.cavidade}`].filter(Boolean).join(' · ') || '—')}</td>
-      <td>${resumoSlump(r)}</td>
-      <td>${U.esc(r.temperaturaLancamento || '—')}</td>
       <td>${badgeResultado(r.resultado)}</td>
+      <td>${U.esc(r.responsavel || '—')}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
         <button class="icone-btn" title="Ver" onclick="ver('${r.id}')">${ICN.olho}</button>

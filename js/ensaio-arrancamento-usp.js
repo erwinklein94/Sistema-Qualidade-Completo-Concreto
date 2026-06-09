@@ -201,8 +201,8 @@ function renderTabela(lista, total) {
 
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
-      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>USP</th><th>Ombreira</th>
-      <th>Arrancamento</th><th>Resultado</th><th>Relatório</th><th>Ações</th>
+      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>USP</th>
+      <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataEnsaio)}</td>
@@ -210,9 +210,8 @@ function renderTabela(lista, total) {
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.usp || '—')}</td>
-      <td>${U.esc(r.tipoOmbreira || r.loteOmbreira || '—')}</td>
-      <td>${resumoArrancamento(r)}</td>
       <td>${badgeResultado(r.resultado)}</td>
+      <td>${U.esc(r.responsavel || '—')}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
         <button class="icone-btn" title="Ver" onclick="ver('${r.id}')">${ICN.olho}</button>

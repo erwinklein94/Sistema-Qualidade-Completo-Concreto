@@ -185,12 +185,11 @@ function renderTabela(lista, total) {
 
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
-      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Fornecedor</th>
+      <th>Data</th><th>Projeto</th><th>Bitola</th><th>Fornecedor</th>
       <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataEnsaio)}</td>
-      <td><strong>${U.esc(r.lote || '—')}</strong></td>
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.fornecedor || '—')}</td>
