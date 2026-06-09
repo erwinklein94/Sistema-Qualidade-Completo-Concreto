@@ -376,7 +376,7 @@ async function salvar() {
   if (!Auth.pode('criar') && !Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('salvar registros'), 'aviso'); return; }
   const reg = lerFormulario();
   if (!reg.dataInspecao) { App.toast('Informe a data da inspeção.', 'aviso'); return; }
-  if (!reg.linkRelatorio) { App.toast('Informe o link do relatório — é por ele que a inspeção será consultada.', 'aviso'); return; }
+  // Link do relatório é opcional: pode ser anexado depois, lote a lote.
 
   try {
     const salvo = await StoreSupabase.salvarInspecaoPista(mapParaBanco(reg));
@@ -678,7 +678,7 @@ function renderLeituraIauditor(item) {
     ${avisoNaoValido}
     <div class="iauditor-status ${item.valido ? 'ok' : ''}">
       <h3>${item.valido ? 'Inspeção de Pista lida — confira e salve no histórico' : 'Prévia da leitura'}</h3>
-      <p>${item.valido ? 'Cole o link do relatório (SharePoint/iAuditor) e salve. Os campos abaixo podem ser ajustados antes.' : 'Os dados extraídos aparecem abaixo apenas para conferência.'}</p>
+      <p>${item.valido ? 'O link do relatório (SharePoint/iAuditor) é opcional — pode salvar agora e anexar depois pelo botão Editar. Os campos abaixo podem ser ajustados antes.' : 'Os dados extraídos aparecem abaixo apenas para conferência.'}</p>
       <div class="iauditor-meta-grid">
         ${metaItem('Arquivo', item.fileName)}
         ${metaItem('Tipo', r.tipo)}
@@ -696,7 +696,7 @@ function renderLeituraIauditor(item) {
       </div>
       ${podeCriar && item.valido ? `
       <div class="form-grid" style="margin-top:14px">
-        <div class="campo full"><label>Link do relatório <span class="obrig">*</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
+        <div class="campo full"><label>Link do relatório <span class="dica">(opcional — pode anexar depois)</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
       </div>
       <div class="iauditor-acoes">
         <button class="btn btn-primario" type="button" onclick="salvarLeituraIauditor()">${ICN.check}Salvar relatório</button>
@@ -716,7 +716,7 @@ async function salvarLeituraIauditor() {
   if (!atual?.registro) { App.toast('Importe um PDF do iAuditor antes de salvar.', 'aviso'); return; }
   if (!atual.valido) { App.toast('Este PDF não foi identificado como Inspeção de Pista.', 'aviso'); return; }
   const link = (document.getElementById('iaLink')?.value || '').trim();
-  if (!link) { App.toast('Cole o link do relatório antes de salvar.', 'aviso'); document.getElementById('iaLink')?.focus(); return; }
+  // Link do relatório é opcional: salva mesmo sem link; pode anexar depois pelo botão Editar.
 
   const reg = {};
   CAMPOS_PISTA.forEach(c => { reg[c] = atual.registro[c] != null ? atual.registro[c] : ''; });
@@ -731,7 +731,11 @@ async function salvarLeituraIauditor() {
     PISTA_REGISTROS.unshift(convertido);
     render();
     App.toast('Relatório de inspeção de pista salvo no histórico.');
-    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Relatório salvo</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de inspeções de pista. <a class="link-relatorio" href="${U.esc(/^https?:\/\//i.test(link) ? link : 'https://' + link)}" target="_blank" rel="noopener">Abrir relatório</a></p></div>`;
+    const linkSalvo = link ? (/^https?:\/\//i.test(link) ? link : 'https://' + link) : '';
+    const msgLink = linkSalvo
+      ? ` <a class="link-relatorio" href="${U.esc(linkSalvo)}" target="_blank" rel="noopener">Abrir relatório</a>`
+      : ' O link do relatório ainda não foi anexado — você pode adicioná-lo depois pelo botão Editar.';
+    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Relatório salvo</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de inspeções de pista.${msgLink}</p></div>`;
     IAUDITOR_RELATORIO_ATUAL = null;
   } catch (err) {
     console.error('Erro ao salvar leitura iAuditor', err);
