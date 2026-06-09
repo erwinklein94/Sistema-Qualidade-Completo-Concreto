@@ -10,8 +10,7 @@ let IAUDITOR_RELATORIO_ATUAL = null;
 
 const CAMPOS_ARRANCAMENTO_USP = [
   'dataEnsaio', 'lote', 'projeto', 'bitola', 'fornecedor',
-  'usp', 'tipoOmbreira', 'loteOmbreira', 'arrancamentoA', 'arrancamentoB', 'arrancamentoC',
-  'resultado', 'responsavel', 'linkRelatorio', 'arquivoOrigem', 'observacoes'
+  'usp', 'resultado', 'responsavel', 'linkRelatorio', 'arquivoOrigem', 'observacoes'
 ];
 const RESULTADOS_ARRANCAMENTO_USP = ['Aprovado', 'Reprovado', 'Pendente'];
 
@@ -85,16 +84,11 @@ function mapDoBanco(row) {
     bitola: row.bitola || '',
     fornecedor: row.fornecedor || '',
     usp: row.usp || '',
-    tipoOmbreira: row.tipo_ombreira || '',
-    loteOmbreira: row.lote_ombreira || '',
-    arrancamentoA: row.arrancamento_a || '',
-    arrancamentoB: row.arrancamento_b || '',
-    arrancamentoC: row.arrancamento_c || '',
     resultado: row.resultado || '',
     responsavel: row.responsavel || '',
     linkRelatorio: row.link_relatorio || '',
     arquivoOrigem: row.arquivo_origem || '',
-    observacoes: row.observacoes || '',
+    observacoes: filtrarTextoSemOmbreira(row.observacoes || ''),
     criadoEm: row.criado_em || ''
   };
 }
@@ -107,16 +101,11 @@ function mapParaBanco(reg) {
     bitola: reg.bitola || null,
     fornecedor: reg.fornecedor || null,
     usp: reg.usp || null,
-    tipo_ombreira: reg.tipoOmbreira || null,
-    lote_ombreira: reg.loteOmbreira || null,
-    arrancamento_a: reg.arrancamentoA || null,
-    arrancamento_b: reg.arrancamentoB || null,
-    arrancamento_c: reg.arrancamentoC || null,
     resultado: reg.resultado || null,
     responsavel: reg.responsavel || null,
     link_relatorio: reg.linkRelatorio || null,
     arquivo_origem: reg.arquivoOrigem || null,
-    observacoes: reg.observacoes || null,
+    observacoes: filtrarTextoSemOmbreira(reg.observacoes) || null,
   };
   if (reg.id) payload.id = reg.id;
   return payload;
@@ -148,7 +137,7 @@ function render() {
     if (f.dataIni && (r.dataEnsaio || '') < f.dataIni) return false;
     if (f.dataFim && (r.dataEnsaio || '') > f.dataFim) return false;
     if (f.busca) {
-      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.usp} ${r.tipoOmbreira} ${r.loteOmbreira} ${r.arrancamentoA} ${r.arrancamentoB} ${r.arrancamentoC} ${r.resultado} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
+      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.usp} ${r.resultado} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
       if (!blob.includes(f.busca)) return false;
     }
     return true;
@@ -222,10 +211,6 @@ function renderTabela(lista, total) {
   </table></div>`;
 }
 
-function resumoArrancamento(r) {
-  const itens = [r.arrancamentoA && `A: ${r.arrancamentoA}`, r.arrancamentoB && `B: ${r.arrancamentoB}`, r.arrancamentoC && `C: ${r.arrancamentoC}`].filter(Boolean);
-  return itens.length ? U.esc(itens.join(' · ')) : '—';
-}
 function badgeBitolaValor(bitola) {
   const cls = bitola === 'Bitola Larga' ? 'badge-bitola-larga' : bitola === 'Bitola Mista' ? 'badge-bitola-mista' : 'badge-bitola-sem';
   return `<span class="badge ${cls}">${U.esc(bitola || 'Sem bitola definida')}</span>`;
@@ -322,11 +307,6 @@ function ver(id) {
       ${itemVer('Bitola', r.bitola)}
       ${itemVer('Fornecedor', r.fornecedor)}
       ${itemVer('USP', r.usp)}
-      ${itemVer('Tipo de ombreira', r.tipoOmbreira)}
-      ${itemVer('Lote da ombreira', r.loteOmbreira)}
-      ${itemVer('Arrancamento A', r.arrancamentoA)}
-      ${itemVer('Arrancamento B', r.arrancamentoB)}
-      ${itemVer('Arrancamento C', r.arrancamentoC)}
       ${itemVer('Resultado', r.resultado)}
       ${itemVer('Responsável', r.responsavel)}
       ${itemVer('Arquivo de origem', r.arquivoOrigem)}
@@ -377,7 +357,7 @@ async function lerRelatorioIauditor(file) {
   if (!window.pdfjsLib || !window.RumoParser) { renderErroIauditor('O leitor de PDF não foi carregado. Verifique sua conexão e recarregue a página.'); return; }
 
   IAUDITOR_RELATORIO_ATUAL = null;
-  alvo.innerHTML = `<div class="iauditor-status"><h3>Lendo ${U.esc(file.name)}...</h3><p>Extraindo lote, projeto, USP, ombreiras e leituras de arrancamento encontradas.</p></div>`;
+  alvo.innerHTML = `<div class="iauditor-status"><h3>Lendo ${U.esc(file.name)}...</h3><p>Extraindo lote, projeto, número de série da USP e dados principais encontrados.</p></div>`;
   try {
     const pages = await extrairPaginasPdf(file);
     const data = RumoParser.parse(pages);
@@ -418,16 +398,9 @@ function montarRegistroIauditor(data, fileName) {
   const tipo = limparValor(meta['Tipo de relatório']) || 'Ensaio de Arrancamento USP';
   const linhas = linhasArrancamento(data);
   const resultado = inferirResultado(data, linhas);
-  const arrancamentoA = encontrarArrancamento(linhas, 'a');
-  const arrancamentoB = encontrarArrancamento(linhas, 'b');
-  const arrancamentoC = encontrarArrancamento(linhas, 'c');
-
   return {
     dataEnsaio, lote, projeto, bitola, fornecedor, resultado, responsavel,
     usp: limparValor(meta['USP'] || meta['Com USP'] || meta['Lote USP'] || meta['USP (Lote)'] || ''),
-    tipoOmbreira: limparValor(meta['Tipo de ombreira'] || meta['Ombreira'] || ''),
-    loteOmbreira: limparValor(meta['Lote da ombreira'] || meta['Lote da ombreira eClip'] || ''),
-    arrancamentoA, arrancamentoB, arrancamentoC,
     linkRelatorio: '',
     arquivoOrigem: fileName,
     observacoes: montarObservacoes({ fileName, meta, tipo, linhas }),
@@ -448,21 +421,10 @@ function linhasArrancamento(data) {
         situacaoLabel: row.situacaoLabel || ''
       };
       const n = normLocal(`${item.secao} ${item.campo} ${item.valor} ${item.criterio}`);
-      if (n.includes('arrancamento') || n.includes('ombreira') || n.includes('usp')) linhas.push(item);
+      if (!n.includes('ombreira') && (n.includes('arrancamento') || n.includes('usp'))) linhas.push(item);
     });
   });
   return linhas;
-}
-
-function encontrarArrancamento(linhas, letra) {
-  const alvoCompacto = `ombreira${letra}`;
-  const alvoSeparado = `ombreira ${letra}`;
-  const linha = (linhas || []).find(l => {
-    const texto = normLocal(`${l.secao} ${l.campo}`);
-    const bruto = limparValor(`${l.secao} ${l.campo}`).toLowerCase();
-    return texto.includes('arrancamento') && (texto.includes(alvoCompacto) || bruto.includes(alvoSeparado));
-  });
-  return linha?.valor && linha.valor !== '—' ? linha.valor : '';
 }
 
 function inferirResultado(data, linhas) {
@@ -474,7 +436,7 @@ function inferirResultado(data, linhas) {
 }
 
 function ehRelatorioArrancamentoUsp(data, registro, fileName) {
-  const parts = [fileName, registro?.tipo, registro?.usp, registro?.tipoOmbreira, registro?.loteOmbreira];
+  const parts = [fileName, registro?.tipo, registro?.usp];
   const meta = data?.meta || {};
   Object.keys(meta).forEach(k => parts.push(k, meta[k]));
   (data?.sections || []).forEach(sec => {
@@ -493,9 +455,9 @@ function montarObservacoes({ fileName, meta, tipo, linhas }) {
     `Arquivo: ${fileName}`,
     `Tipo de relatório: ${tipo || '—'}`,
   ];
-  const metaTxt = Object.keys(meta || {}).slice(0, 14).map(k => `${k}: ${meta[k]}`).join(' | ');
+  const metaTxt = Object.keys(meta || {}).filter(k => !normLocal(k).includes('ombreira')).slice(0, 14).map(k => `${k}: ${meta[k]}`).join(' | ');
   const det = (linhas || []).slice(0, 40).map(l => `- ${l.secao} · ${l.campo}: ${l.valor}${l.criterio ? ` (critério: ${l.criterio})` : ''}`);
-  return cab.concat(metaTxt ? [`Metadados lidos: ${metaTxt}`] : [], det.length ? ['Leituras de arrancamento/USP:', ...det] : []).join('\n');
+  return cab.concat(metaTxt ? [`Metadados lidos: ${metaTxt}`] : [], det.length ? ['Dados lidos de arrancamento USP:', ...det] : []).join('\n');
 }
 
 function renderLeituraIauditor(item) {
@@ -521,13 +483,9 @@ function renderLeituraIauditor(item) {
         ${metaItem('Projeto', r.projeto)}
         ${metaItem('Bitola', r.bitola)}
         ${metaItem('USP', r.usp)}
-        ${metaItem('Ombreira', r.tipoOmbreira || r.loteOmbreira)}
         ${metaItem('Data', U.dataBR(r.dataEnsaio))}
         ${metaItem('Responsável', r.responsavel)}
         ${metaItem('Resultado sugerido', r.resultado)}
-        ${metaItem('Arrancamento A', r.arrancamentoA)}
-        ${metaItem('Arrancamento B', r.arrancamentoB)}
-        ${metaItem('Arrancamento C', r.arrancamentoC)}
       </div>
       ${podeCriar && item.valido ? `
       <div class="form-grid" style="margin-top:14px">
@@ -560,11 +518,6 @@ async function salvarLeituraIauditor() {
     bitola: atual.registro.bitola,
     fornecedor: atual.registro.fornecedor,
     usp: atual.registro.usp,
-    tipoOmbreira: atual.registro.tipoOmbreira,
-    loteOmbreira: atual.registro.loteOmbreira,
-    arrancamentoA: atual.registro.arrancamentoA,
-    arrancamentoB: atual.registro.arrancamentoB,
-    arrancamentoC: atual.registro.arrancamentoC,
     resultado: atual.registro.resultado,
     responsavel: atual.registro.responsavel,
     linkRelatorio: link,
@@ -615,6 +568,11 @@ function renderErroIauditor(msg) {
    Helpers de normalização (independentes)
    --------------------------------------------------------------------- */
 function limparValor(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
+
+function filtrarTextoSemOmbreira(texto) {
+  const linhas = String(texto == null ? '' : texto).split('\n');
+  return linhas.filter(l => !normLocal(l).includes('ombreira')).join('\n').trim();
+}
 function normLocal(v) { return String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); }
 function hojeISO() { return new Date().toISOString().slice(0, 10); }
 
