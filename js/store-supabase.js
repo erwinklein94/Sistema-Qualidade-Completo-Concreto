@@ -232,6 +232,59 @@ const StoreSupabase = (() => {
     return true;
   }
 
+  /* ---------------------------------------------------------------------
+     Ensaios de bitola — histórico consultivo independente.
+     --------------------------------------------------------------------- */
+  async function listarEnsaiosBitola(filtros = {}) {
+    let q = db()
+      .from('ensaios_bitola')
+      .select('*')
+      .order('data_ensaio', { ascending: false, nullsFirst: false })
+      .order('criado_em', { ascending: false, nullsFirst: false })
+      .limit(filtros.limite || 5000);
+
+    if (filtros.id) q = q.eq('id', filtros.id);
+    if (filtros.lote) q = q.eq('lote', filtros.lote);
+    if (filtros.projeto) q = q.eq('projeto', filtros.projeto);
+    if (filtros.bitola) q = q.eq('bitola', filtros.bitola);
+    if (filtros.resultado) q = q.eq('resultado', filtros.resultado);
+    if (filtros.dataIni) q = q.gte('data_ensaio', filtros.dataIni);
+    if (filtros.dataFim) q = q.lte('data_ensaio', filtros.dataFim);
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function salvarEnsaioBitola(registro) {
+    const [acao, descricao] = acaoSalvar(registro);
+    exigirPermissao(acao, descricao);
+    const user = await usuarioAtual();
+    const payload = { ...registro, atualizado_por: user?.id || null };
+    const id = payload.id;
+
+    let query;
+    if (id) {
+      delete payload.id;
+      query = db().from('ensaios_bitola').update(payload).eq('id', id);
+    } else {
+      delete payload.id;
+      payload.criado_por = user?.id || null;
+      query = db().from('ensaios_bitola').insert(payload);
+    }
+
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function removerEnsaioBitola(id) {
+    exigirPermissao('excluir', 'excluir registros');
+    const { error } = await db().from('ensaios_bitola').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
   async function listarConfiguracoes(tipoLista = '') {
     let q = db().from('listas_configuracao').select('*').eq('ativo', true).order('tipo_lista').order('ordem');
     if (tipoLista) q = q.eq('tipo_lista', tipoLista);
@@ -432,6 +485,9 @@ const StoreSupabase = (() => {
     listarEnsaiosLiberacao,
     salvarEnsaioLiberacao,
     removerEnsaioLiberacao,
+    listarEnsaiosBitola,
+    salvarEnsaioBitola,
+    removerEnsaioBitola,
     obterAvisoDashboard,
     salvarAvisoDashboard,
     listarUsuariosApp,

@@ -18,6 +18,7 @@ const App = {
       { k: 'producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'producao.html', group: 'concreto' },
       { k: 'pedidos', t: 'Pedidos', ic: ICN.trem, href: 'pedidos.html', group: 'concreto' },
       { k: 'ensaiosLiberacao', t: 'Ensaios de Liberação', ic: ICN.check, href: 'ensaios-liberacao.html', group: 'concreto' },
+      { k: 'ensaioBitola', t: 'Ensaio de Bitola', ic: ICN.ensaios, href: 'ensaio-bitola.html', group: 'concreto' },
       { k: 'reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'reprovados.html', group: 'concreto' },
       { k: 'especDormentes', t: 'Especificações e Limites', ic: ICN.ensaios, href: 'especificacoes-dormentes.html', group: 'concreto' },
 
