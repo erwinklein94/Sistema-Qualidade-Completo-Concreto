@@ -10,7 +10,7 @@ let IAUDITOR_RELATORIO_ATUAL = null;
 
 const CAMPOS_PISTA = [
   'dataInspecao', 'lote', 'projeto', 'bitola', 'fornecedor', 'resultado', 'responsavel',
-  'pista', 'trechoPosicao', 'molde', 'cavidade', 'atividade', 'itensInspecionados',
+  'pista', 'dormentesReprovados', 'trechoPosicao', 'molde', 'cavidade', 'atividade', 'itensInspecionados',
   'naoConformidades', 'acoesCorretivas', 'linkRelatorio', 'arquivoOrigem', 'observacoes'
 ];
 const RESULTADOS_PISTA = ['Aprovado', 'Reprovado', 'Pendente'];
@@ -116,6 +116,7 @@ function mapDoBanco(row) {
     bitola: row.bitola || '',
     fornecedor: row.fornecedor || '',
     pista: row.pista || '',
+    dormentesReprovados: normalizarQuantidadeReprovados(row.dormentes_reprovados ?? row.quantidade_reprovada ?? '') || extrairDormentesReprovadosRegistro(row),
     trechoPosicao: row.trecho_posicao || '',
     molde: row.molde || '',
     cavidade: row.cavidade || '',
@@ -183,7 +184,7 @@ function render() {
     if (f.dataIni && (r.dataInspecao || '') < f.dataIni) return false;
     if (f.dataFim && (r.dataInspecao || '') > f.dataFim) return false;
     if (f.busca) {
-      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.pista} ${r.trechoPosicao} ${r.molde} ${r.cavidade} ${r.atividade} ${r.itensInspecionados} ${r.naoConformidades} ${r.acoesCorretivas} ${r.resultado} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
+      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.pista} ${valorDormentesReprovados(r)} ${r.trechoPosicao} ${r.molde} ${r.cavidade} ${r.atividade} ${r.itensInspecionados} ${r.naoConformidades} ${r.acoesCorretivas} ${r.resultado} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
       if (!blob.includes(f.busca)) return false;
     }
     return true;
@@ -238,7 +239,7 @@ function renderTabela(lista, total) {
 
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
-      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th>
+      <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th><th>Reprovados</th>
       <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
@@ -247,6 +248,7 @@ function renderTabela(lista, total) {
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.pista || '—')}</td>
+      <td><strong>${U.esc(valorDormentesReprovados(r))}</strong></td>
       <td>${badgeResultado(r.resultado)}</td>
       <td>${U.esc(r.responsavel || '—')}</td>
       <td>${linkRelatorio(r)}</td>
@@ -257,6 +259,47 @@ function renderTabela(lista, total) {
       </td>
     </tr>`).join('')}</tbody>
   </table></div>`;
+}
+
+function valorDormentesReprovados(r) {
+  const direto = normalizarQuantidadeReprovados(r?.dormentesReprovados ?? r?.dormentes_reprovados ?? r?.quantidadeReprovada ?? r?.quantidade_reprovada ?? '');
+  if (direto !== '') return direto;
+  const extraido = extrairDormentesReprovadosRegistro(r);
+  return extraido !== '' ? extraido : '—';
+}
+
+function extrairDormentesReprovadosRegistro(r) {
+  if (!r) return '';
+  const fontes = [
+    r.dormentesReprovados, r.dormentes_reprovados, r.quantidadeReprovada, r.quantidade_reprovada,
+    r.observacoes, r.itensInspecionados, r.itens_inspecionados, r.naoConformidades, r.nao_conformidades
+  ].filter(v => v != null && String(v).trim());
+  for (const fonte of fontes) {
+    const qtd = extrairQuantidadeReprovadaTexto(fonte);
+    if (qtd !== '') return qtd;
+  }
+  return '';
+}
+
+function extrairQuantidadeReprovadaTexto(texto) {
+  const s = limparValor(texto);
+  if (!s) return '';
+  const padroes = [
+    /(?:quantidade\s+reprovada|dormentes?\s+reprovados?|qtd\.?\s*(?:de\s*)?reprovados?|qtde\.?\s*(?:de\s*)?reprovados?)\s*[:=\-]?\s*(\d{1,5})/i,
+    /(?:reprovados?)\s*[:=\-]\s*(\d{1,5})/i
+  ];
+  for (const re of padroes) {
+    const m = s.match(re);
+    if (m) return normalizarQuantidadeReprovados(m[1]);
+  }
+  return '';
+}
+
+function normalizarQuantidadeReprovados(valor) {
+  const s = limparValor(valor);
+  if (!s || s === '—') return '';
+  const m = s.match(/\d{1,5}/);
+  return m ? String(parseInt(m[0], 10)) : '';
 }
 
 function resumoTexto(txt) {
@@ -458,13 +501,14 @@ function montarRegistroIauditor(data, fileName) {
   const dataInspecao = dataPtParaISO(meta['Data da fabricação/inspeção'] || meta['Data de produção'] || meta['Data da fabricação'] || meta['Data da inspeção'] || meta['Data do ensaio']) || hojeISO();
   const responsavel = limparValor(meta['Fiscal responsável'] || meta['Responsável'] || '');
   const resultado = inferirResultado(data, linhas);
+  const dormentesReprovados = extrairDormentesReprovadosIauditor(data, linhas);
 
   const itensInspecionados = montarResumoItens(linhas);
   const naoConformidades = montarNaoConformidades(linhas, data);
   const acoesCorretivas = limparValor(encontrarValor(linhas, ['ação corretiva', 'acao corretiva', 'tratativa', 'plano de ação', 'plano de acao']));
 
   return {
-    dataInspecao, lote, projeto, bitola, fornecedor, resultado, responsavel,
+    dataInspecao, lote, projeto, bitola, fornecedor, resultado, responsavel, dormentesReprovados,
     pista: limparValor(meta['Pista'] || encontrarValor(linhas, ['pista'])),
     trechoPosicao: limparValor(meta['Trecho'] || meta['Posição'] || meta['Posicao'] || meta['Local'] || encontrarValor(linhas, ['trecho', 'posição', 'posicao', 'local inspecionado', 'local'])),
     molde: limparValor(meta['Molde'] || encontrarValor(linhas, ['molde'])),
@@ -475,9 +519,28 @@ function montarRegistroIauditor(data, fileName) {
     acoesCorretivas,
     linkRelatorio: '',
     arquivoOrigem: fileName,
-    observacoes: montarObservacoes({ fileName, meta, tipo, linhas }),
+    observacoes: montarObservacoes({ fileName, meta, tipo, linhas, dormentesReprovados }),
     tipo, linhas
   };
+}
+
+function extrairDormentesReprovadosIauditor(data, linhas) {
+  const meta = data?.meta || {};
+  const direto = normalizarQuantidadeReprovados(meta['Quantidade reprovada'] || meta['Dormentes reprovados'] || meta['Reprovados']);
+  if (direto !== '') return direto;
+
+  const porLinha = encontrarValor(linhas, [
+    'quantidade reprovada', 'dormentes reprovados', 'qtd reprovados', 'qtde reprovados', 'reprovados'
+  ]);
+  const normalizadoLinha = normalizarQuantidadeReprovados(porLinha);
+  if (normalizadoLinha !== '') return normalizadoLinha;
+
+  const textos = [];
+  (data?.sections || []).forEach(sec => {
+    textos.push(sec.title || '');
+    (sec.rows || []).forEach(row => textos.push(row.ensaio, row.name, row.valor, row.criterio, row.situacaoLabel));
+  });
+  return extrairQuantidadeReprovadaTexto(textos.filter(Boolean).join(' '));
 }
 
 function linhasPista(data) {
@@ -564,7 +627,7 @@ function inferirTipoRelatorio(data) {
   return titulos || '';
 }
 
-function montarObservacoes({ fileName, meta, tipo, linhas }) {
+function montarObservacoes({ fileName, meta, tipo, linhas, dormentesReprovados }) {
   const cab = [
     'Registro importado do leitor de relatórios iAuditor.',
     `Arquivo: ${fileName}`,
@@ -572,7 +635,12 @@ function montarObservacoes({ fileName, meta, tipo, linhas }) {
   ];
   const metaTxt = Object.keys(meta || {}).slice(0, 16).map(k => `${k}: ${meta[k]}`).join(' | ');
   const det = (linhas || []).slice(0, 45).map(l => `- ${l.secao} · ${l.campo}: ${l.valor}${l.criterio ? ` (critério: ${l.criterio})` : ''}`);
-  return cab.concat(metaTxt ? [`Metadados lidos: ${metaTxt}`] : [], det.length ? ['Leituras de inspeção de pista:', ...det] : []).join('\n');
+  const qtdReprovados = normalizarQuantidadeReprovados(dormentesReprovados) || extrairQuantidadeReprovadaTexto(metaTxt) || extrairQuantidadeReprovadaTexto(det.join(' '));
+  return cab.concat(
+    metaTxt ? [`Metadados lidos: ${metaTxt}`] : [],
+    qtdReprovados !== '' ? [`Dormentes reprovados: ${qtdReprovados}`] : [],
+    det.length ? ['Leituras de inspeção de pista:', ...det] : []
+  ).join('\n');
 }
 
 function renderLeituraIauditor(item) {
