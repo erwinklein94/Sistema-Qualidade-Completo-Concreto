@@ -2571,13 +2571,14 @@ body::before {
   background: rgba(255,255,255,.82);
   backdrop-filter: blur(18px);
   box-shadow: var(--sombra);
-  overflow: hidden;
+  overflow: visible;
 }
 .topo::after {
   content: '';
   position: absolute;
   inset: 0 0 auto 0;
   height: 5px;
+  border-radius: 24px 24px 0 0;
   background: linear-gradient(90deg, var(--azul-escuro), var(--azul-claro), var(--verde-claro), var(--amarelo));
 }
 .topo-identidade { display: grid; gap: 2px; }
@@ -6839,3 +6840,106 @@ body[data-tema="escuro"] .defeito-card-topo h3 { color: var(--branco); }
 body[data-tema="escuro"] .defeito-desc { color: var(--cinza-texto-claro); }
 body[data-tema="escuro"] .defeito-img { background: rgba(255,255,255,.04); }
 body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); border-color: var(--cinza-borda); }
+
+/* ===================== MENUS DROPDOWN DO TOPO (Concreto / Subcomponente / Ferramentas) ===================== */
+.menu-dropdowns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 4px;
+}
+.menu-dd { position: relative; }
+
+.menu-dd-botao {
+  gap: 8px;
+  padding-right: 10px;
+}
+.menu-dd-botao::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  opacity: .9;
+}
+.menu-dd--concreto .menu-dd-botao::before { background: var(--azul-claro, #32A6E6); }
+.menu-dd--subcomponentes .menu-dd-botao::before { background: var(--verde, #1E9F7F); }
+.menu-dd--ferramentas .menu-dd-botao::before { background: #9966ff; }
+
+.menu-dd-botao .ic-chevron {
+  width: 14px;
+  height: 14px;
+  opacity: .7;
+  transition: transform .18s ease;
+}
+.menu-dd-botao[aria-expanded="true"] .ic-chevron { transform: rotate(180deg); }
+
+.menu-dd-botao.ativo {
+  border-color: var(--azul-claro);
+  color: var(--azul-claro);
+  font-weight: 700;
+}
+.menu-dd--subcomponentes .menu-dd-botao.ativo { border-color: var(--verde); color: var(--verde); }
+.menu-dd--ferramentas .menu-dd-botao.ativo { border-color: #9966ff; color: #9966ff; }
+
+/* Painel suspenso */
+.menu-dd-painel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 256px;
+  max-width: 320px;
+  background: var(--cinza-card, #fff);
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  box-shadow: var(--sombra-hover);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 60;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+}
+.menu-dd-painel.aberto { display: flex; }
+
+.menu-dd-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1.5px solid transparent;
+  text-decoration: none;
+  color: var(--cinza-texto);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.menu-dd-link .ic { width: 18px; height: 18px; flex-shrink: 0; opacity: .9; }
+.menu-dd-link:hover { background: var(--cinza-bg); color: var(--azul-escuro); }
+.menu-dd-link.ativo {
+  background: linear-gradient(90deg, rgba(50,166,230,.16), transparent);
+  border-color: rgba(50,166,230,.45);
+  color: var(--azul-escuro);
+}
+.menu-dd-link.nav-link--subcomponentes.ativo {
+  background: linear-gradient(90deg, rgba(30,159,127,.16), transparent);
+  border-color: rgba(30,159,127,.45);
+}
+.menu-dd-link.nav-link--ferramentas.ativo {
+  background: linear-gradient(90deg, rgba(153,102,255,.16), transparent);
+  border-color: rgba(153,102,255,.45);
+}
+.menu-dd-link[data-external="true"] span::after { content: ' ↗'; font-weight: 900; opacity: .75; }
+
+/* Tema escuro: contraste do hover dos links */
+body[data-tema="escuro"] .menu-dd-link:hover { background: rgba(255,255,255,.08); color: #fff; }
+body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
+
+/* Responsivo: em telas estreitas, mostra só ícone + seta para caber */
+@media (max-width: 820px) {
+  .menu-dd-botao span { display: none; }
+  .menu-dd-painel { right: 0; }
+}

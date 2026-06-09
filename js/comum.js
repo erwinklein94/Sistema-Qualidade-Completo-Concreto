@@ -93,9 +93,63 @@ const App = {
     return nav;
   },
 
+  // Grupos exibidos como botões dropdown no topo direito
+  gruposDropdown() {
+    return [
+      { grupo: 'concreto', titulo: 'Menu Concreto', ic: ICN.producao },
+      { grupo: 'subcomponentes', titulo: 'Menu Subcomponente', ic: ICN.vazioBox },
+      { grupo: 'ferramentas', titulo: 'Ferramentas', ic: ICN.config },
+    ];
+  },
+
+  menuDropdownsHtml() {
+    const chevron = '<svg class="ic ic-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    const itens = this.menuPermitido();
+    let blocos = '';
+    this.gruposDropdown().forEach(g => {
+      const links = itens.filter(m => !m.sec && m.group === g.grupo);
+      if (!links.length) return;
+      const ativoNoGrupo = links.some(m => m.k === this.paginaAtiva);
+      let opcoes = '';
+      links.forEach(m => {
+        const classes = ['menu-dd-link', m.k === this.paginaAtiva ? 'ativo' : '', `nav-link--${m.group}`].filter(Boolean).join(' ');
+        const externalAttrs = m.external ? ' target="_blank" rel="noopener" data-external="true"' : '';
+        opcoes += `<a href="${m.href}" class="${classes}" role="menuitem"${externalAttrs} onclick="App.fecharDropdowns()">${m.ic}<span>${m.t}</span></a>`;
+      });
+      blocos += `
+        <div class="menu-dd menu-dd--${g.grupo}" data-grupo="${g.grupo}">
+          <button type="button" class="btn btn-secundario btn-sm menu-dd-botao${ativoNoGrupo ? ' ativo' : ''}" aria-haspopup="true" aria-expanded="false" onclick="App.alternarDropdown('${g.grupo}', event)">${g.ic}<span>${g.titulo}</span>${chevron}</button>
+          <div class="menu-dd-painel" id="dd-${g.grupo}" role="menu">${opcoes}</div>
+        </div>`;
+    });
+    return `<div class="menu-dropdowns" id="menuDropdowns">${blocos}</div>`;
+  },
+
+  alternarDropdown(grupo, ev) {
+    if (ev) ev.stopPropagation();
+    const painel = document.getElementById('dd-' + grupo);
+    const jaAberto = painel && painel.classList.contains('aberto');
+    this.fecharDropdowns();
+    if (painel && !jaAberto) {
+      painel.classList.add('aberto');
+      const botao = painel.previousElementSibling;
+      if (botao) botao.setAttribute('aria-expanded', 'true');
+    }
+  },
+
+  fecharDropdowns() {
+    document.querySelectorAll('.menu-dd-painel.aberto').forEach(p => {
+      p.classList.remove('aberto');
+      const botao = p.previousElementSibling;
+      if (botao) botao.setAttribute('aria-expanded', 'false');
+    });
+  },
+
   atualizarMenuPorPermissoes() {
     const nav = document.querySelector('.sidebar .nav');
     if (nav) nav.innerHTML = this.navHtml();
+    const dd = document.getElementById('menuDropdowns');
+    if (dd) dd.outerHTML = this.menuDropdownsHtml();
   },
 
   aplicarPermissoesNaTela() {
@@ -138,6 +192,7 @@ const App = {
           </div>
         </div>
         <div class="topo-acoes">
+          ${this.menuDropdownsHtml()}
           <button class="btn btn-secundario btn-sm tema-toggle" id="botaoTema" type="button" onclick="App.alternarTema()" aria-pressed="false" title="Alternar tema">${ICN.tema}<span>Tema escuro</span></button>
           <div class="usuario-auth" id="areaUsuario"></div>
           <div class="topo-acoes" id="topoAcoes">${window.Exportacoes && paginaAtiva !== 'banco' ? window.Exportacoes.botoes() : ''}</div>
@@ -155,7 +210,10 @@ const App = {
 
     if (!this._atalhoMenuConfigurado) {
       document.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') App.fecharMenu();
+        if (ev.key === 'Escape') { App.fecharMenu(); App.fecharDropdowns(); }
+      });
+      document.addEventListener('click', (ev) => {
+        if (!ev.target.closest('.menu-dd')) App.fecharDropdowns();
       });
       this._atalhoMenuConfigurado = true;
     }
