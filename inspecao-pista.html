@@ -92,6 +92,7 @@
             <div class="campo"><label>Resultado</label><select id="resultado"></select></div>
             <div class="campo"><label>Responsável</label><input id="responsavel" type="text" placeholder="Quem executou/registrou"></div>
             <div class="campo"><label>Pista</label><input id="pista" type="text" placeholder="Pista/linha de produção"></div>
+            <div class="campo"><label>Reprovados</label><input id="dormentesReprovados" type="number" min="0" step="1" placeholder="Qtd. dormentes reprovados"></div>
 
             <div class="form-secao">Relatório</div>
             <div class="campo full"><label>Link do relatório <span class="obrig">*</span> <span class="dica">(SharePoint/iAuditor)</span></label><input id="linkRelatorio" type="url" required placeholder="https://..."></div>
@@ -129,6 +130,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
   <script src="js/iauditor-parser.js?v=20260526-1"></script>
-  <script src="js/inspecao-pista.js?v=20260609-reprovados-v1"></script>
+  <script src="js/inspecao-pista.js?v=20260609-reprovados-editavel-v1"></script>
 </body>
 </html>

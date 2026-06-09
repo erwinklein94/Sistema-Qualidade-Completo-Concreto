@@ -348,9 +348,28 @@ function editar(id) {
 function lerFormulario() {
   const reg = {};
   CAMPOS_PISTA.forEach(c => { reg[c] = (document.getElementById(c)?.value || '').trim(); });
+  reg.dormentesReprovados = normalizarQuantidadeReprovados(reg.dormentesReprovados);
+  reg.observacoes = aplicarDormentesReprovadosNasObservacoes(reg.observacoes, reg.dormentesReprovados);
   const id = document.getElementById('id').value;
   if (id) reg.id = id;
   return reg;
+}
+
+function aplicarDormentesReprovadosNasObservacoes(observacoes, quantidade) {
+  const qtd = normalizarQuantidadeReprovados(quantidade);
+  const linhas = String(observacoes || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .filter(l => !/^\s*Dormentes\s+reprovados\s*:/i.test(l));
+
+  if (qtd !== '') {
+    const linha = `Dormentes reprovados: ${qtd}`;
+    const idxLeituras = linhas.findIndex(l => /^\s*Leituras\s+de\s+inspe[cç][aã]o\s+de\s+pista\s*:/i.test(l));
+    if (idxLeituras >= 0) linhas.splice(idxLeituras, 0, linha);
+    else linhas.push(linha);
+  }
+
+  return linhas.join('\n').trim();
 }
 
 async function salvar() {
@@ -403,6 +422,7 @@ function ver(id) {
       ${itemVer('Bitola', r.bitola)}
       ${itemVer('Fornecedor', r.fornecedor)}
       ${itemVer('Pista', r.pista)}
+      ${itemVer('Reprovados', valorDormentesReprovados(r))}
       ${itemVer('Trecho / posição', r.trechoPosicao)}
       ${itemVer('Molde', r.molde)}
       ${itemVer('Cavidade', r.cavidade)}
