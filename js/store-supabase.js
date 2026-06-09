@@ -342,6 +342,63 @@ const StoreSupabase = (() => {
     return true;
   }
 
+
+  /* ---------------------------------------------------------------------
+     Inspeções de concretagem — histórico consultivo independente.
+     --------------------------------------------------------------------- */
+  async function listarInspecoesConcretagem(filtros = {}) {
+    let q = db()
+      .from('inspecoes_concretagem')
+      .select('*')
+      .order('data_inspecao', { ascending: false, nullsFirst: false })
+      .order('criado_em', { ascending: false, nullsFirst: false })
+      .limit(filtros.limite || 5000);
+
+    if (filtros.id) q = q.eq('id', filtros.id);
+    if (filtros.lote) q = q.eq('lote', filtros.lote);
+    if (filtros.fornecedor) q = q.eq('fornecedor', filtros.fornecedor);
+    if (filtros.projeto) q = q.eq('projeto', filtros.projeto);
+    if (filtros.bitola) q = q.eq('bitola', filtros.bitola);
+    if (filtros.resultado) q = q.eq('resultado', filtros.resultado);
+    if (filtros.pista) q = q.eq('pista', filtros.pista);
+    if (filtros.molde) q = q.eq('molde', filtros.molde);
+    if (filtros.dataIni) q = q.gte('data_inspecao', filtros.dataIni);
+    if (filtros.dataFim) q = q.lte('data_inspecao', filtros.dataFim);
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function salvarInspecaoConcretagem(registro) {
+    const [acao, descricao] = acaoSalvar(registro);
+    exigirPermissao(acao, descricao);
+    const user = await usuarioAtual();
+    const payload = { ...registro, atualizado_por: user?.id || null };
+    const id = payload.id;
+
+    let query;
+    if (id) {
+      delete payload.id;
+      query = db().from('inspecoes_concretagem').update(payload).eq('id', id);
+    } else {
+      delete payload.id;
+      payload.criado_por = user?.id || null;
+      query = db().from('inspecoes_concretagem').insert(payload);
+    }
+
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function removerInspecaoConcretagem(id) {
+    exigirPermissao('excluir', 'excluir registros');
+    const { error } = await db().from('inspecoes_concretagem').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
   async function listarConfiguracoes(tipoLista = '') {
     let q = db().from('listas_configuracao').select('*').eq('ativo', true).order('tipo_lista').order('ordem');
     if (tipoLista) q = q.eq('tipo_lista', tipoLista);
@@ -548,6 +605,9 @@ const StoreSupabase = (() => {
     listarEnsaiosArrancamentoUsp,
     salvarEnsaioArrancamentoUsp,
     removerEnsaioArrancamentoUsp,
+    listarInspecoesConcretagem,
+    salvarInspecaoConcretagem,
+    removerInspecaoConcretagem,
     obterAvisoDashboard,
     salvarAvisoDashboard,
     listarUsuariosApp,
