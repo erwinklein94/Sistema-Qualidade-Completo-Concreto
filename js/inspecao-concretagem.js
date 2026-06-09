@@ -283,9 +283,14 @@ function editar(id) {
 }
 
 function lerFormulario() {
-  const reg = {};
-  CAMPOS_CONCRETAGEM.forEach(c => { reg[c] = (document.getElementById(c)?.value || '').trim(); });
   const id = document.getElementById('id').value;
+  const existente = id ? (CONCRETAGEM_REGISTROS.find(x => x.id === id) || {}) : {};
+  const reg = { ...existente };
+  CAMPOS_CONCRETAGEM.forEach(c => {
+    const el = document.getElementById(c);
+    if (el) reg[c] = (el.value || '').trim();
+    else if (reg[c] == null) reg[c] = '';
+  });
   if (id) reg.id = id;
   return reg;
 }
