@@ -6417,3 +6417,13 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   .menu-dd-botao span { display: none; }
   .menu-dd-painel { right: 0; }
 }
+
+/* ===================== LOGIN — fundo "Rumo ao Hexa" cobrindo toda a tela ===================== */
+.login-page {
+  background: url('../assets/brand/login-bg-hexa.jpg') center center / cover no-repeat;
+  background-color: #00233f; /* fallback enquanto a imagem carrega */
+}
+/* a imagem é o fundo: remove a textura diagonal decorativa para a foto aparecer limpa */
+.login-page::before { display: none; }
+/* garante o card sempre acima da foto */
+.login-card { position: relative; z-index: 1; }
