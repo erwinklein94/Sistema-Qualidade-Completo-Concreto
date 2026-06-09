@@ -15,13 +15,14 @@ const App = {
       { k: 'semanal', t: 'Indicador Semanal', ic: ICN.semanal, href: 'semanal.html', group: 'concreto' },
       { k: 'painelSeries', t: 'Fluxo de Liberação', ic: ICN.ensaios, href: 'ensaios.html', group: 'concreto' },
       { k: 'fluxoLiberacao', t: 'Painel de Séries', ic: ICN.trem, href: 'fluxo-liberacao.html', group: 'concreto' },
-      { k: 'producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'producao.html', group: 'concreto' },
       { k: 'pedidos', t: 'Pedidos', ic: ICN.trem, href: 'pedidos.html', group: 'concreto' },
+      { k: 'producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'producao.html', group: 'concreto' },
+      { k: 'reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'reprovados.html', group: 'concreto' },
       { k: 'ensaiosLiberacao', t: 'Ensaios de Liberação', ic: ICN.check, href: 'ensaios-liberacao.html', group: 'concreto' },
       { k: 'ensaioBitola', t: 'Ensaio de Bitola', ic: ICN.ensaios, href: 'ensaio-bitola.html', group: 'concreto' },
-      { k: 'inspecaoConcretagem', t: 'Inspeção de Concretagem', ic: ICN.ensaios, href: 'inspecao-concretagem.html', group: 'concreto' },
       { k: 'ensaioArrancamentoUsp', t: 'Ensaio de Arrancamento USP', ic: ICN.ensaios, href: 'ensaio-arrancamento-usp.html', group: 'concreto' },
-      { k: 'reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'reprovados.html', group: 'concreto' },
+      { k: 'inspecaoConcretagem', t: 'Inspeção de Concretagem', ic: ICN.ensaios, href: 'inspecao-concretagem.html', group: 'concreto' },
+      { k: 'inspecaoPista', t: 'Inspeção de Pista', ic: ICN.ensaios, href: 'inspecao-pista.html', group: 'concreto' },
       { k: 'especDormentes', t: 'Especificações e Limites', ic: ICN.ensaios, href: 'especificacoes-dormentes.html', group: 'concreto' },
 
       {
