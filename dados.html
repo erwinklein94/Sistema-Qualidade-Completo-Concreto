@@ -55,6 +55,21 @@
         </div>
 
         <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Comemoração da Copa — Rumo ao Hexa</span>
+            <span class="card-sub">Confetes nas cores do Brasil a cada lançamento confirmado no Supabase</span>
+          </div>
+          <p class="txt-cinza" style="margin-bottom:18px;font-size:14px;line-height:1.7">
+            Durante o período da Copa do Mundo, toda gravação confirmada no Supabase (novo documento, lançamento ou edição) dispara uma comemoração com confetes verde e amarelo, bolas de futebol e o letreiro <strong style="color:var(--azul-escuro)">"Rumo ao Hexa!!!"</strong> caindo na tela por alguns segundos. Use o botão abaixo para ativar ou desativar o efeito neste navegador.
+          </p>
+          <div class="flex gap12" style="flex-wrap:wrap;align-items:center">
+            <button class="btn btn-primario" id="btnFestaHexa" onclick="alternarFestaHexa()">⚽ Comemoração</button>
+            <button class="btn btn-secundario" onclick="window.FestaHexa?.celebrar()">Testar comemoração</button>
+            <span class="txt-mini txt-cinza" id="festaHexaStatus"></span>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-titulo"><span class="acento">Importações bloqueadas</span></div>
           <div style="font-size:14px;line-height:1.7;color:var(--cinza-texto)">
             <p style="margin-bottom:10px">A importação de Excel e o carregamento de dados de demonstração foram removidos para preservar o banco como fonte única da verdade.</p>
@@ -86,6 +101,7 @@
   <script src="js/store-supabase.js?v=20260609-config-sistema"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260609-mobile-topo-v1"></script>
-  <script src="js/dados.js?v=20260609-custo-nao-qualidade"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v1"></script>
+  <script src="js/dados.js?v=20260610-copa-hexa-v1"></script>
 </body>
 </html>

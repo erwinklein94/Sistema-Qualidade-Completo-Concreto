@@ -39,7 +39,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   atualizarKpis();
   renderResumoSemanaDados();
   carregarCustoDormente();
+  atualizarBotaoFestaHexa();
 });
+
+/* ---------- Comemoração da Copa (Rumo ao Hexa) ---------- */
+function alternarFestaHexa() {
+  if (!window.FestaHexa) return;
+  const ligada = FestaHexa.alternar();
+  atualizarBotaoFestaHexa();
+  App.toast(ligada ? 'Comemoração da Copa ativada. Rumo ao Hexa!' : 'Comemoração da Copa desativada.', ligada ? 'sucesso' : 'aviso');
+  if (ligada) FestaHexa.celebrar();
+}
+
+function atualizarBotaoFestaHexa() {
+  const btn = document.getElementById('btnFestaHexa');
+  const status = document.getElementById('festaHexaStatus');
+  if (!btn || !window.FestaHexa) return;
+  const ligada = FestaHexa.ativa();
+  btn.textContent = ligada ? '⚽ Desativar comemoração' : '⚽ Ativar comemoração';
+  btn.className = ligada ? 'btn btn-perigo' : 'btn btn-primario';
+  if (status) status.textContent = ligada ? 'Status: ativada neste navegador.' : 'Status: desativada neste navegador.';
+}
 
 function atualizarKpis() {
   const d = Store.tudo();

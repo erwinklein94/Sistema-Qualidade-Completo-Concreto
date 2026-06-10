@@ -645,6 +645,7 @@ const DataBooks = (() => {
 
       fecharFormulario();
       App.toast('Data book salvo no Supabase.', 'sucesso');
+      window.FestaHexa?.celebrar();
       await carregarOpcoes();
       await carregar();
       if (data?.id) {

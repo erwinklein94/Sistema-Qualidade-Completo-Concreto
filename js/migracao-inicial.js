@@ -286,6 +286,7 @@ async function executarMigracao() {
     atualizarStatus('Concluída');
     logar('Migração concluída. Marcador de bloqueio gravado no Supabase.');
     App.toast('Migração inicial concluída com sucesso.');
+    window.FestaHexa?.celebrar();
 
     document.getElementById('cardSelecao').innerHTML = `
       <div class="vazio compacto">${ICN.check}
