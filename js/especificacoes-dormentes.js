@@ -89,6 +89,50 @@ const SECOES_CAMPOS = [
     ]
   },
   {
+    titulo: 'Parâmetros de projeto — EM-SPE-035 rev.10',
+    campos: [
+      { id: 'carga_eixo_projeto', label: 'Carga nominal estática por eixo' },
+      { id: 'velocidade_maxima_projeto', label: 'Velocidade máxima' },
+      { id: 'espacamento_dormentes', label: 'Espaçamento entre dormentes' },
+      { id: 'peso_maximo_dormente', label: 'Peso máximo do dormente' },
+      { id: 'inclinacao_trilho', label: 'Inclinação do trilho' },
+      { id: 'pressao_max_lastro', label: 'Taxa de compressão máx. no lastro' },
+      { id: 'bitola_grade_montada', label: 'Bitola na grade montada' },
+      { id: 'dist_centro_eixo_via', label: 'Dist. centro do dormente ao eixo da via' }
+    ]
+  },
+  {
+    titulo: 'Momentos fletores de projeto (kN·m) — EM-SPE-035 Tabela 1',
+    campos: [
+      { id: 'momento_fletor_positivo_apoio', label: 'Positivo no apoio do trilho' },
+      { id: 'momento_fletor_negativo_apoio', label: 'Negativo no apoio do trilho' },
+      { id: 'momento_fletor_negativo_centro', label: 'Negativo no centro' },
+      { id: 'momento_fletor_positivo_centro', label: 'Positivo no centro' }
+    ]
+  },
+  {
+    titulo: 'Protensão, acabamento e danos admissíveis',
+    campos: [
+      { id: 'fio_protensao', label: 'Fio de protensão' },
+      { id: 'posicionamento_fios_protensao', label: 'Posicionamento dos fios de protensão' },
+      { id: 'superficie_apoio_trilho', label: 'Superfície de apoio do trilho' },
+      { id: 'danos_admissiveis_movimentacao', label: 'Danos admissíveis (movimentação/transporte)' }
+    ]
+  },
+  {
+    titulo: 'Palmilha USP — EM-SPE-055 rev.05',
+    campos: [
+      { id: 'usp_distancia_bordos', label: 'Distância da palmilha aos bordos' },
+      { id: 'usp_imersao_elastomero', label: 'Imersão mín. do elastômero no concreto' },
+      { id: 'usp_espessura_elastomero_externo', label: 'Espessura do elastômero externo' },
+      { id: 'usp_planicidade', label: 'Planicidade / empeno da palmilha' },
+      { id: 'usp_rigidez_estatica', label: 'Rigidez estática (Cstat)' },
+      { id: 'usp_area_contato', label: 'Área de contato' },
+      { id: 'usp_resistencia_arrancamento', label: 'Resistência ao arrancamento' },
+      { id: 'usp_resistencia_tracao', label: 'Resistência à tração' }
+    ]
+  },
+  {
     titulo: 'Observações',
     campos: [
       { id: 'observacao', label: 'Observação', tipo: 'textarea', full: true }
@@ -108,12 +152,25 @@ const VALORES_COMUNS = {
   slump_espalhamento_fim: '400 a 600 mm'
 };
 
+// Limites da palmilha under sleeper pad — EM-SPE-055 rev.05 (06/10/2025)
+const VALORES_USP = {
+  usp_distancia_bordos: '≥ 10 e ≤ 20 mm dos bordos da face inferior',
+  usp_imersao_elastomero: '≥ 2 mm no concreto fresco (além da camada de conexão)',
+  usp_espessura_elastomero_externo: '≥ 7 e ≤ 20 mm',
+  usp_planicidade: '≤ 2 mm na peça de 1.380 mm',
+  usp_rigidez_estatica: 'Cstat ≥ 0,22 N/mm³ — NBR 16649 Anexo A, categoria C',
+  usp_area_contato: '≥ 18% — NBR 16649 Anexo C',
+  usp_resistencia_arrancamento: '≥ 0,3 N/mm² — NBR 16649 Anexo E',
+  usp_resistencia_tracao: '≥ 2,5 N/mm² — NBR 16649 Anexo F'
+};
+
 const ESPEC_PADROES_DORMENTES = {
   'MALHA PAULISTA BITOLA MISTA': {
     projeto: 'MALHA PAULISTA BITOLA MISTA',
     bitola: 'Bitola Mista',
     tipo_dormente: 'Bitola Mista MP - USP',
     ...VALORES_COMUNS,
+    ...VALORES_USP,
     momento_positivo_apoio_trilho: '256,60 kN — sem fissuras',
     fissura_apoio_positivo: 'Não',
     momento_negativo_apoio_trilho: '191,20 kN — sem fissuras',
@@ -147,6 +204,26 @@ const ESPEC_PADROES_DORMENTES = {
     bitola: 'Bitola Larga',
     tipo_dormente: 'Bitola Larga MP',
     ...VALORES_COMUNS,
+    ...VALORES_USP,
+    carga_eixo_projeto: '32,5 t/eixo',
+    velocidade_maxima_projeto: '80 km/h',
+    espacamento_dormentes: 'Máx. 600 mm (1.667 dormentes/km)',
+    peso_maximo_dormente: '≤ 400 kg (excluindo fixações)',
+    inclinacao_trilho: '1:40, para dentro da via',
+    pressao_max_lastro: '≤ 1,00 MPa',
+    bitola_grade_montada: '1.600 mm +2/-1 mm (grade c/ mín. 10 dormentes, a cada 2 mil fabricados)',
+    dist_centro_eixo_via: 'Tolerância 12 mm (controle na forma)',
+    momento_fletor_positivo_apoio: '30,6 kN·m',
+    momento_fletor_negativo_apoio: '21,4 kN·m',
+    momento_fletor_negativo_centro: '24,4 kN·m',
+    momento_fletor_positivo_centro: '17,1 kN·m',
+    fio_protensao: 'CP 170 RB ou CP 175 RB (NBR 7482); aderência inicial exige acabamento entalhado "E"',
+    posicionamento_fios_protensao: '±3 mm vertical / ±6 mm horizontal — fora da tolerância, refugo',
+    superficie_apoio_trilho: 'Plana e lisa; irregularidades ≤ 1 mm',
+    danos_admissiveis_movimentacao: '≤ 10 mm prof. × ≤ 150 mm compr. × ≤ 25 mm alt., só abaixo da linha de centro; armadura exposta = refugo',
+    comp_axial_28_dias: '≥ 65 MPa',
+    tracao_flexao_28_dias: '≥ 7,5 MPa',
+    temperatura_maxima: '≤ 60 °C na cura, até a desprotensão (prevenção DEF)',
     momento_positivo_apoio_trilho: '193,50 kN — sem fissuras',
     fissura_apoio_positivo: 'Não',
     momento_negativo_apoio_trilho: '144,00 kN — sem fissuras',
@@ -161,7 +238,7 @@ const ESPEC_PADROES_DORMENTES = {
     arrancamento_ombreira_a: '53,40 kN',
     arrancamento_ombreira_b: '53,40 kN',
     inclinacao_base_apoio_trilhos: 'Sim — entre 1:35 e 1:45',
-    empeno_transversal_entre_apoios: '0,10 mm',
+    empeno_transversal_entre_apoios: '0,10 mm — limite ≤ 1 mm',
     torcao_ombreira_a: 'Aprovado — carga 340 N·m',
     torcao_ombreira_b: 'Aprovado — carga 340 N·m',
     comprimento_dormente: '2795 mm — nominal 2800 mm; tolerância ±6 mm',
@@ -171,7 +248,7 @@ const ESPEC_PADROES_DORMENTES = {
     dist_interna_ombreiras_externas: '171 mm — tolerância ±1 mm ou passa/não passa',
     dist_interna_ombreiras_mesmo_trilho: 'Aprovado — medida de projeto',
     altura_ombreira: 'Aprovado — tolerância ±2,0 mm',
-    observacao: 'Padrão pré-preenchido conforme leituras principais informadas para Malha Paulista Bitola Larga.'
+    observacao: 'Limites conforme EM-SPE-035 rev.10 (09/09/2025) e EM-SPE-055 rev.05 (06/10/2025). Tolerâncias da forma: comprimento ±6 mm, largura ±3 mm, altura +6/-3 mm. Inclinação do apoio entre 1:35 e 1:45. Trilho TR-68 (AREMA 136-RE) ou UIC-60 (60E1), fixação fast-clip. Garantia do dormente: 10 anos. Garantia da palmilha USP: 1.000 MTBT. Desenho de referência ENG-DVP-D130; palmilha bitola larga base retangular ENG-DVP-D131.'
   },
   'FERRO NORTE': {
     projeto: 'FERRO NORTE',
@@ -209,6 +286,7 @@ const ESPEC_PADROES_DORMENTES = {
     bitola: 'Bitola Larga',
     tipo_dormente: 'Bitola Larga FMT USP',
     ...VALORES_COMUNS,
+    ...VALORES_USP,
     momento_positivo_apoio_trilho: '193,50 kN — sem fissuras',
     fissura_apoio_positivo: 'Não',
     momento_negativo_apoio_trilho: '144,00 kN — sem fissuras',
@@ -492,7 +570,7 @@ function mensagemErroBanco(err, padrao) {
   const msg = err?.message || err?.details || '';
   if (!msg) return padrao;
   if (/row-level security|violates row-level security/i.test(msg)) return 'Acesso bloqueado pelas regras de segurança do Supabase. Esta área só pode ser editada por Admin.';
-  if (/column .* does not exist|Could not find .* column|schema cache/i.test(msg)) return 'Campos novos ainda não existem no Supabase. Rode novamente supabase/2026-05-31-especificacoes-e-equipamentos.sql.';
+  if (/column .* does not exist|Could not find .* column|schema cache/i.test(msg)) return 'Campos novos ainda não existem no Supabase. Rode supabase/2026-05-31-especificacoes-e-equipamentos.sql e supabase/2026-06-11-especificacoes-em-spe-035-055.sql.';
   if (/relation .* does not exist|could not find the table/i.test(msg)) return 'Tabela ainda não criada no Supabase. Rode supabase/2026-05-31-especificacoes-e-equipamentos.sql.';
   if (/JWT|token|auth/i.test(msg)) return 'Sessão expirada ou inválida. Saia e faça login novamente.';
   return msg;
