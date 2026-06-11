@@ -40,15 +40,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderResumoSemanaDados();
   carregarCustoDormente();
   atualizarBotaoFestaHexa();
+  window.FestaHexa?.sincronizar().then(atualizarBotaoFestaHexa);
 });
 
-/* ---------- Comemoração da Copa (Rumo ao Hexa) ---------- */
-function alternarFestaHexa() {
+/* ---------- Comemoração da Copa (Rumo ao Hexa) — configuração global ---------- */
+async function alternarFestaHexa() {
   if (!window.FestaHexa) return;
-  const ligada = FestaHexa.alternar();
-  atualizarBotaoFestaHexa();
-  App.toast(ligada ? 'Comemoração da Copa ativada. Rumo ao Hexa!' : 'Comemoração da Copa desativada.', ligada ? 'sucesso' : 'aviso');
-  if (ligada) FestaHexa.celebrar();
+  const btn = document.getElementById('btnFestaHexa');
+  const ligar = !FestaHexa.ativa();
+  if (btn) btn.disabled = true;
+  try {
+    await FestaHexa.definir(ligar);
+    atualizarBotaoFestaHexa();
+    App.toast(ligar
+      ? 'Comemoração da Copa ativada para todos os usuários. Rumo ao Hexa!'
+      : 'Comemoração da Copa desativada para todos os usuários.', ligar ? 'sucesso' : 'aviso');
+    if (ligar) FestaHexa.celebrar();
+  } catch (err) {
+    console.error('Erro ao salvar configuração da comemoração', err);
+    const msg = /configuracoes_sistema|Could not find the table|schema cache/i.test(err?.message || '')
+      ? 'A tabela configuracoes_sistema ainda não existe no Supabase. Rode o arquivo supabase/2026-06-09-configuracoes-sistema.sql no SQL Editor.'
+      : (err?.message || 'Não foi possível salvar a configuração no Supabase.');
+    App.toast(msg, 'erro');
+    FestaHexa.sincronizar().then(atualizarBotaoFestaHexa); // desfaz o cache local
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function atualizarBotaoFestaHexa() {
@@ -58,7 +75,9 @@ function atualizarBotaoFestaHexa() {
   const ligada = FestaHexa.ativa();
   btn.textContent = ligada ? '⚽ Desativar comemoração' : '⚽ Ativar comemoração';
   btn.className = ligada ? 'btn btn-perigo' : 'btn btn-primario';
-  if (status) status.textContent = ligada ? 'Status: ativada neste navegador.' : 'Status: desativada neste navegador.';
+  if (status) status.textContent = ligada
+    ? 'Status: ativada para todos os usuários (admin, fiscalização e consulta).'
+    : 'Status: desativada para todos os usuários (admin, fiscalização e consulta).';
 }
 
 function atualizarKpis() {

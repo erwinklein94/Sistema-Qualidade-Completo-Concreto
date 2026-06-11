@@ -9,22 +9,46 @@
    - Gancho automático: embrulha todas as funções salvar* dos stores
      (StoreSupabase e StoreSubcomponentesSupabase). Telas que gravam
      direto no Supabase (Data books, migração) chamam FestaHexa.celebrar().
-   - Liga/desliga: card na página Dados do Sistema (Administração).
-     Preferência salva no navegador (localStorage).
+   - Liga/desliga GLOBAL: o admin alterna na página Dados do Sistema e a
+     decisão vale para TODOS os perfis (admin, fiscalização e consulta).
+     A configuração fica no Supabase (configuracoes_sistema, chave
+     festa_hexa_ativa) e é lida no carregamento de cada página; o
+     localStorage funciona apenas como cache local da leitura.
    ===================================================================== */
 
 const FestaHexa = (() => {
-  const CHAVE = 'sq_festa_hexa_ativa'; // '1' ligado (padrão) | '0' desligado
+  const CHAVE_CONFIG = 'festa_hexa_ativa';      // chave global no Supabase
+  const CHAVE_CACHE = 'sq_festa_hexa_ativa';    // cache local da última leitura
   const DURACAO_MS = 4500;
   let rodando = false;
   let cssInjetado = false;
 
   function ativa() {
-    try { return localStorage.getItem(CHAVE) !== '0'; } catch (e) { return true; }
+    try { return localStorage.getItem(CHAVE_CACHE) !== '0'; } catch (e) { return true; }
   }
 
-  function definir(ligada) {
-    try { localStorage.setItem(CHAVE, ligada ? '1' : '0'); } catch (e) { /* ignora */ }
+  function gravarCache(ligada) {
+    try { localStorage.setItem(CHAVE_CACHE, ligada ? '1' : '0'); } catch (e) { /* ignora */ }
+  }
+
+  // Lê a configuração global no Supabase e atualiza o cache local.
+  // Valor '0' = desativada; ausência da chave ou qualquer outro valor = ativada.
+  async function sincronizar() {
+    try {
+      if (!window.StoreSupabase?.obterConfiguracaoSistema) return ativa();
+      const cfg = await StoreSupabase.obterConfiguracaoSistema(CHAVE_CONFIG);
+      gravarCache(String(cfg?.valor ?? '1').trim() !== '0');
+    } catch (e) { /* sem conexão/tabela: mantém o cache */ }
+    return ativa();
+  }
+
+  // Admin: grava a decisão no Supabase para valer em todo o site.
+  async function definir(ligada) {
+    gravarCache(ligada);
+    await StoreSupabase.salvarConfiguracaoSistema({
+      chave: CHAVE_CONFIG,
+      valor: ligada ? '1' : '0',
+    });
     return ativa();
   }
 
@@ -79,6 +103,7 @@ const FestaHexa = (() => {
 
   /* ---------- a festa em si ---------- */
   function celebrar() {
+    sincronizar(); // em segundo plano: abas abertas captam a decisão do admin no próximo evento
     if (!ativa() || rodando || !document.body) return;
     rodando = true;
     injetarCss();
@@ -150,9 +175,12 @@ const FestaHexa = (() => {
   }
 
   instalarGanchos();
-  document.addEventListener('DOMContentLoaded', instalarGanchos);
+  document.addEventListener('DOMContentLoaded', () => {
+    instalarGanchos();
+    sincronizar(); // lê a decisão global do admin no Supabase
+  });
 
-  return { celebrar, ativa, definir, alternar };
+  return { celebrar, ativa, definir, alternar, sincronizar };
 })();
 
 window.FestaHexa = FestaHexa;
