@@ -56,7 +56,9 @@ const GRUPOS_PREENCHIMENTO = [
 const CAMPOS = ['fornecedor','pista','pedido','lote','projeto','tipo','total','dataFabricacao','cura14','cura28',
   'tempoCura','comUsp','uspLote','ombreira','loteOmbreira','tempIni','tempMeio','tempFim',
   'slumpIniA','slumpIniE','slumpMeioA','slumpMeioE','slumpFimA','slumpFimE',
-  'desproIni','desproMeio','desproFim','comp7','comp14','tracao14','comp28','tracao28',
+  'desproIni','desproMeio','desproFim',
+  'comp7Cp1','comp7Cp2','comp14Cp1','comp14Cp2','tracao14Cp1','tracao14Cp2',
+  'comp28Cp1','comp28Cp2','tracao28Cp1','tracao28Cp2',
   'serie','iauditor','ensaiados','aAnalisar','reprovados','aprovado','status','motivo'];
 
 const STATUS_LOTE = Object.freeze({
@@ -69,7 +71,9 @@ const STATUS_LOTE = Object.freeze({
 });
 
 const CAMPOS_STATUS_AUTOMATICO = [
-  'dataFabricacao', 'cura14', 'cura28', 'comp14', 'tracao14', 'comp28', 'tracao28',
+  'dataFabricacao', 'cura14', 'cura28',
+  'comp14Cp1', 'comp14Cp2', 'tracao14Cp1', 'tracao14Cp2',
+  'comp28Cp1', 'comp28Cp2', 'tracao28Cp1', 'tracao28Cp2',
   'serie', 'iauditor', 'ensaiados', 'aAnalisar', 'reprovados', 'aprovado', 'status'
 ];
 
@@ -349,6 +353,7 @@ function render() {
 
   registrarExportacaoProducao(lista);
   renderAlertasPreenchimento(lista);
+  renderIndicadorCapabilidade(lista);
   document.getElementById('contador').textContent = PRODUCAO_CARREGANDO
     ? 'Carregando do Supabase...'
     : `${lista.length} de ${todos.length} registro(s) no Supabase`;
@@ -437,6 +442,12 @@ function badgePreenchimento(info) {
     <span class="badge ${cls}">${info.pct}%</span>
     <div class="barra-preenchimento"><span class="${info.status}" style="width:${info.pct}%"></span></div>
   </div>`;
+}
+
+function renderIndicadorCapabilidade(lista) {
+  const alvo = document.getElementById('indicadorCapabilidade');
+  if (!alvo || !window.IndicadoresQualidade) return;
+  alvo.innerHTML = PRODUCAO_CARREGANDO ? '' : IndicadoresQualidade.htmlPainelCapabilidade(lista);
 }
 
 function renderAlertasPreenchimento(lista) {
@@ -699,11 +710,11 @@ function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
     desproIni: r.despro_ini || '',
     desproMeio: r.despro_meio || '',
     desproFim: r.despro_fim || '',
-    comp7: valorBanco(r.comp_7),
-    comp14: valorBanco(r.comp_14),
-    tracao14: valorBanco(r.tracao_14),
-    comp28: valorBanco(r.comp_28),
-    tracao28: valorBanco(r.tracao_28),
+    ...camposCpDoBanco('comp7', r.comp_7, r.comp_7_cp2),
+    ...camposCpDoBanco('comp14', r.comp_14, r.comp_14_cp2),
+    ...camposCpDoBanco('tracao14', r.tracao_14, r.tracao_14_cp2),
+    ...camposCpDoBanco('comp28', r.comp_28, r.comp_28_cp2),
+    ...camposCpDoBanco('tracao28', r.tracao_28, r.tracao_28_cp2),
     serie: r.serie || '',
     iauditor: r.iauditor || '',
     ensaiados: valorBanco(r.dorm_ensaiados),
@@ -781,11 +792,11 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
       slump_meio_espalhamento: numeroOuNull(reg.slumpMeioE),
       slump_final_abatimento: numeroOuNull(reg.slumpFimA),
       slump_final_espalhamento: numeroOuNull(reg.slumpFimE),
-      comp_7: numeroOuNull(reg.comp7),
-      comp_14: numeroOuNull(reg.comp14),
-      tracao_14: numeroOuNull(reg.tracao14),
-      comp_28: numeroOuNull(reg.comp28),
-      tracao_28: numeroOuNull(reg.tracao28),
+      comp_7: numeroOuNull(reg.comp7Cp1),
+      comp_14: numeroOuNull(reg.comp14Cp1),
+      tracao_14: numeroOuNull(reg.tracao14Cp1),
+      comp_28: numeroOuNull(reg.comp28Cp1),
+      tracao_28: numeroOuNull(reg.tracao28Cp1),
     };
   }
 
@@ -804,15 +815,38 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
     despro_ini: textoOuNull(reg.desproIni),
     despro_meio: textoOuNull(reg.desproMeio),
     despro_fim: textoOuNull(reg.desproFim),
-    comp_7: textoOuNull(reg.comp7),
-    comp_14: textoOuNull(reg.comp14),
-    tracao_14: textoOuNull(reg.tracao14),
-    comp_28: textoOuNull(reg.comp28),
-    tracao_28: textoOuNull(reg.tracao28),
+    comp_7: textoOuNull(reg.comp7Cp1),
+    comp_7_cp2: textoOuNull(reg.comp7Cp2),
+    comp_14: textoOuNull(reg.comp14Cp1),
+    comp_14_cp2: textoOuNull(reg.comp14Cp2),
+    tracao_14: textoOuNull(reg.tracao14Cp1),
+    tracao_14_cp2: textoOuNull(reg.tracao14Cp2),
+    comp_28: textoOuNull(reg.comp28Cp1),
+    comp_28_cp2: textoOuNull(reg.comp28Cp2),
+    tracao_28: textoOuNull(reg.tracao28Cp1),
+    tracao_28_cp2: textoOuNull(reg.tracao28Cp2),
   };
 }
 
 function valorBanco(v) { return v == null ? '' : String(v); }
+
+// Resistências por corpo de prova (CP 1 / CP 2).
+// Gera os campos separados do formulário e mantém o campo combinado
+// (ex.: comp7 = "64,22 / 60,26") usado em cards e exportações.
+// Rede de segurança: se o banco ainda tiver valor antigo "a / b" com o
+// CP 2 vazio (migração SQL não executada), divide na primeira barra
+// sem perder nada — o restante inteiro vai para o CP 2.
+function camposCpDoBanco(prefixo, v1, v2) {
+  let cp1 = valorBanco(v1).trim();
+  let cp2 = valorBanco(v2).trim();
+  if (!cp2 && cp1.includes('/')) {
+    const i = cp1.indexOf('/');
+    cp2 = cp1.slice(i + 1).trim();
+    cp1 = cp1.slice(0, i).trim();
+  }
+  const combinado = [cp1, cp2].filter(Boolean).join(' / ');
+  return { [`${prefixo}Cp1`]: cp1, [`${prefixo}Cp2`]: cp2, [prefixo]: combinado };
+}
 function dataBanco(v) { return v ? String(v).slice(0, 10) : ''; }
 function textoOuNull(v) { const s = String(v == null ? '' : v).trim(); return s ? s : null; }
 function dataOuNull(v) { const s = String(v == null ? '' : v).slice(0, 10).trim(); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; }
@@ -841,6 +875,7 @@ function mensagemErroBanco(err, padrao) {
   const msg = err?.message || err?.details || '';
   if (!msg) return padrao;
   if (/duplicate key|unique constraint/i.test(msg)) return 'Já existe um lote com esse fornecedor no Supabase.';
+  if (/column .* does not exist|Could not find .* column|schema cache/i.test(msg)) return 'Campos de CP 2 ainda não existem no Supabase. Rode supabase/2026-06-11-producao-resistencias-cp1-cp2.sql.';
   if (/row-level security|violates row-level security/i.test(msg)) return 'Acesso bloqueado pelas regras de segurança do Supabase. Confira seu perfil em usuarios_app.';
   if (/JWT|token|auth/i.test(msg)) return 'Sessão expirada ou inválida. Saia e faça login novamente.';
   return msg;

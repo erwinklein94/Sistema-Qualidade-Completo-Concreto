@@ -465,11 +465,24 @@ function mapProducaoBanco(r, compatibilidade = false) {
     despro_ini: textoOuNull(r.desproIni),
     despro_meio: textoOuNull(r.desproMeio),
     despro_fim: textoOuNull(r.desproFim),
-    comp_7: textoOuNull(r.comp7),
-    comp_14: textoOuNull(r.comp14),
-    tracao_14: textoOuNull(r.tracao14),
-    comp_28: textoOuNull(r.comp28),
-    tracao_28: textoOuNull(r.tracao28),
+    ...colunasCpBanco('comp_7', r.comp7),
+    ...colunasCpBanco('comp_14', r.comp14),
+    ...colunasCpBanco('tracao_14', r.tracao14),
+    ...colunasCpBanco('comp_28', r.comp28),
+    ...colunasCpBanco('tracao_28', r.tracao28),
+  };
+}
+
+// Planilhas antigas trazem os dois corpos de prova juntos ("64,22 / 60,26").
+// Divide na primeira barra: CP 1 fica na coluna original, todo o restante
+// vai para a coluna *_cp2, sem perda de informação.
+function colunasCpBanco(coluna, valor) {
+  const s = String(valor == null ? '' : valor).trim();
+  const i = s.indexOf('/');
+  if (i < 0) return { [coluna]: textoOuNull(s), [`${coluna}_cp2`]: null };
+  return {
+    [coluna]: textoOuNull(s.slice(0, i)),
+    [`${coluna}_cp2`]: textoOuNull(s.slice(i + 1)),
   };
 }
 

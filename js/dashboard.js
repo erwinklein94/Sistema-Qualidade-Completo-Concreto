@@ -338,6 +338,7 @@ function render() {
   if (Dashboard.carregando) {
     kpis.innerHTML = '';
     cont.innerHTML = `<div class="card"><div class="vazio">${ICN.vazioBox}<h3>Carregando Dashboard</h3><p>Buscando Produção, Reprovados e Ensaios de Liberação no Supabase...</p></div></div>`;
+    limparIndicadoresDashboard();
     destruir();
     return;
   }
@@ -345,6 +346,7 @@ function render() {
   if (Dashboard.erro) {
     kpis.innerHTML = '';
     cont.innerHTML = `<div class="card"><div class="vazio">${ICN.alerta}<h3>Erro ao carregar</h3><p>${U.esc(Dashboard.erro)}</p><button class="btn btn-secundario" onclick="carregarDashboard()">Tentar novamente</button></div></div>`;
+    limparIndicadoresDashboard();
     destruir();
     return;
   }
@@ -357,6 +359,7 @@ function render() {
       <p>O Dashboard agora lê somente os dados lançados no Supabase. Ajuste os filtros ou cadastre produção/reprovas/ensaios no site.</p>
       <div style="margin-top:18px"><button class="btn btn-primario" onclick="limparFiltrosDashboard()">Ver todos os dados</button></div>
     </div></div>`;
+    limparIndicadoresDashboard();
     destruir();
     return;
   }
@@ -390,6 +393,26 @@ function render() {
     periodoTxt
   });
   desenharGraficos(prod, rep, ens, filtros);
+  renderIndicadoresDashboard(prod, rep);
+}
+
+function renderIndicadoresDashboard(prod, rep) {
+  const cap = document.getElementById('capabilidadeDashboard');
+  const moldes = document.getElementById('moldesCavidadesDashboard');
+  if (!window.IndicadoresQualidade) { if (cap) cap.innerHTML = ''; if (moldes) moldes.innerHTML = ''; return; }
+  if (cap) cap.innerHTML = IndicadoresQualidade.htmlPainelCapabilidade(prod, {
+    subtitulo: 'Cp/Cpk dos corpos de prova (CP 1 e CP 2) da Produção no recorte dos filtros acima · limites da EM-SPE-035 rev.10 · meta Cpk ≥ 1,33'
+  });
+  if (moldes) moldes.innerHTML = IndicadoresQualidade.htmlPainelMoldesCavidades(rep, {
+    subtitulo: 'Espelho da aba Dormentes Reprovados: moldes e cavidades com mais refugos por projeto e por tipo de problema, no recorte dos filtros acima.'
+  });
+}
+
+function limparIndicadoresDashboard() {
+  ['capabilidadeDashboard', 'moldesCavidadesDashboard'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 }
 
 function destruir() {
@@ -1072,6 +1095,11 @@ function mapProducao(r) {
     ensaiados: valorBanco(r.dorm_ensaiados),
     reprovados: valorBanco(r.dorm_reprovados),
     aprovado: valorBanco(r.total_aprovado),
+    ...cpsDashboard('comp7', r.comp_7, r.comp_7_cp2),
+    ...cpsDashboard('comp14', r.comp_14, r.comp_14_cp2),
+    ...cpsDashboard('tracao14', r.tracao_14, r.tracao_14_cp2),
+    ...cpsDashboard('comp28', r.comp_28, r.comp_28_cp2),
+    ...cpsDashboard('tracao28', r.tracao_28, r.tracao_28_cp2),
     status: normalizarStatusDashboard(r.status || ''),
     serie: r.serie || '',
     semana: r.semana || '',
@@ -1096,8 +1124,20 @@ function mapReprovado(r) {
     bitola: r.bitola || '',
     tipo: r.tipo || '',
     motivoIndicador: r.motivo_indicador || '',
+    motivoDetalhado: r.motivo_detalhado || '',
+    molde: r.molde || '',
+    cavidade: r.cavidade || '',
     totalRefugos: valorBanco(r.total_refugos || 1),
   };
+}
+
+// Resistências por corpo de prova para o indicador de capabilidade.
+// Usa a mesma divisão de segurança da Produção (valor antigo "a / b").
+function cpsDashboard(prefixo, v1, v2) {
+  const [cp1, cp2] = window.IndicadoresQualidade
+    ? IndicadoresQualidade.separarCps(v1, v2)
+    : [valorBanco(v1), valorBanco(v2)];
+  return { [`${prefixo}Cp1`]: cp1, [`${prefixo}Cp2`]: cp2 };
 }
 
 function mapEnsaio(r) {

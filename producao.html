@@ -65,6 +65,8 @@
           <div id="alertasPreenchimento"></div>
         </div>
 
+        <div id="indicadorCapabilidade"></div>
+
         <div class="card">
           <div class="card-titulo">
             <span class="acento">Registros de Produção</span>
@@ -132,11 +134,16 @@
             <div class="campo"><label>Fim Pista</label><input id="desproFim" type="text"></div>
 
             <div class="form-secao">Resistências — Compressão Axial (MPa) e Tração na Flexão</div>
-            <div class="campo"><label>Comp. Axial 7 dias</label><input id="comp7" type="text" placeholder="ex.: 64,22 / 60,26"></div>
-            <div class="campo"><label>Comp. Axial 14 dias</label><input id="comp14" type="text"></div>
-            <div class="campo"><label>Tração Flexão 14 dias</label><input id="tracao14" type="text"></div>
-            <div class="campo"><label>Comp. Axial 28 dias</label><input id="comp28" type="text"></div>
-            <div class="campo"><label>Tração Flexão 28 dias</label><input id="tracao28" type="text"></div>
+            <div class="campo"><label>Comp. Axial 7 dias — CP 1</label><input id="comp7Cp1" type="text" placeholder="ex.: 64,22"></div>
+            <div class="campo"><label>Comp. Axial 7 dias — CP 2</label><input id="comp7Cp2" type="text" placeholder="ex.: 60,26"></div>
+            <div class="campo"><label>Comp. Axial 14 dias — CP 1</label><input id="comp14Cp1" type="text"></div>
+            <div class="campo"><label>Comp. Axial 14 dias — CP 2</label><input id="comp14Cp2" type="text"></div>
+            <div class="campo"><label>Tração Flexão 14 dias — CP 1</label><input id="tracao14Cp1" type="text"></div>
+            <div class="campo"><label>Tração Flexão 14 dias — CP 2</label><input id="tracao14Cp2" type="text"></div>
+            <div class="campo"><label>Comp. Axial 28 dias — CP 1</label><input id="comp28Cp1" type="text"></div>
+            <div class="campo"><label>Comp. Axial 28 dias — CP 2</label><input id="comp28Cp2" type="text"></div>
+            <div class="campo"><label>Tração Flexão 28 dias — CP 1</label><input id="tracao28Cp1" type="text"></div>
+            <div class="campo"><label>Tração Flexão 28 dias — CP 2</label><input id="tracao28Cp2" type="text"></div>
 
             <div class="form-secao">Ensaio de Liberação</div>
             <div class="campo"><label>Série — Ensaio de Liberação</label><input id="serie" type="text" placeholder="ex.: Série 01 - FMT"></div>
@@ -183,6 +190,7 @@
   <script src="js/comum.js?v=20260609-mobile-topo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260527-window-fix"></script>
-  <script src="js/producao.js?v=20260528-producao-topo-direita"></script>
+  <script src="js/indicadores-qualidade.js?v=20260611-cpk-moldes-v1"></script>
+  <script src="js/producao.js?v=20260611-cp1-cp2-capabilidade"></script>
 </body>
 </html>

@@ -6572,3 +6572,72 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
     height: 16px;
   }
 }
+
+/* =====================================================================
+   INDICADORES DE QUALIDADE — Capabilidade (Cp/Cpk) e Moldes/Cavidades
+   ===================================================================== */
+.dashboard-indicadores { margin-top: 18px; }
+#indicadorCapabilidade, #indicadorMoldesCavidades { margin-bottom: 18px; }
+
+.capabilidade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.cap-card {
+  border: 1px solid var(--borda, #e3e8ef);
+  border-left: 5px solid var(--cinza-claro, #c7cdd6);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--card, #fff);
+}
+.cap-card.ok { border-left-color: var(--ok); }
+.cap-card.aviso { border-left-color: var(--amarelo); }
+.cap-card.critico { border-left-color: var(--erro); }
+.cap-rotulo { font-weight: 700; font-size: 0.85rem; margin-bottom: 8px; }
+.cap-numeros { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.cap-principal .cap-valor { font-size: 1.7rem; font-weight: 800; margin-left: 6px; }
+.cap-card.ok .cap-valor { color: var(--ok); }
+.cap-card.aviso .cap-valor { color: var(--amarelo-texto, #b58900); }
+.cap-card.critico .cap-valor { color: var(--erro); }
+.cap-secundario { font-size: 1rem; font-weight: 700; opacity: 0.85; }
+.cap-secundario .cap-tag { margin-right: 6px; }
+.cap-tag {
+  font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em;
+  text-transform: uppercase; opacity: 0.65;
+}
+.cap-meta { font-size: 0.74rem; opacity: 0.8; margin-top: 8px; }
+.cap-limites { font-size: 0.72rem; opacity: 0.7; margin-top: 4px; }
+.cap-limites strong { color: var(--erro); }
+
+.molde-projeto { margin-bottom: 16px; }
+.molde-projeto:last-child { margin-bottom: 0; }
+.molde-projeto-titulo {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.molde-projeto-meta { font-size: 0.76rem; opacity: 0.75; }
+.moldes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+.molde-card {
+  border: 1px solid var(--borda, #e3e8ef);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--card, #fff);
+}
+.molde-card.principal { border-color: var(--erro); box-shadow: 0 0 0 1px var(--erro) inset; }
+.molde-card-topo {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px; font-size: 0.82rem;
+}
+.molde-card-total { font-weight: 800; color: var(--erro); white-space: nowrap; }
+.molde-card-motivos { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 4px; }
+.molde-card-motivos .badge.mini { font-size: 0.66rem; padding: 2px 7px; }
+.molde-extras { font-size: 0.74rem; opacity: 0.7; margin-top: 6px; }
+
+@media (max-width: 600px) {
+  .capabilidade-grid, .moldes-grid { grid-template-columns: 1fr; }
+}

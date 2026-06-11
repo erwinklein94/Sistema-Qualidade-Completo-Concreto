@@ -201,6 +201,7 @@ function render() {
     : `${lista.length} de ${todos.length} registro(s) no Supabase · ${totalRefugos} refugos${txtPeriodo}`;
 
   renderParecerReprovados(lista, f);
+  renderIndicadorMoldesCavidades(lista);
 
   const cont = document.getElementById('lista');
   if (!cont) return;
@@ -249,6 +250,12 @@ function render() {
       <th>Sem.</th><th>Período operacional</th><th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Molde</th><th>Cavidade</th>
       <th>Motivo</th><th>Detalhe</th><th class="right">Refugos</th><th>Ações</th>
     </tr></thead><tbody>${linhas}</tbody></table></div>`;
+}
+
+function renderIndicadorMoldesCavidades(lista) {
+  const alvo = document.getElementById('indicadorMoldesCavidades');
+  if (!alvo || !window.IndicadoresQualidade) return;
+  alvo.innerHTML = REPROVADOS_CARREGANDO ? '' : IndicadoresQualidade.htmlPainelMoldesCavidades(lista);
 }
 
 function renderParecerReprovados(lista, f) {
