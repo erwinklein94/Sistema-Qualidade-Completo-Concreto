@@ -1256,7 +1256,7 @@ function mensagemErroBanco(err, padrao) {
 
 
 function graficosDashboardExportacao() {
-  return [
+  const graficos = [
     { titulo: 'Produção por projeto', canvasId: 'chartProjeto' },
     { titulo: 'Motivos de reprova', canvasId: 'chartMotivos' },
     { titulo: 'Produção × Reprova semanal por projeto', canvasId: 'chartSemanalProjeto' },
@@ -1265,16 +1265,118 @@ function graficosDashboardExportacao() {
     { titulo: 'Status dos lotes', canvasId: 'chartStatus' },
     { titulo: 'Ensaios de liberação', canvasId: 'chartEnsaios' },
   ];
+
+  // A evolução mensal do Cpk só existe quando o usuário abre um projeto no painel.
+  // Se estiver aberta, ela também entra no PDF. O quadro de avisos não é incluído.
+  if (document.getElementById('chartEvolucaoCpk')) {
+    graficos.push({ titulo: 'Evolução mensal do Cpk por projeto selecionado', canvasId: 'chartEvolucaoCpk' });
+  }
+
+  return graficos;
+}
+
+function textoPdfDashboard(v) {
+  return String(v == null ? '' : v).replace(/—/g, '-').replace(/≥/g, '>=').replace(/σ/g, 'sigma');
+}
+
+function fmtNumeroPdfDashboard(v, casas = 2) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(casas).replace('.', ',') : '-';
+}
+
+function fmtInteiroPdfDashboard(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n).toLocaleString('pt-BR') : '0';
+}
+
+function fmtDeltaCpkPdfDashboard(delta) {
+  const n = Number(delta);
+  if (!Number.isFinite(n)) return '-';
+  return `${n >= 0 ? '+' : '-'}${Math.abs(n).toFixed(2).replace('.', ',')}`;
+}
+
+function statusCpkPdfDashboard(item) {
+  const cpk = Number(item?.cpk);
+  const n = Number(item?.n || 0);
+  const temDesvio = Object.prototype.hasOwnProperty.call(item || {}, 'desvio');
+  const desvio = Number(item?.desvio || 0);
+  if (!n) return 'Sem dados';
+  if (n < 2 || (temDesvio && !(desvio > 0)) || !Number.isFinite(cpk)) return 'Dados insuficientes';
+  if (cpk >= 1.33) return 'Processo capaz';
+  if (cpk >= 1.0) return 'Aceitavel - monitorar';
+  return 'Incapaz - agir';
+}
+
+function tendenciaCpkPdfDashboard(seta) {
+  if (seta === '↗') return 'Subindo';
+  if (seta === '↘') return 'Caindo';
+  if (seta === '→') return 'Estavel';
+  return '-';
+}
+
+function baseCpkPdfDashboard(base) {
+  if (base === '90d') return 'Ultimos 90 dias';
+  if (base === 'geral') return 'Historico completo';
+  return 'Sem base valida';
+}
+
+function linhasCpkRecorteDashboardExportacao(prod) {
+  if (!window.IndicadoresQualidade?.calcularCapabilidade) return [];
+  return IndicadoresQualidade.calcularCapabilidade(prod || []).map(i => {
+    const margem = Number.isFinite(Number(i.media)) && Number.isFinite(Number(i.lie)) ? Number(i.media) - Number(i.lie) : null;
+    return {
+      ensaio: textoPdfDashboard(i.rotulo),
+      cpk: fmtNumeroPdfDashboard(i.cpk),
+      status: statusCpkPdfDashboard(i),
+      cps: fmtInteiroPdfDashboard(i.n),
+      media: `${fmtNumeroPdfDashboard(i.media)} ${i.unidade || ''}`.trim(),
+      desvio: fmtNumeroPdfDashboard(i.desvio, 3),
+      minimoMaximo: `${fmtNumeroPdfDashboard(i.min)} / ${fmtNumeroPdfDashboard(i.max)}`,
+      lie: `${fmtNumeroPdfDashboard(i.lie)} ${i.unidade || ''}`.trim(),
+      margem: Number.isFinite(margem) ? `${margem >= 0 ? '+' : '-'}${fmtNumeroPdfDashboard(Math.abs(margem))} ${i.unidade || ''}`.trim() : '-',
+      abaixoLie: fmtInteiroPdfDashboard(i.abaixoLie || 0),
+    };
+  });
+}
+
+function linhasCpkProjetosDashboardExportacao(registrosHistorico) {
+  if (!window.IndicadoresQualidade?.saudeProjetos) return [];
+  const saude = IndicadoresQualidade.saudeProjetos(registrosHistorico || []);
+  return (saude.projetos || []).flatMap(p => (p.ensaios || []).map(e => ({
+    projeto: textoPdfDashboard(p.projeto),
+    ensaio: textoPdfDashboard(String(e.rotulo || '').replace(/\s*[—-]\s*28 dias/i, ' 28d')),
+    cpk: fmtNumeroPdfDashboard(e.cpk),
+    status: statusCpkPdfDashboard(e),
+    base: baseCpkPdfDashboard(e.base),
+    cps: fmtInteiroPdfDashboard(e.n),
+    delta90d: fmtDeltaCpkPdfDashboard(e.tend?.delta),
+    tendencia: tendenciaCpkPdfDashboard(e.tend?.seta),
+    alerta: e.alerta ? 'Sim' : 'Nao',
+  })));
+}
+
+function resumoCpkDashboardExportacao(registrosHistorico) {
+  if (!window.IndicadoresQualidade?.saudeProjetos) return [];
+  const saude = IndicadoresQualidade.saudeProjetos(registrosHistorico || []);
+  const linhas = [];
+  if (saude.melhor) linhas.push({ indicador: 'CPK - melhor projeto', valor: `${textoPdfDashboard(saude.melhor.projeto)} - Cpk min. ${fmtNumeroPdfDashboard(saude.melhor.cpkMin)}` });
+  if (saude.atencao) linhas.push({ indicador: 'CPK - projeto em atencao', valor: `${textoPdfDashboard(saude.atencao.projeto)} - Cpk min. ${fmtNumeroPdfDashboard(saude.atencao.cpkMin)}` });
+  if (saude.piorTendencia) linhas.push({ indicador: 'CPK - pior tendencia em 90 dias', valor: `${textoPdfDashboard(saude.piorTendencia.projeto)} - ${fmtDeltaCpkPdfDashboard(saude.piorTendencia.piorDelta)}` });
+  return linhas;
 }
 
 function registrarExportacaoDashboard(prod, rep, ens, filtros, resumo) {
   if (!window.Exportacoes) return;
   const filtrosTela = Exportacoes.filtrosDaTela();
+  const linhasCpkRecorte = linhasCpkRecorteDashboardExportacao(prod);
+  const linhasCpkProjetos = linhasCpkProjetosDashboardExportacao(Dashboard.prod);
+
   Exportacoes.registrar({
     titulo: 'Dashboard',
     nomeArquivo: 'dashboard',
     filtros: filtrosTela,
     graficos: graficosDashboardExportacao(),
+    observacao: 'Fonte: Supabase. Exportacao gerada a partir dos filtros aplicados na tela. Inclui Cpk do recorte filtrado e saude estatistica por projeto no historico completo. O quadro de avisos do Dashboard nao entra neste PDF.',
     secoes: [
       {
         titulo: 'Resumo do Dashboard',
@@ -1289,8 +1391,40 @@ function registrarExportacaoDashboard(prod, rep, ens, filtros, resumo) {
           { indicador: 'Taxa de reprova (Reprovas / Produção)', valor: `${String(resumo.taxaReprova).replace('.', ',')}%` },
           { indicador: 'Ensaios de liberação', valor: ens.length },
           { indicador: 'Ensaios aprovados', valor: resumo.ensAprov },
-          { indicador: 'Período', valor: resumo.periodoTxt }
+          { indicador: 'Período', valor: resumo.periodoTxt },
+          ...resumoCpkDashboardExportacao(Dashboard.prod)
         ]
+      },
+      {
+        titulo: 'CPK - capabilidade do recorte filtrado',
+        columns: [
+          { key: 'ensaio', label: 'Ensaio' },
+          { key: 'cpk', label: 'Cpk' },
+          { key: 'status', label: 'Status' },
+          { key: 'cps', label: 'CPs' },
+          { key: 'media', label: 'Média' },
+          { key: 'desvio', label: 'Desvio' },
+          { key: 'minimoMaximo', label: 'Mín / Máx' },
+          { key: 'lie', label: 'LIE' },
+          { key: 'margem', label: 'Margem LIE' },
+          { key: 'abaixoLie', label: 'Abaixo LIE' }
+        ],
+        rows: linhasCpkRecorte
+      },
+      {
+        titulo: 'CPK por projeto - histórico completo',
+        columns: [
+          { key: 'projeto', label: 'Projeto' },
+          { key: 'ensaio', label: 'Ensaio' },
+          { key: 'cpk', label: 'Cpk atual' },
+          { key: 'status', label: 'Status' },
+          { key: 'base', label: 'Base' },
+          { key: 'cps', label: 'CPs' },
+          { key: 'delta90d', label: 'Delta 90d' },
+          { key: 'tendencia', label: 'Tendência' },
+          { key: 'alerta', label: 'Alerta queda' }
+        ],
+        rows: linhasCpkProjetos
       },
       {
         titulo: 'Produção filtrada',
