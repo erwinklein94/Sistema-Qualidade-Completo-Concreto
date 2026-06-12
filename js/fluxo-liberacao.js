@@ -6,6 +6,8 @@ let FLUXO_ENSAIOS = [];
 let FLUXO_DADOS = { series: [] };
 let FLUXO_CARREGANDO = false;
 let FLUXO_ERRO = '';
+let FICHA_LOTE_ATUAL = null;
+const FICHA_VINCULOS_CACHE = new Map();
 
 const STATUS_FILTRO_FLUXO = [
   { valor: '', texto: 'Todos' },
@@ -30,13 +32,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   `);
 
   preencherFiltrosFluxo();
-  ['busca', 'fFornecedor', 'fProjeto', 'fBitola', 'fStatusFluxo', 'fSomenteAlertas'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('input', renderFluxo);
-    if (el) el.addEventListener('change', renderFluxo);
+  let buscaTimer = null;
+  document.getElementById('busca')?.addEventListener('input', () => {
+    clearTimeout(buscaTimer);
+    buscaTimer = setTimeout(renderFluxo, 200);
+  });
+  ['fFornecedor', 'fProjeto', 'fBitola', 'fStatusFluxo', 'fSomenteAlertas'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', renderFluxo);
   });
 
   renderFluxo();
+
+  document.getElementById('modalFichaLote')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) fecharFichaLote();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') fecharFichaLote();
+    if ((e.key === 'Enter' || e.key === ' ') && e.target?.classList?.contains('clicavel')) {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
+
   await carregarFluxoLiberacao();
 });
 
@@ -57,9 +74,10 @@ async function carregarFluxoLiberacao() {
       StoreSupabase.listarProducao({ limite: 10000 }),
       StoreSupabase.listarEnsaiosLiberacao({ limite: 10000 }),
     ]);
-    FLUXO_PRODUCAO = (producao || []).map(mapProducaoFluxo);
-    FLUXO_ENSAIOS = (ensaios || []).map(mapEnsaioFluxo);
+    FLUXO_PRODUCAO = producao || [];
+    FLUXO_ENSAIOS = ensaios || [];
     FLUXO_DADOS = FluxoLiberacao.calcular(FLUXO_PRODUCAO, FLUXO_ENSAIOS);
+    FICHA_VINCULOS_CACHE.clear();
     FLUXO_CARREGANDO = false;
     renderFluxo();
   } catch (err) {
@@ -116,10 +134,11 @@ function renderFluxo() {
   }
 
   const series = seriesFiltradas();
-  registrarExportacaoFluxo(series);
+  const projetos = montarMapaProjetos(series, FLUXO_DADOS.series || []);
+  registrarExportacaoFluxo(series, projetos);
   renderKpisFluxo(series);
   renderResumoRegra(series);
-  renderMapaProjetos(series);
+  renderMapaProjetos(projetos);
   renderCardsFluxo(series);
   renderTabelaFluxo(series);
   setText('contadorFluxo', `${series.length} de ${(FLUXO_DADOS.series || []).length} série(s)`);
@@ -164,10 +183,9 @@ function renderCardsFluxo(series) {
   alvo.innerHTML = `<div class="fluxo-grid">${series.map(cardFluxo).join('')}</div>`;
 }
 
-function renderMapaProjetos(series) {
+function renderMapaProjetos(projetos) {
   const alvo = document.getElementById('mapaProjetosSeries');
   if (!alvo) return;
-  const projetos = montarMapaProjetos(series);
   if (!projetos.length) {
     alvo.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhum projeto encontrado</h3><p>Ajuste os filtros ou cadastre lotes de produção para visualizar a sequência das séries.</p></div>`;
     return;
@@ -175,7 +193,16 @@ function renderMapaProjetos(series) {
   alvo.innerHTML = `<div class="mapa-projetos-grid">${projetos.map(cardMapaProjeto).join('')}</div>`;
 }
 
-function montarMapaProjetos(series) {
+function montarMapaProjetos(series, todasSeries) {
+  const numerosGlobais = new Map();
+  (todasSeries || series || []).forEach(s => {
+    const projeto = FluxoLiberacao.projetoCanonico ? FluxoLiberacao.projetoCanonico(s) : (s.projeto || 'Sem projeto');
+    const codigo = FluxoLiberacao.codigoProjeto ? FluxoLiberacao.codigoProjeto(s) : codigoProjetoMapaLocal(projeto, s.bitola);
+    const chaveProjeto = chaveTextoLocal(`${codigo}|||${projeto}`);
+    const numero = numeroSerieLocal(s.serie);
+    if (numero) numerosGlobais.set(chaveProjeto, Math.max(numerosGlobais.get(chaveProjeto) || 0, numero));
+  });
+
   const mapa = new Map();
   (series || []).forEach(s => {
     const projeto = FluxoLiberacao.projetoCanonico ? FluxoLiberacao.projetoCanonico(s) : (s.projeto || 'Sem projeto');
@@ -185,6 +212,7 @@ function montarMapaProjetos(series) {
       mapa.set(chaveProjeto, {
         projeto,
         codigo,
+        chaveProjeto,
         series: new Map(),
         fornecedores: new Set(),
         bitolas: new Set(),
@@ -225,7 +253,7 @@ function montarMapaProjetos(series) {
     serieInfo.fornecedores.add(s.fornecedor || 'Sem fábrica');
     serieInfo.bitolas.add(s.bitola || 'Sem bitola');
     serieInfo.origens.add(s.auto ? 'automática' : 'manual');
-    const statusPrioritario = statusPrioridadeLocal(s.statusChave) < statusPrioridadeLocal(serieInfo.statusChave);
+    const statusPrioritario = FluxoLiberacao.prioridadeStatus(s.statusChave) < FluxoLiberacao.prioridadeStatus(serieInfo.statusChave);
     if (statusPrioritario) {
       serieInfo.statusChave = s.statusChave || serieInfo.statusChave;
       serieInfo.status = s.status || serieInfo.status;
@@ -235,7 +263,8 @@ function montarMapaProjetos(series) {
 
   return Array.from(mapa.values()).map(p => {
     const numerosValidos = p.numeros.filter(n => Number.isFinite(n) && n > 0);
-    p.ultimoNumero = numerosValidos.length ? Math.max(...numerosValidos) : 0;
+    const maiorVisivel = numerosValidos.length ? Math.max(...numerosValidos) : 0;
+    p.ultimoNumero = Math.max(maiorVisivel, numerosGlobais.get(p.chaveProjeto) || 0);
     p.proximoNumero = p.ultimoNumero + 1 || 1;
     p.proximaSerie = nomeSerieSugeridaLocal(p.codigo, p.proximoNumero);
     p.seriesLista = Array.from(p.series.values()).map(serie => {
@@ -301,7 +330,7 @@ function itemMapaSerie(serie, projetoInfo) {
 
 function loteMapaProjeto(l) {
   const serie = l._serie || {};
-  return `<span class="mapa-lote-chip">
+  return `<span class="mapa-lote-chip clicavel" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Abrir ficha completa do lote" role="button" tabindex="0">
     <strong>${U.esc(l.lote || 'Lote sem número')}</strong>
     <em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em>
     <small>${U.esc(serie.fornecedor || l.fornecedor || 'Sem fábrica')} · ${U.esc(serie.bitola || l.bitola || 'Sem bitola')}</small>
@@ -327,20 +356,6 @@ function numeroSerieLocal(serie) {
   if (!m) return 0;
   const n = parseInt(m[1], 10);
   return Number.isFinite(n) ? n : 0;
-}
-
-function statusPrioridadeLocal(chave) {
-  return {
-    travado: 0,
-    aguardando14: 1,
-    aguardando28: 2,
-    reteste28: 3,
-    pendente: 4,
-    cura28: 5,
-    cura14: 6,
-    formando: 7,
-    liberado: 8,
-  }[chave] ?? 99;
 }
 
 function chaveTextoLocal(v) {
@@ -377,19 +392,40 @@ function cardFluxo(s) {
     </div>
     <div class="fluxo-lotes">
       <strong>Lotes da série</strong>
-      <div>${s.lotes.map(l => `<span class="lote-serie-chip ${ultimo && l.id === ultimo.id ? 'ultimo' : ''}"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em></span>`).join('')}</div>
+      <div>${s.lotes.map(l => `<span class="lote-serie-chip clicavel ${ultimo && l.id === ultimo.id ? 'ultimo' : ''}" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Abrir ficha completa do lote" role="button" tabindex="0"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em></span>`).join('')}</div>
     </div>
     <div class="fluxo-ensaios"><strong>Ensaios registrados</strong><div>${ensaios}</div></div>
-    <div class="fluxo-decisao"><strong>Próxima ação</strong><span>${U.esc(s.proximaAcao)}</span><small>${U.esc(s.detalheFluxo || '')}</small></div>
+    <div class="fluxo-decisao"><strong>Próxima ação</strong><span>${U.esc(s.proximaAcao)}</span><small>${U.esc(s.detalheFluxo || '')}${contagemCuraTexto(s)}</small>${decisaoEnsaioTexto(s)}</div>
   </article>`;
+}
+
+function contagemCuraTexto(s) {
+  if (s.statusChave === 'cura14' && s.diasPara14 > 0) return ` Faltam ${s.diasPara14} dia(s) para completar 14 dias.`;
+  if (s.statusChave === 'cura28' && s.diasPara28 > 0) return ` Faltam ${s.diasPara28} dia(s) para completar 28 dias.`;
+  if (s.statusChave === 'aguardando14' && s.diasPara14 != null && s.diasPara14 < 0) return ` Os 14 dias venceram há ${Math.abs(s.diasPara14)} dia(s).`;
+  if (s.statusChave === 'aguardando28' && s.diasPara28 != null && s.diasPara28 < 0) return ` Os 28 dias venceram há ${Math.abs(s.diasPara28)} dia(s).`;
+  return '';
+}
+
+function decisaoEnsaioTexto(s) {
+  const e = s.liberadoPor || s.travadoPor;
+  if (!e) return '';
+  const rotulo = s.liberadoPor ? 'Liberada pelo ensaio de' : 'Travada pelo ensaio de';
+  const link = linkRelatorioHref(e.linkRelatorio);
+  return `<small class="fluxo-decisao-ensaio">${rotulo} ${U.dataBR(e.dataEnsaio)} (lote ${U.esc(e.lote || '—')})${link ? ` · <a href="${U.esc(link)}" target="_blank" rel="noopener">relatório</a>` : ''}</small>`;
+}
+
+function linkRelatorioHref(valor) {
+  const link = String(valor || '').trim();
+  if (!link) return '';
+  return /^https?:\/\//i.test(link) ? link : `https://${link}`;
 }
 
 function ensaioChip(e) {
   const cls = e.resultado === 'Aprovado' ? 'ok' : e.resultado === 'Reprovado' ? 'erro' : 'aviso';
   const idade = e.idadeDias == null ? '' : ` · ${e.idadeDias}d`;
   const fase = e.fase ? `${e.fase}d` : 'fase indef.';
-  const link = String(e.linkRelatorio || '').trim();
-  const href = link ? (/^https?:\/\//i.test(link) ? link : `https://${link}`) : '';
+  const href = linkRelatorioHref(e.linkRelatorio);
   return `<span class="ensaio-fluxo-chip ${cls}"><strong>${fase} · ${U.esc(e.resultado || '—')}</strong><em>${U.dataBR(e.dataEnsaio)} · lote ${U.esc(e.lote || '—')}${idade}</em>${href ? `<a href="${U.esc(href)}" target="_blank" rel="noopener">relatório</a>` : ''}</span>`;
 }
 
@@ -440,42 +476,8 @@ function contarStatus(series) {
   }, {});
 }
 
-function mapProducaoFluxo(r) {
-  return {
-    id: r.id,
-    fornecedor: r.fornecedor || '',
-    lote: r.lote || '',
-    projeto: r.projeto || '',
-    bitola: r.bitola || '',
-    tipo: r.tipo_dormente || '',
-    total: valorBanco(r.total_produzido),
-    dataFabricacao: dataBanco(r.data_fabricacao),
-    serie: r.serie || '',
-    status: r.status || '',
-  };
-}
-
-function mapEnsaioFluxo(r) {
-  return {
-    id: r.id,
-    producaoLoteId: r.producao_lote_id || '',
-    dataEnsaio: dataBanco(r.data_ensaio),
-    fornecedor: r.fornecedor || '',
-    projeto: r.projeto || '',
-    bitola: r.bitola || '',
-    lote: r.lote_ensaiado || '',
-    serieLiberada: r.serie_liberada || '',
-    resultado: r.resultado || '',
-    quantidadeEnsaiada: valorBanco(r.quantidade_ensaiada),
-    responsavel: r.responsavel || '',
-    linkRelatorio: r.link_relatorio_iauditor || '',
-    observacoes: r.observacoes || '',
-  };
-}
-
-function registrarExportacaoFluxo(series) {
+function registrarExportacaoFluxo(series, projetos) {
   if (!window.Exportacoes) return;
-  const projetos = montarMapaProjetos(series);
   Exportacoes.registrar({
     titulo: 'Painel de Séries',
     nomeArquivo: 'painel-series',
@@ -535,8 +537,6 @@ function registrarExportacaoFluxo(series) {
 
 function setHtml(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
 function setText(id, texto) { const el = document.getElementById(id); if (el) el.textContent = texto; }
-function valorBanco(v) { return v == null ? '' : String(v); }
-function dataBanco(v) { return v ? String(v).slice(0, 10) : ''; }
 function intLocal(v) { const n = parseInt(String(v == null ? '' : v).replace(/[^0-9-]/g, ''), 10); return isNaN(n) ? 0 : n; }
 
 function mensagemErroBanco(err, padrao) {
@@ -547,5 +547,216 @@ function mensagemErroBanco(err, padrao) {
   return msg;
 }
 
+/* =====================================================================
+   FICHA DO LOTE — modal com todas as informações do lote no site
+   ===================================================================== */
+function abrirFichaLote(id) {
+  const alvoId = String(id || '');
+  const serie = (FLUXO_DADOS.series || []).find(s => s.lotes.some(l => String(l.id) === alvoId)) || null;
+  const lote = serie
+    ? serie.lotes.find(l => String(l.id) === alvoId)
+    : (FLUXO_DADOS.lotes || []).find(l => String(l.id) === alvoId);
+  if (!lote) {
+    App.toast('Lote não encontrado no painel atual. Atualize o painel e tente de novo.', 'aviso');
+    return;
+  }
+  FICHA_LOTE_ATUAL = lote;
+  const titulo = document.getElementById('fichaLoteTitulo');
+  if (titulo) titulo.textContent = `Lote ${lote.lote || '—'} — ${serie ? serie.serie : 'sem série calculada'}`;
+  setHtml('fichaLoteCorpo', fichaLoteHtml(lote, serie));
+  document.getElementById('modalFichaLote')?.classList.add('aberto');
+  carregarVinculosLote(lote);
+}
+
+function fecharFichaLote() {
+  FICHA_LOTE_ATUAL = null;
+  document.getElementById('modalFichaLote')?.classList.remove('aberto');
+}
+
+function fichaLoteHtml(lote, serie) {
+  const r = lote.origem || {};
+  const hoje = FLUXO_DADOS.hoje || '';
+  const idade = FluxoLiberacao.diffDias(lote.dataFabricacao, hoje);
+  const cura14 = String(r.cura_14 || '').slice(0, 10) || FluxoLiberacao.addDias(lote.dataFabricacao, 14);
+  const cura28 = String(r.cura_28 || '').slice(0, 10) || FluxoLiberacao.addDias(lote.dataFabricacao, 28);
+  const ehUltimo = !!(serie && serie.ultimoLote && String(serie.ultimoLote.id) === String(lote.id));
+  const ensaiosDoLote = serie ? serie.ensaios.filter(e => ensaioEhDoLote(e, lote)) : [];
+
+  return `
+    <div class="detalhe-secao">Identificação</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Fornecedor', r.fornecedor)}${fichaItem('Pista', r.pista)}${fichaItem('N° Pedido', r.pedido)}
+      ${fichaItem('Lote', r.lote)}${fichaItem('Projeto', r.projeto)}${fichaItem('Bitola', U.bitolaDe(r))}
+      ${fichaItem('Tipo', r.tipo_dormente)}${fichaItem('Total Produção', r.total_produzido)}
+    </div>
+
+    <div class="detalhe-secao">Série e fluxo de liberação</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Série', serie ? serie.serie : '')}
+      ${fichaItem('Origem da série', serie ? (serie.auto ? 'Automática' : 'Manual') : '')}
+      ${fichaItem('Status do fluxo', serie ? serie.status : '')}
+      ${fichaItem('Posição na série', serie ? (ehUltimo ? 'Último lote (ensaiável)' : `Lote ${serie.lotes.findIndex(l => String(l.id) === String(lote.id)) + 1} de ${serie.loteQtd}`) : '')}
+      ${fichaItem('Idade atual', idade == null ? '' : `${idade} dia(s)`)}
+    </div>
+
+    <div class="detalhe-secao">Datas e cura</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Fabricação', U.dataBR(lote.dataFabricacao))}${fichaItem('Cura 14d', U.dataBR(cura14))}
+      ${fichaItem('Cura 28d', U.dataBR(cura28))}${fichaItem('Tempo de Cura (h)', r.tempo_cura)}
+      ${fichaItem('Período início', U.dataBR(String(r.periodo_inicio || '').slice(0, 10)))}
+      ${fichaItem('Período fim', U.dataBR(String(r.periodo_fim || '').slice(0, 10)))}
+      ${fichaItem('Semana / Ano', [r.semana, r.ano].filter(Boolean).join(' / '))}
+    </div>
+
+    <div class="detalhe-secao">USP / Ombreiras</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Com USP', fichaSimNao(r.com_usp))}${fichaItem('USP (Lote)', r.usp_lote)}
+      ${fichaItem('Ombreira', r.tipo_ombreira)}${fichaItem('Lote Ombreira', r.lote_ombreira)}
+    </div>
+
+    <div class="detalhe-secao">Temperatura (°C)</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Inicial', r.temp_inicial)}${fichaItem('Meio', r.temp_meio)}${fichaItem('Final', r.temp_final)}
+    </div>
+
+    <div class="detalhe-secao">Slump Test (mm)</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Início Abat.', r.slump_inicial_abatimento)}${fichaItem('Início Esp.', r.slump_inicial_espalhamento)}
+      ${fichaItem('Meio Abat.', r.slump_meio_abatimento)}${fichaItem('Meio Esp.', r.slump_meio_espalhamento)}
+      ${fichaItem('Fim Abat.', r.slump_final_abatimento)}${fichaItem('Fim Esp.', r.slump_final_espalhamento)}
+    </div>
+
+    <div class="detalhe-secao">Desprotensão</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Início Pista', r.despro_ini)}${fichaItem('Meio Pista', r.despro_meio)}${fichaItem('Fim Pista', r.despro_fim)}
+    </div>
+
+    <div class="detalhe-secao">Resistências (CP 1 / CP 2)</div>
+    <div class="detalhe-grid">
+      ${fichaItem('Comp. 7d', fichaCp(r.comp_7, r.comp_7_cp2))}${fichaItem('Comp. 14d', fichaCp(r.comp_14, r.comp_14_cp2))}
+      ${fichaItem('Tração 14d', fichaCp(r.tracao_14, r.tracao_14_cp2))}${fichaItem('Comp. 28d', fichaCp(r.comp_28, r.comp_28_cp2))}
+      ${fichaItem('Tração 28d', fichaCp(r.tracao_28, r.tracao_28_cp2))}
+    </div>
+
+    <div class="detalhe-secao">Ensaio / Resultado do lançamento</div>
+    <div class="detalhe-grid">
+      ${fichaItem('iAuditor', r.iauditor)}${fichaItem('Ensaiados', r.dorm_ensaiados)}
+      ${fichaItem('A Analisar', r.dorm_a_analisar)}${fichaItem('Reprovados', r.dorm_reprovados)}
+      ${fichaItem('Aprovado', r.total_aprovado)}${fichaItem('Status', r.status)}
+    </div>
+    ${r.motivo ? `<div class="detalhe-secao">Motivo / Especificação</div><p style="font-size:13.5px;color:var(--cinza-texto)">${U.esc(r.motivo)}</p>` : ''}
+
+    <div class="detalhe-secao">Ensaios de liberação deste lote</div>
+    <div class="ficha-chips">${ensaiosDoLote.length ? ensaiosDoLote.map(ensaioChip).join('') : '<span class="txt-mini txt-cinza">Nenhum ensaio registrado com este lote. ' + (serie && serie.ensaios.length ? 'A série tem ensaios em outros lotes (veja o card da série).' : '') + '</span>'}</div>
+
+    <div class="detalhe-secao">Vínculos no site</div>
+    <div id="fichaVinculos"><span class="txt-mini txt-cinza">Buscando inspeções, reprovas e relatórios deste lote...</span></div>
+
+    ${serie && serie.lotes.length > 1 ? `
+      <div class="detalhe-secao">Lotes da mesma série</div>
+      <div class="ficha-chips">${serie.lotes.map(l => String(l.id) === String(lote.id)
+        ? `<span class="lote-serie-chip atual"><strong>${U.esc(l.lote || '—')}</strong><em>este lote</em></span>`
+        : `<span class="lote-serie-chip clicavel" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Ver ficha deste lote" role="button" tabindex="0"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)}</em></span>`).join('')}</div>` : ''}
+
+    <div class="form-acoes">
+      <a class="btn btn-secundario" href="producao.html?lote=${encodeURIComponent(lote.lote || '')}">${ICN.producao}Abrir na Produção</a>
+      <button class="btn btn-secundario" onclick="fecharFichaLote()">Fechar</button>
+    </div>
+  `;
+}
+
+function ensaioEhDoLote(e, lote) {
+  if (e.producaoLoteId && String(e.producaoLoteId) === String(lote.id)) return true;
+  const a = String(e.lote || '').trim().toUpperCase();
+  const b = String(lote.lote || '').trim().toUpperCase();
+  return !!a && a === b;
+}
+
+async function carregarVinculosLote(lote) {
+  const chave = String(lote.id);
+  if (FICHA_VINCULOS_CACHE.has(chave)) {
+    if (FICHA_LOTE_ATUAL && String(FICHA_LOTE_ATUAL.id) === chave) {
+      setHtml('fichaVinculos', vinculosLoteHtml(lote, FICHA_VINCULOS_CACHE.get(chave)));
+    }
+    return;
+  }
+  const filtroLote = String(lote.lote || '').trim();
+  try {
+    const [pista, concretagem, reprovados] = filtroLote ? await Promise.all([
+      StoreSupabase.listarInspecoesPista({ lote: filtroLote, limite: 200 }),
+      StoreSupabase.listarInspecoesConcretagem({ lote: filtroLote, limite: 200 }),
+      StoreSupabase.listarReprovados({ lote: filtroLote, limite: 200 }),
+    ]) : [[], [], []];
+    const dados = { pista: pista || [], concretagem: concretagem || [], reprovados: reprovados || [] };
+    FICHA_VINCULOS_CACHE.set(chave, dados);
+    if (FICHA_LOTE_ATUAL && String(FICHA_LOTE_ATUAL.id) === chave) {
+      setHtml('fichaVinculos', vinculosLoteHtml(lote, dados));
+    }
+  } catch (err) {
+    console.error('Erro ao buscar vínculos do lote', err);
+    if (FICHA_LOTE_ATUAL && String(FICHA_LOTE_ATUAL.id) === chave) {
+      setHtml('fichaVinculos', `<span class="txt-mini txt-cinza">Não foi possível buscar os vínculos agora. ${U.esc(mensagemErroBanco(err, ''))}</span>`);
+    }
+  }
+}
+
+function vinculosLoteHtml(lote, dados) {
+  const loteParam = encodeURIComponent(String(lote.lote || '').trim());
+  return `<div class="ficha-vinculos-grid">
+    ${blocoVinculo('Inspeções de pista', dados.pista, `inspecao-pista.html?lote=${loteParam}`, i => ({
+      data: String(i.data_inspecao || '').slice(0, 10), texto: i.resultado || i.atividade || '', link: i.link_relatorio
+    }))}
+    ${blocoVinculo('Inspeções de concretagem', dados.concretagem, `inspecao-concretagem.html?lote=${loteParam}`, i => ({
+      data: String(i.data_inspecao || '').slice(0, 10), texto: i.resultado || i.atividade || '', link: i.link_relatorio
+    }))}
+    ${blocoVinculo('Dormentes reprovados', dados.reprovados, `reprovados.html?lote=${loteParam}`, i => ({
+      data: String(i.data_producao || '').slice(0, 10), texto: [i.motivo_indicador, i.total_refugos ? `${i.total_refugos} refugo(s)` : ''].filter(Boolean).join(' · '), link: ''
+    }))}
+    ${blocoVinculoLink('Ensaios de liberação', `ensaios-liberacao.html?lote=${loteParam}`)}
+  </div>`;
+}
+
+function blocoVinculo(titulo, itens, hrefPagina, extrair) {
+  const lista = (itens || []).slice(0, 4).map(i => {
+    const d = extrair(i);
+    const href = linkRelatorioHref(d.link);
+    return `<li>${U.dataBR(d.data)}${d.texto ? ` · ${U.esc(d.texto)}` : ''}${href ? ` · <a href="${U.esc(href)}" target="_blank" rel="noopener">relatório</a>` : ''}</li>`;
+  }).join('');
+  const extra = (itens || []).length > 4 ? `<li class="txt-cinza">+ ${itens.length - 4} registro(s)</li>` : '';
+  return `<div class="ficha-vinculo">
+    <div class="ficha-vinculo-topo"><strong>${U.esc(titulo)}</strong><span class="badge ${itens?.length ? 'badge-amarelo' : 'badge-ok'}">${itens?.length || 0}</span></div>
+    ${lista ? `<ul>${lista}${extra}</ul>` : '<p class="txt-mini txt-cinza">Nenhum registro para este lote.</p>'}
+    <a href="${U.esc(hrefPagina)}">Abrir página filtrada</a>
+  </div>`;
+}
+
+function blocoVinculoLink(titulo, hrefPagina) {
+  return `<div class="ficha-vinculo">
+    <div class="ficha-vinculo-topo"><strong>${U.esc(titulo)}</strong></div>
+    <p class="txt-mini txt-cinza">Os ensaios deste lote e da série aparecem nas seções acima.</p>
+    <a href="${U.esc(hrefPagina)}">Abrir página filtrada</a>
+  </div>`;
+}
+
+function fichaItem(rot, val) {
+  const texto = String(val == null ? '' : val).trim();
+  return `<div class="detalhe-item"><div class="rot">${U.esc(rot)}</div><div class="val">${U.esc(texto || '—')}</div></div>`;
+}
+
+function fichaCp(cp1, cp2) {
+  const a = String(cp1 == null ? '' : cp1).trim();
+  const b = String(cp2 == null ? '' : cp2).trim();
+  if (!a && !b) return '';
+  return b ? `${a || '—'} / ${b}` : a;
+}
+
+function fichaSimNao(v) {
+  if (v === true) return 'Sim';
+  if (v === false) return 'Não';
+  return v == null ? '' : String(v);
+}
+
 window.render = renderFluxo;
 window.carregarFluxoLiberacao = carregarFluxoLiberacao;
+window.abrirFichaLote = abrirFichaLote;
+window.fecharFichaLote = fecharFichaLote;

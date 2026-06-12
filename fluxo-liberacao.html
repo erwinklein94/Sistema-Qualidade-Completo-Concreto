@@ -18,7 +18,7 @@
             <span class="card-sub">Produção + Ensaios de Liberação trabalhando como uma regra única</span>
           </div>
           <p class="txt-cinza" style="font-size:14px;line-height:1.7">
-            Esta visão calcula automaticamente quais lotes pertencem a cada série por fábrica, projeto e bitola, identifica o último lote ensaiável, acompanha cura de 14/28 dias, cruza os ensaios cadastrados e mostra a próxima ação operacional.
+            Esta visão calcula automaticamente quais lotes pertencem a cada série por fábrica, projeto e bitola, identifica o último lote ensaiável, acompanha cura de 14/28 dias, cruza os ensaios cadastrados e mostra a próxima ação operacional. Clique em qualquer lote para abrir a ficha completa, com resistências, inspeções, reprovas e relatórios vinculados.
           </p>
         </div>
 
@@ -68,6 +68,16 @@
     </main>
   </div>
 
+  <div class="modal-overlay" id="modalFichaLote">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="fichaLoteTitulo">Ficha do lote</h2>
+        <button class="fechar-modal" onclick="fecharFichaLote()" aria-label="Fechar ficha do lote">⨯</button>
+      </div>
+      <div class="modal-corpo" id="fichaLoteCorpo"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260523-2"></script>
@@ -79,7 +89,7 @@
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260609-mobile-topo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/fluxo-liberacao-core.js?v=20260527-window-fix"></script>
-  <script src="js/fluxo-liberacao.js?v=20260527-mapa-projetos"></script>
+  <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
+  <script src="js/fluxo-liberacao.js?v=20260612-ficha-lote-v1"></script>
 </body>
 </html>

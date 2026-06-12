@@ -52,9 +52,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('lote')?.addEventListener('blur', sugerirDadosPeloLote);
 
   inicializarLeitorIauditor();
+  aplicarLoteDaUrl();
   render();
   await carregarEnsaiosLiberacao();
 });
+
+function aplicarLoteDaUrl() {
+  const lote = new URLSearchParams(location.search).get('lote');
+  if (!lote) return;
+  const busca = document.getElementById('busca');
+  if (busca) busca.value = lote;
+}
 
 function preencherSelect(id, arr, ph) {
   const el = document.getElementById(id);

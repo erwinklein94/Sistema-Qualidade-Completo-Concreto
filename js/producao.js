@@ -118,9 +118,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('dataFabricacao')?.addEventListener('change', atualizarCurasPelaFabricacao);
 
   await carregarPedidosProducao();
+  aplicarLoteDaUrl();
   render();
   await carregarProducao();
 });
+
+function aplicarLoteDaUrl() {
+  const lote = new URLSearchParams(location.search).get('lote');
+  if (!lote) return;
+  const busca = document.getElementById('busca');
+  if (busca) busca.value = lote;
+}
 
 function sel(id, arr, ph) { document.getElementById(id).innerHTML = U.opcoes(arr, '', ph); }
 

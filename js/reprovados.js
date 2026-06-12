@@ -72,9 +72,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('producaoLoteId')?.addEventListener('change', e => preencherDadosDoLote(e.target.value));
   document.getElementById('lote')?.addEventListener('blur', tentarVincularLoteDigitado);
 
+  aplicarLoteDaUrl();
   render();
   await carregarReprovados();
 });
+
+function aplicarLoteDaUrl() {
+  const lote = new URLSearchParams(location.search).get('lote');
+  if (!lote) return;
+  const busca = document.getElementById('busca');
+  if (busca) busca.value = lote;
+}
+
+function temLoteNaUrl() {
+  return !!new URLSearchParams(location.search).get('lote');
+}
 
 function preencherSelect(id, arr, ph) {
   const el = document.getElementById(id);
@@ -99,7 +111,7 @@ async function carregarReprovados() {
     popularSelectLotes();
     Reprovados.periodoPadrao = periodoUltimaSemanaDisponivel();
     atualizarFiltroSemanaReprovados(U.valorSemana(Reprovados.periodoPadrao));
-    if (Reprovados.periodoPadrao) aplicarPeriodo(Reprovados.periodoPadrao);
+    if (Reprovados.periodoPadrao && !temLoteNaUrl()) aplicarPeriodo(Reprovados.periodoPadrao);
 
     REPROVADOS_CARREGANDO = false;
     render();

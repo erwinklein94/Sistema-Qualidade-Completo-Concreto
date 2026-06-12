@@ -7181,3 +7181,68 @@ body.pagina-painel-series[data-tema="escuro"] .dossie-item.erro { background: rg
   }
 }
 
+
+/* ===================== FICHA DO LOTE (Painel de Séries) ===================== */
+.lote-serie-chip.clicavel,
+.mapa-lote-chip.clicavel {
+  cursor: pointer;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.lote-serie-chip.clicavel:hover,
+.lote-serie-chip.clicavel:focus-visible,
+.mapa-lote-chip.clicavel:hover,
+.mapa-lote-chip.clicavel:focus-visible {
+  border-color: var(--azul-claro);
+  box-shadow: 0 2px 8px rgba(0, 56, 101, 0.18);
+  transform: translateY(-1px);
+  outline: none;
+}
+.lote-serie-chip.atual {
+  border-style: dashed;
+  opacity: .75;
+}
+.ficha-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ficha-vinculos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+.ficha-vinculo {
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--branco);
+}
+.ficha-vinculo-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ficha-vinculo-topo strong { font-size: 13.5px; }
+.ficha-vinculo ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12.5px;
+  color: var(--cinza-texto);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ficha-vinculo a {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--azul-claro);
+}
+body[data-tema="escuro"] .ficha-vinculo {
+  background: transparent;
+  border-color: rgba(255, 255, 255, .14);
+}
+body[data-tema="escuro"] .ficha-vinculo ul { color: var(--cinza-texto-claro); }

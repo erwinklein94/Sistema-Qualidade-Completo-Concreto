@@ -282,9 +282,9 @@ const FluxoLiberacao = (() => {
   }
 
   function classificarFaseEnsaio(e, loteBase) {
-    const texto = norm(`${e.fase || ''} ${e.tipoEnsaio || ''} ${e.observacoes || ''}`);
-    if (texto.includes('28')) return 28;
-    if (texto.includes('14')) return 14;
+    const fase = norm(e.fase || '');
+    if (/(^|\D)28(\D|$)/.test(fase)) return 28;
+    if (/(^|\D)14(\D|$)/.test(fase)) return 14;
     const idade = idadeEnsaio(e, loteBase);
     if (idade == null) return 14;
     return idade >= 28 ? 28 : 14;
@@ -505,6 +505,7 @@ const FluxoLiberacao = (() => {
     calcular,
     serieDoLote,
     normalizarSerie,
+    prioridadeStatus,
     codigoProjeto,
     projetoCanonico,
     addDias,
