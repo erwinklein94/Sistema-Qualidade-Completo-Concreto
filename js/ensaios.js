@@ -4,6 +4,11 @@
    ===================================================================== */
 let PAINEL_PRODUCAO = [];
 let PAINEL_ENSAIOS = [];
+let PAINEL_CONCRETAGENS = [];
+let PAINEL_INSPECOES_PISTA = [];
+let PAINEL_ENSAIOS_BITOLA = [];
+let PAINEL_ARRANCAMENTOS_USP = [];
+let PAINEL_DOSSIE_AVISOS = [];
 let PAINEL_CARREGANDO = false;
 let PAINEL_ERRO = '';
 let PAINEL_DADOS = null;
@@ -75,13 +80,22 @@ async function carregarPainelSeries() {
 
   try {
     await Auth.exigirLogin();
-    const [producao, ensaios] = await Promise.all([
+    PAINEL_DOSSIE_AVISOS = [];
+    const [producao, ensaios, concretagens, inspecoesPista, ensaiosBitola, arrancamentosUsp] = await Promise.all([
       StoreSupabase.listarProducao({ limite: 10000 }),
       StoreSupabase.listarEnsaiosLiberacao({ limite: 10000 }),
+      carregarDadoOpcionalDossie('Inspeção de concretagem', () => StoreSupabase.listarInspecoesConcretagem?.({ limite: 10000 })),
+      carregarDadoOpcionalDossie('Inspeção de pista', () => StoreSupabase.listarInspecoesPista?.({ limite: 10000 })),
+      carregarDadoOpcionalDossie('Ensaio de bitola', () => StoreSupabase.listarEnsaiosBitola?.({ limite: 10000 })),
+      carregarDadoOpcionalDossie('Ensaio de arrancamento USP', () => StoreSupabase.listarEnsaiosArrancamentoUsp?.({ limite: 10000 })),
     ]);
 
     PAINEL_PRODUCAO = (producao || []).map(mapProducaoPainel);
     PAINEL_ENSAIOS = (ensaios || []).map(mapEnsaioPainel);
+    PAINEL_CONCRETAGENS = (concretagens || []).map(mapInspecaoConcretagemPainel);
+    PAINEL_INSPECOES_PISTA = (inspecoesPista || []).map(mapInspecaoPistaPainel);
+    PAINEL_ENSAIOS_BITOLA = (ensaiosBitola || []).map(mapEnsaioBitolaPainel);
+    PAINEL_ARRANCAMENTOS_USP = (arrancamentosUsp || []).map(mapArrancamentoUspPainel);
     PAINEL_DADOS = calcularDadosBase();
 
     atualizarFiltroSerie();
@@ -95,6 +109,19 @@ async function carregarPainelSeries() {
     PAINEL_ERRO = mensagemErroBanco(err, 'Não foi possível carregar o Fluxo de Liberação do Supabase.');
     App.toast(PAINEL_ERRO, 'erro');
     render();
+  }
+}
+
+async function carregarDadoOpcionalDossie(nome, loader) {
+  try {
+    if (typeof loader !== 'function') return [];
+    const dados = await loader();
+    return dados || [];
+  } catch (err) {
+    const msg = err?.message || err?.details || String(err || '');
+    console.warn(`Dossiê do lote: ${nome} não carregou`, err);
+    PAINEL_DOSSIE_AVISOS.push(`${nome}: ${msg || 'não carregado'}`);
+    return [];
   }
 }
 
@@ -197,9 +224,11 @@ function montarLinhasFiltradas(dados, f) {
     (serie.lotes || []).forEach(lote => {
       if (!dentroPeriodo(lote.dataFabricacao, f.ini, f.fim)) return;
       const loteDeEnsaio = mesmoLote(lote, serie.ultimoLote);
-      const textoBusca = `${lote.lote} ${serie.fornecedor} ${serie.projeto} ${serie.bitola} ${serie.serie} ${serie.status} ${lote.tipo} ${lote.total}`.toLowerCase();
+      const ctx = { lote, serieRef: serie, loteDeEnsaio };
+      ctx.dossie = montarDossieLote(ctx);
+      const textoBusca = `${lote.lote} ${serie.fornecedor} ${serie.projeto} ${serie.bitola} ${serie.serie} ${serie.status} ${lote.tipo} ${lote.total} ${textoBuscaDossie(ctx.dossie)}`.toLowerCase();
       if (f.busca && !textoBusca.includes(f.busca)) return;
-      linhas.push({ lote, serieRef: serie, loteDeEnsaio });
+      linhas.push(ctx);
     });
   });
 
@@ -225,6 +254,8 @@ function renderTabelaFluxo(linhas, dados) {
       ${legendaItem('atual', '●', 'Etapa atual')}
       ${legendaItem('pendente', '—', 'Ainda não chegou')}
       ${legendaItem('erro', '!', 'Reprova/trava')}
+      ${legendaItem('dossie', 'D', 'Dossiê do lote')}
+      ${PAINEL_DOSSIE_AVISOS.length ? `<span class="legenda-fluxo aviso" title="${U.esc(PAINEL_DOSSIE_AVISOS.join(' | '))}"><b>!</b>Algum histórico não carregou</span>` : ''}
     </div>
     <div class="tabela-wrap fluxo-horizontal-wrap">
       <table class="tabela tabela-fluxo-lotes">
@@ -232,6 +263,7 @@ function renderTabelaFluxo(linhas, dados) {
           <tr>
             <th class="sticky-col lote-col">Lote</th>
             <th class="sticky-col serie-col">Projeto / Série</th>
+            <th class="dossie-col">Dossiê do lote</th>
             <th>Produzido</th>
             <th>Cura 14d</th>
             <th>Ensaio 14d</th>
@@ -278,8 +310,192 @@ function linhaFluxoHtml(ctx, hoje) {
         <small title="${U.esc(lotesSerie)}">${serie.loteQtd} lote(s) na série · ensaio no lote ${U.esc(serie.ultimoLote?.lote || '—')}</small>
       </div>
     </td>
+    ${dossieLoteHtml(ctx)}
     ${etapas.map(etapaHtml).join('')}
   </tr>`;
+}
+
+function montarDossieLote(ctx) {
+  const { lote, serieRef: serie } = ctx;
+  const loteAtual = norm(lote?.lote || '');
+  const loteEnsaioSerie = norm(serie?.ultimoLote?.lote || '');
+  const lotesSerie = new Set((serie?.lotes || []).map(l => norm(l.lote)).filter(Boolean));
+  const idAtual = String(lote?.id || '').trim();
+
+  const producao = [{
+    data: lote?.dataFabricacao || '',
+    lote: lote?.lote || '',
+    resultado: lote?.status || 'Cadastrado',
+    detalhes: `${formatNumero(lote?.total)} peça(s)`,
+    relacao: 'lote direto',
+  }];
+
+  const concretagem = filtrarDireto(PAINEL_CONCRETAGENS, lote, serie);
+  const pista = filtrarDireto(PAINEL_INSPECOES_PISTA, lote, serie);
+  const liberacao = (serie?.ensaios || []).map(e => ({
+    ...e,
+    data: e.dataEnsaio,
+    relacao: registroEhDireto(e, lote, ['lote'], ['producaoLoteId']) ? 'lote direto' : `por série${e.lote ? ' · lote ' + e.lote : ''}`,
+    detalhes: `${e.fase || '?'}d${e.quantidadeEnsaiada ? ' · ' + e.quantidadeEnsaiada + ' CP(s)' : ''}`,
+  }));
+  const bitola = filtrarDiretoOuSerie(PAINEL_ENSAIOS_BITOLA, lote, serie, lotesSerie, loteAtual, loteEnsaioSerie);
+  const arrancamento = filtrarDiretoOuSerie(PAINEL_ARRANCAMENTOS_USP, lote, serie, lotesSerie, loteAtual, loteEnsaioSerie, ['lote', 'loteOmbreira']);
+
+  const itens = [
+    itemDossie('producao', 'Produção', producao, 'producao.html', 'Lote cadastrado na Produção'),
+    itemDossie('concretagem', 'Inspeção de concretagem', concretagem, 'inspecao-concretagem.html', 'Nenhuma inspeção de concretagem vinculada ao lote'),
+    itemDossie('pista', 'Inspeção de pista', pista, 'inspecao-pista.html', 'Nenhuma inspeção de pista vinculada ao lote'),
+    itemDossie('liberacao', 'Ensaio de liberação', liberacao, 'ensaios-liberacao.html', 'Nenhum ensaio de liberação da série encontrado'),
+    itemDossie('bitola', 'Ensaio de bitola', bitola, 'ensaio-bitola.html', 'Nenhum ensaio de bitola direto ou por lote de ensaio da série'),
+    itemDossie('arrancamento', 'Arrancamento USP', arrancamento, 'ensaio-arrancamento-usp.html', 'Nenhum ensaio de arrancamento USP direto ou por lote de ensaio da série'),
+  ];
+
+  const encontrados = itens.filter(i => i.encontrado).length;
+  const links = itens.flatMap(i => (i.registros || []).map(r => r.linkRelatorio).filter(Boolean));
+  return { itens, encontrados, total: itens.length, links, lote: lote?.lote || '', serie: serie?.serie || '' };
+}
+
+function filtrarDireto(registros, lote, serie) {
+  return (registros || [])
+    .filter(r => registroEhDireto(r, lote) && mesmoGrupoRegistro(r, serie))
+    .map(r => ({ ...r, relacao: 'lote direto' }));
+}
+
+function filtrarDiretoOuSerie(registros, lote, serie, lotesSerie, loteAtual, loteEnsaioSerie, camposLote = ['lote']) {
+  return (registros || [])
+    .filter(r => {
+      if (!mesmoGrupoRegistro(r, serie)) return false;
+      const direto = registroEhDireto(r, lote, camposLote);
+      if (direto) return true;
+      const loteRegistro = camposLote.map(c => norm(r?.[c])).find(Boolean) || '';
+      return !!loteRegistro && (loteRegistro === loteEnsaioSerie || lotesSerie.has(loteRegistro));
+    })
+    .map(r => {
+      const direto = registroEhDireto(r, lote, camposLote);
+      const loteRegistro = camposLote.map(c => r?.[c]).find(Boolean) || r.lote || '';
+      return { ...r, relacao: direto ? 'lote direto' : `por série · lote ${loteRegistro || serie?.ultimoLote?.lote || '—'}` };
+    });
+}
+
+function registroEhDireto(registro, lote, camposLote = ['lote'], camposId = ['producaoLoteId']) {
+  if (!registro || !lote) return false;
+  const idLote = String(lote.id || '').trim();
+  if (idLote && camposId.some(c => String(registro?.[c] || '').trim() === idLote)) return true;
+  const loteAtual = norm(lote.lote || '');
+  return !!loteAtual && camposLote.some(c => norm(registro?.[c]) === loteAtual);
+}
+
+function mesmoGrupoRegistro(registro, serie) {
+  if (!registro || !serie) return true;
+  if (registro.fornecedor && serie.fornecedor && norm(registro.fornecedor) !== norm(serie.fornecedor)) return false;
+  if (registro.projeto && serie.projeto && !projetosCompativeis(registro.projeto, serie.projeto)) return false;
+  if (registro.bitola && serie.bitola && norm(registro.bitola) !== norm(serie.bitola)) return false;
+  return true;
+}
+
+function projetosCompativeis(a, b) {
+  const pa = FluxoLiberacao?.projetoCanonico ? FluxoLiberacao.projetoCanonico(a) : normalizarProjeto(a);
+  const pb = FluxoLiberacao?.projetoCanonico ? FluxoLiberacao.projetoCanonico(b) : normalizarProjeto(b);
+  const na = norm(pa || a);
+  const nb = norm(pb || b);
+  if (na === nb || norm(a) === norm(b)) return true;
+  return na.includes('MALHA PAULISTA') && nb.includes('MALHA PAULISTA');
+}
+
+function itemDossie(key, titulo, registros, pagina, vazio) {
+  const lista = (registros || []).filter(Boolean).sort(ordemRegistroDossie);
+  const encontrado = lista.length > 0;
+  const status = !encontrado ? 'pendente' : lista.some(r => resultadoClasseDossie(r) === 'erro') ? 'erro' : lista.some(r => resultadoClasseDossie(r) === 'aviso') ? 'aviso' : 'ok';
+  return { key, titulo, pagina, vazio, registros: lista, encontrado, status };
+}
+
+function ordemRegistroDossie(a, b) {
+  return String(b.data || '').localeCompare(String(a.data || '')) || String(b.id || '').localeCompare(String(a.id || ''));
+}
+
+function resultadoClasseDossie(r) {
+  const n = norm(r?.resultado || '');
+  if (n.includes('REPROV') || n.includes('RECUS') || n.includes('TRAV')) return 'erro';
+  if (n.includes('PEND') || n.includes('AGUARD')) return 'aviso';
+  return 'ok';
+}
+
+function textoBuscaDossie(dossie) {
+  return (dossie?.itens || []).map(i => [
+    i.titulo,
+    i.encontrado ? 'encontrado com registro check' : 'sem registro pendente não encontrado',
+    ...(i.registros || []).map(r => `${r.lote || ''} ${r.resultado || ''} ${r.relacao || ''} ${r.responsavel || ''} ${r.linkRelatorio || ''} ${r.detalhes || ''}`),
+  ].join(' ')).join(' ');
+}
+
+function dossieLoteHtml(ctx) {
+  const dossie = ctx.dossie || montarDossieLote(ctx);
+  const resumoLinks = dossie.links.length ? `${dossie.links.length} link(s)` : 'sem links';
+  return `<td class="dossie-col">
+    <details class="dossie-lote">
+      <summary>
+        <span>Dossiê do lote</span>
+        <strong>${dossie.encontrados}/${dossie.total}</strong>
+        <small>${U.esc(resumoLinks)}</small>
+      </summary>
+      <div class="dossie-lista">
+        ${dossie.itens.map(dossieItemHtml).join('')}
+      </div>
+    </details>
+  </td>`;
+}
+
+function dossieItemHtml(item) {
+  const icones = { ok: '✓', aviso: '●', erro: '!', pendente: '—' };
+  const resumo = item.encontrado ? `${item.registros.length} registro(s)` : item.vazio;
+  const registros = item.encontrado
+    ? item.registros.slice(0, 4).map(registroDossieHtml).join('') + (item.registros.length > 4 ? `<span class="dossie-mais">+${item.registros.length - 4} outro(s) registro(s)</span>` : '')
+    : `<span class="dossie-vazio">Sem registro encontrado</span>`;
+  return `<div class="dossie-item ${item.status}">
+    <div class="dossie-item-topo">
+      <b>${icones[item.status] || '—'}</b>
+      <div><strong>${U.esc(item.titulo)}</strong><span>${U.esc(resumo)}</span></div>
+      <a href="${U.esc(item.pagina)}" title="Abrir módulo" target="_self">módulo</a>
+    </div>
+    <div class="dossie-registros">${registros}</div>
+  </div>`;
+}
+
+function registroDossieHtml(r) {
+  const data = U.dataBR(r.data || r.dataEnsaio || r.dataInspecao || r.dataFabricacao);
+  const resultado = r.resultado || 'Registrado';
+  const lote = r.lote ? ` · lote ${r.lote}` : '';
+  const detalhes = r.detalhes ? ` · ${r.detalhes}` : '';
+  const relacao = r.relacao ? ` · ${r.relacao}` : '';
+  const link = hrefRelatorioDossie(r.linkRelatorio);
+  return `<span class="dossie-registro ${resultadoClasseDossie(r)}">
+    <em>${U.esc(data)} · ${U.esc(resultado)}${U.esc(lote)}${U.esc(relacao)}${U.esc(detalhes)}</em>
+    ${link ? `<a href="${U.esc(link)}" target="_blank" rel="noopener">relatório</a>` : ''}
+  </span>`;
+}
+
+function hrefRelatorioDossie(link) {
+  const v = String(link || '').trim();
+  if (!v) return '';
+  if (/^(https?:|mailto:|file:)/i.test(v)) return v;
+  return `https://${v}`;
+}
+
+function resumoDossieExport(dossie) {
+  return (dossie?.itens || []).map(i => {
+    const status = i.encontrado ? `${i.registros.length} registro(s)` : 'sem registro';
+    return `${i.titulo}: ${status}`;
+  }).join(' | ');
+}
+
+function linksDossieExport(dossie) {
+  const links = [];
+  (dossie?.itens || []).forEach(i => {
+    (i.registros || []).forEach(r => {
+      if (r.linkRelatorio) links.push(`${i.titulo}: ${r.linkRelatorio}`);
+    });
+  });
+  return links.join(' | ');
 }
 
 function etapasDoLote(ctx, hoje) {
@@ -377,6 +593,8 @@ function registrarExportacaoPainelSeries(linhas, dados) {
         { key: 'statusSerie', label: 'Status atual da série' },
         { key: 'ultimoLoteSerie', label: 'Último lote da série' },
         { key: 'lotesVinculados', label: 'Lotes vinculados' },
+        { key: 'dossieResumo', label: 'Dossiê do lote' },
+        { key: 'dossieLinks', label: 'Links de relatórios do dossiê' },
         ...ETAPAS_EXPORT.map(k => ({ key: k, label: nomeEtapaExport(k) })),
       ],
       rows: linhas.map(ctx => linhaExport(ctx, dados.hoje)),
@@ -399,6 +617,8 @@ function linhaExport(ctx, hoje) {
     statusSerie: s.status,
     ultimoLoteSerie: s.ultimoLote?.lote || '',
     lotesVinculados: (s.lotes || []).map(l => l.lote).filter(Boolean).join(', '),
+    dossieResumo: resumoDossieExport(ctx.dossie || montarDossieLote(ctx)),
+    dossieLinks: linksDossieExport(ctx.dossie || montarDossieLote(ctx)),
     ...etapas,
   };
 }
@@ -449,6 +669,83 @@ function mapEnsaioPainel(r) {
     responsavel: r.responsavel || '',
     linkRelatorio: r.link_relatorio_iauditor || '',
     observacoes: r.observacoes || '',
+    origem: r,
+  };
+}
+
+function mapInspecaoConcretagemPainel(r) {
+  return {
+    id: r.id,
+    data: dataBanco(r.data_inspecao),
+    lote: r.lote || '',
+    projeto: normalizarProjeto(r.projeto || ''),
+    bitola: r.bitola || '',
+    fornecedor: r.fornecedor || '',
+    pista: r.pista || '',
+    molde: r.molde || '',
+    cavidade: r.cavidade || '',
+    resultado: r.resultado || 'Registrado',
+    responsavel: r.responsavel || '',
+    linkRelatorio: r.link_relatorio || '',
+    arquivoOrigem: r.arquivo_origem || '',
+    detalhes: [r.pista && `pista ${r.pista}`, r.molde && `molde ${r.molde}`, r.cavidade && `cav. ${r.cavidade}`, r.temperatura_lancamento && `temp. ${r.temperatura_lancamento}`, r.slump_abatimento && `abat. ${r.slump_abatimento}`].filter(Boolean).join(' · '),
+    origem: r,
+  };
+}
+
+function mapInspecaoPistaPainel(r) {
+  return {
+    id: r.id,
+    data: dataBanco(r.data_inspecao),
+    lote: r.lote || '',
+    projeto: normalizarProjeto(r.projeto || ''),
+    bitola: r.bitola || '',
+    fornecedor: r.fornecedor || '',
+    pista: r.pista || '',
+    molde: r.molde || '',
+    cavidade: r.cavidade || '',
+    resultado: r.resultado || 'Registrado',
+    responsavel: r.responsavel || '',
+    linkRelatorio: r.link_relatorio || '',
+    arquivoOrigem: r.arquivo_origem || '',
+    detalhes: [r.pista && `pista ${r.pista}`, r.molde && `molde ${r.molde}`, r.cavidade && `cav. ${r.cavidade}`, (r.reprovados || r.quantidade_reprovados) && `reprovados ${r.reprovados || r.quantidade_reprovados}`, r.atividade].filter(Boolean).join(' · '),
+    origem: r,
+  };
+}
+
+function mapEnsaioBitolaPainel(r) {
+  return {
+    id: r.id,
+    data: dataBanco(r.data_ensaio),
+    lote: r.lote || '',
+    projeto: normalizarProjeto(r.projeto || ''),
+    bitola: r.bitola || '',
+    fornecedor: r.fornecedor || '',
+    resultado: r.resultado || 'Registrado',
+    responsavel: r.responsavel || '',
+    linkRelatorio: r.link_relatorio || '',
+    arquivoOrigem: r.arquivo_origem || '',
+    detalhes: r.observacoes || '',
+    origem: r,
+  };
+}
+
+function mapArrancamentoUspPainel(r) {
+  return {
+    id: r.id,
+    data: dataBanco(r.data_ensaio),
+    lote: r.lote || '',
+    projeto: normalizarProjeto(r.projeto || ''),
+    bitola: r.bitola || '',
+    fornecedor: r.fornecedor || '',
+    usp: r.usp || '',
+    tipoOmbreira: r.tipo_ombreira || '',
+    loteOmbreira: r.lote_ombreira || '',
+    resultado: r.resultado || 'Registrado',
+    responsavel: r.responsavel || '',
+    linkRelatorio: r.link_relatorio || '',
+    arquivoOrigem: r.arquivo_origem || '',
+    detalhes: [r.usp && `USP ${r.usp}`, r.tipo_ombreira, r.lote_ombreira && `ombreira ${r.lote_ombreira}`, r.arrancamento_a && `A ${r.arrancamento_a}`, r.arrancamento_b && `B ${r.arrancamento_b}`, r.arrancamento_c && `C ${r.arrancamento_c}`].filter(Boolean).join(' · '),
     origem: r,
   };
 }
