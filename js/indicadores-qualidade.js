@@ -22,7 +22,12 @@
     { chave: 'tracao28', rotulo: 'Tração na flexão — 28 dias', unidade: 'MPa', lie: 7.5 },
   ];
 
-  const META_CPK = 1.33;
+  const META_CPK = 1.33;              // meta ideal / referência de excelência do processo
+  const META_CPK_BOA = 1.00;         // alvo operacional bom: processo sob controle razoável
+  const META_CPK_ATENCAO = 0.67;     // atenção: risco relevante, reduzir variação
+  const META_CPK_BAIXA = 0.50;       // capabilidade baixa: investigar causas principais
+
+  const ROTULO_META_CPK = `ideal ≥ ${fmt(META_CPK)}`;
 
   function numeroDe(v) {
     const s = String(v == null ? '' : v).trim();
@@ -91,15 +96,19 @@
 
   function statusCpk(i) {
     if (!i.n || i.n < 2 || !(i.desvio > 0) || i.cpk == null) return { classe: 'neutro', rotulo: 'Dados insuficientes' };
-    if (i.cpk >= META_CPK) return { classe: 'ok', rotulo: 'Processo capaz' };
-    if (i.cpk >= 1.0) return { classe: 'aviso', rotulo: 'Aceitável — monitorar' };
-    return { classe: 'critico', rotulo: 'Incapaz — agir' };
+    if (i.cpk >= META_CPK) return { classe: 'ok', rotulo: 'Ideal do processo' };
+    if (i.cpk >= META_CPK_BOA) return { classe: 'bom', rotulo: 'Bom controle — evoluir' };
+    if (i.cpk >= META_CPK_ATENCAO) return { classe: 'aviso', rotulo: 'Atenção — reduzir variação' };
+    if (i.cpk >= META_CPK_BAIXA) return { classe: 'baixo', rotulo: 'Baixa capabilidade — investigar' };
+    return { classe: 'critico', rotulo: 'Crítico — agir na variação' };
   }
 
   function classeCpk(cpk) {
     if (cpk == null || !Number.isFinite(cpk)) return 'neutro';
     if (cpk >= META_CPK) return 'ok';
-    if (cpk >= 1.0) return 'aviso';
+    if (cpk >= META_CPK_BOA) return 'bom';
+    if (cpk >= META_CPK_ATENCAO) return 'aviso';
+    if (cpk >= META_CPK_BAIXA) return 'baixo';
     return 'critico';
   }
 
@@ -114,18 +123,19 @@
     return `${pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}%`.replace('.', ',');
   }
 
-  // Gauge horizontal de 0 a 2,0 com zonas (vermelho <1,0 · amarelo até
-  // 1,33 · verde acima), marca da meta e ponteiro do Cpk atual.
+  // Gauge horizontal de 0 a 2,0 com zonas progressivas.
+  // O 1,33 continua como ideal de processo, mas a leitura não trata todo
+  // valor abaixo dele como reprovação automática.
   function htmlGaugeCpk(cpk) {
     const escala = v => Math.max(0, Math.min(100, (v / 2) * 100));
     const ponteiro = cpk == null ? '' : `<span class="cap-gauge-ponteiro" style="left:${escala(cpk).toFixed(1)}%" title="Cpk ${fmt(cpk)}"></span>`;
     return `<div class="cap-gauge">
       <div class="cap-gauge-trilho">
-        <span class="cap-zona critico" style="width:50%"></span><span class="cap-zona aviso" style="width:16.5%"></span><span class="cap-zona ok" style="width:33.5%"></span>
-        <span class="cap-gauge-meta" style="left:${escala(META_CPK).toFixed(1)}%" title="Meta ${fmt(META_CPK)}"></span>
+        <span class="cap-zona critico" style="width:25%" title="Crítico: Cpk < ${fmt(META_CPK_BAIXA)}"></span><span class="cap-zona baixo" style="width:8.5%" title="Baixa capabilidade: ${fmt(META_CPK_BAIXA)} a ${fmt(META_CPK_ATENCAO)}"></span><span class="cap-zona aviso" style="width:16.5%" title="Atenção: ${fmt(META_CPK_ATENCAO)} a ${fmt(META_CPK_BOA)}"></span><span class="cap-zona bom" style="width:16.5%" title="Bom controle: ${fmt(META_CPK_BOA)} a ${fmt(META_CPK)}"></span><span class="cap-zona ok" style="width:33.5%" title="Ideal: Cpk ≥ ${fmt(META_CPK)}"></span>
+        <span class="cap-gauge-meta" style="left:${escala(META_CPK).toFixed(1)}%" title="Meta ideal ${fmt(META_CPK)}"></span>
         ${ponteiro}
       </div>
-      <div class="cap-gauge-escala"><span>0</span><span style="left:50%">1,0</span><span style="left:66.5%">1,33</span><span class="fim">2,0</span></div>
+      <div class="cap-gauge-escala"><span>0</span><span style="left:25%">0,50</span><span style="left:33.5%">0,67</span><span style="left:50%">1,00</span><span style="left:66.5%">1,33 ideal</span><span class="fim">2,0</span></div>
     </div>`;
   }
 
@@ -177,7 +187,7 @@
       return `<article class="cap-card neutro">
         <div class="cap-cabecalho"><div class="cap-rotulo">${i.rotulo}</div><span class="cap-status neutro">Sem dados</span></div>
         <div class="cap-vazio">Nenhum corpo de prova de ${i.rotulo.toLowerCase()} no recorte atual. Lance os resultados (CP 1 e CP 2) na Produção.</div>
-        <div class="cap-limites">LIE ${fmt(i.lie)} ${i.unidade} — EM-SPE-035 rev.10 · meta Cpk ≥ ${fmt(META_CPK)}</div>
+        <div class="cap-limites">LIE ${fmt(i.lie)} ${i.unidade} — EM-SPE-035 rev.10 · referência ideal Cpk ≥ ${fmt(META_CPK)}</div>
       </article>`;
     }
     const margem = i.media - i.lie;
@@ -192,7 +202,7 @@
       <div class="cap-cpk">
         <span class="cap-tag">Cpk</span>
         <span class="cap-valor">${fmt(i.cpk)}</span>
-        <span class="cap-meta-alvo">meta ≥ ${fmt(META_CPK)}</span>
+        <span class="cap-meta-alvo">${ROTULO_META_CPK}</span>
       </div>
       ${htmlGaugeCpk(i.cpk)}
       ${blocoHistorico}
@@ -211,7 +221,7 @@
 
   function htmlPainelCapabilidade(registros, opcoes = {}) {
     const itens = calcularCapabilidade(registros);
-    const sub = opcoes.subtitulo || 'Cpk calculado sobre os corpos de prova individuais (CP 1 e CP 2) dos ensaios de 28 dias no recorte atual · limites da EM-SPE-035 rev.10 · meta Cpk ≥ 1,33';
+    const sub = opcoes.subtitulo || 'Cpk calculado sobre os corpos de prova individuais (CP 1 e CP 2) dos ensaios de 28 dias no recorte atual · limites da EM-SPE-035 rev.10 · referência ideal Cpk ≥ 1,33 · leitura progressiva: 0,50 / 0,67 / 1,00 / 1,33';
     const ctx = { historico: opcoes.historico || null, rotuloHistorico: opcoes.rotuloHistorico || '' };
     const ranking = opcoes.rankingProjetos ? htmlRankingProjetosCpk(opcoes.rankingProjetos) : '';
     return `<div class="card">
@@ -384,7 +394,7 @@
     };
   }
 
-  // Sparkline SVG (sem dependências) da série mensal, com a meta 1,33.
+  // Sparkline SVG (sem dependências) da série mensal, com a referência ideal 1,33.
   function htmlSparklineCpk(serie) {
     const pts = (serie || []).slice(-12);
     if (pts.filter(p => p.valido).length < 2) return '';
@@ -422,7 +432,7 @@
   // Painel "Saúde Estatística dos Projetos" (Dashboard).
   function htmlPainelSaudeProjetos(registros, opcoes = {}) {
     const r = saudeProjetos(registros, opcoes.hojeISO);
-    const sub = opcoes.subtitulo || `Cpk 28 dias por projeto sobre o histórico completo — independente dos filtros acima · janela atual: últimos 90 dias (mínimo ${MIN_N_CPK} CPs) · meta Cpk ≥ 1,33`;
+    const sub = opcoes.subtitulo || `Cpk 28 dias por projeto sobre o histórico completo — independente dos filtros acima · janela atual: últimos 90 dias (mínimo ${MIN_N_CPK} CPs) · referência ideal Cpk ≥ 1,33 · leitura progressiva por faixas`;
 
     const linhaResumo = (icone, titulo, p, texto) => p
       ? `<div class="saude-resumo-item"><span class="saude-resumo-icone">${icone}</span><span class="saude-resumo-titulo">${titulo}:</span> ${badgeProjetoSeguro(p.projeto)} <span class="saude-resumo-extra">${texto}</span></div>`
@@ -477,7 +487,7 @@
       return `<tr class="${cls}"><td>${badgeProjetoSeguro(p.projeto)}${p.alerta ? ' <span class="cap-alerta">↘</span>' : ''}</td>${cel(p.ensaios[0])}${cel(p.ensaios[1])}</tr>`;
     }).join('');
     return `<div class="cap-ranking">
-      <div class="cap-ranking-titulo">Cpk por projeto — histórico completo (independente dos filtros) · Δ em 90 dias</div>
+      <div class="cap-ranking-titulo">Cpk por projeto — histórico completo (independente dos filtros) · Δ em 90 dias · ideal 1,33</div>
       <div class="tabela-wrap"><table class="tabela cap-ranking-tabela">
         <thead><tr><th>Projeto</th><th>Cpk Compressão 28d</th><th>Cpk Tração 28d</th></tr></thead>
         <tbody>${linhas}</tbody>
@@ -566,6 +576,10 @@
 
   window.IndicadoresQualidade = {
     MIN_N_CPK,
+    META_CPK,
+    META_CPK_BOA,
+    META_CPK_ATENCAO,
+    META_CPK_BAIXA,
     separarCps,
     calcularCapabilidade,
     htmlPainelCapabilidade,

@@ -414,14 +414,14 @@ function renderIndicadoresDashboard(prod, rep) {
   }
 
   if (cap) cap.innerHTML = IndicadoresQualidade.htmlPainelCapabilidade(prod, {
-    subtitulo: 'Cpk dos ensaios de 28 dias sobre os corpos de prova (CP 1 e CP 2) da Produção, no recorte dos filtros acima · limites da EM-SPE-035 rev.10 · meta Cpk ≥ 1,33'
+    subtitulo: 'Cpk dos ensaios de 28 dias sobre os corpos de prova (CP 1 e CP 2) da Produção, no recorte dos filtros acima · limites da EM-SPE-035 rev.10 · referência ideal Cpk ≥ 1,33 · leitura progressiva: 0,50 / 0,67 / 1,00 / 1,33'
   });
   if (moldes) moldes.innerHTML = IndicadoresQualidade.htmlPainelMoldesCavidades(rep, {
     subtitulo: 'Espelho da aba Dormentes Reprovados: moldes e cavidades com mais refugos por projeto e por tipo de problema, no recorte dos filtros acima.'
   });
 }
 
-const CORES_EVOLUCAO_CPK = { comp: '#1E9F80', tracao: '#4d8dd6', meta: '#FBD300', critico: '#e23b3b', barras: 'rgba(127,127,127,0.25)' };
+const CORES_EVOLUCAO_CPK = { comp: '#1E9F80', tracao: '#4d8dd6', ideal: '#FBD300', operacional: '#32A6E6', atencao: '#e23b3b', barras: 'rgba(127,127,127,0.25)' };
 
 function abrirEvolucaoCpkProjeto(projeto, opcoes = {}) {
   const area = document.getElementById('evolucaoCpkProjeto');
@@ -458,8 +458,9 @@ function abrirEvolucaoCpkProjeto(projeto, opcoes = {}) {
       datasets: [
         { type: 'line', label: 'Cpk Compressão 28d', data: s.comp.cpk, borderColor: CORES_EVOLUCAO_CPK.comp, backgroundColor: CORES_EVOLUCAO_CPK.comp, spanGaps: true, tension: 0.25, pointRadius: 4, yAxisID: 'y' },
         { type: 'line', label: 'Cpk Tração 28d', data: s.tracao.cpk, borderColor: CORES_EVOLUCAO_CPK.tracao, backgroundColor: CORES_EVOLUCAO_CPK.tracao, spanGaps: true, tension: 0.25, pointRadius: 4, yAxisID: 'y' },
-        { type: 'line', label: 'Meta 1,33', data: s.rotulos.map(() => 1.33), borderColor: CORES_EVOLUCAO_CPK.meta, borderDash: [7, 6], pointRadius: 0, borderWidth: 2, yAxisID: 'y' },
-        { type: 'line', label: 'Crítico 1,00', data: s.rotulos.map(() => 1.0), borderColor: CORES_EVOLUCAO_CPK.critico, borderDash: [4, 5], pointRadius: 0, borderWidth: 1.5, yAxisID: 'y' },
+        { type: 'line', label: 'Ideal 1,33', data: s.rotulos.map(() => 1.33), borderColor: CORES_EVOLUCAO_CPK.ideal, borderDash: [7, 6], pointRadius: 0, borderWidth: 2, yAxisID: 'y' },
+        { type: 'line', label: 'Alvo operacional 1,00', data: s.rotulos.map(() => 1.0), borderColor: CORES_EVOLUCAO_CPK.operacional, borderDash: [5, 5], pointRadius: 0, borderWidth: 1.8, yAxisID: 'y' },
+        { type: 'line', label: 'Atenção 0,67', data: s.rotulos.map(() => 0.67), borderColor: CORES_EVOLUCAO_CPK.atencao, borderDash: [3, 5], pointRadius: 0, borderWidth: 1.2, yAxisID: 'y' },
         { type: 'bar', label: 'CPs de compressão no mês', data: s.comp.n, backgroundColor: CORES_EVOLUCAO_CPK.barras, yAxisID: 'y1', order: 10 },
       ],
     },
@@ -1302,9 +1303,11 @@ function statusCpkPdfDashboard(item) {
   const desvio = Number(item?.desvio || 0);
   if (!n) return 'Sem dados';
   if (n < 2 || (temDesvio && !(desvio > 0)) || !Number.isFinite(cpk)) return 'Dados insuficientes';
-  if (cpk >= 1.33) return 'Processo capaz';
-  if (cpk >= 1.0) return 'Aceitavel - monitorar';
-  return 'Incapaz - agir';
+  if (cpk >= 1.33) return 'Ideal do processo';
+  if (cpk >= 1.00) return 'Bom controle - evoluir';
+  if (cpk >= 0.67) return 'Atencao - reduzir variacao';
+  if (cpk >= 0.50) return 'Baixa capabilidade - investigar';
+  return 'Critico - agir na variacao';
 }
 
 function tendenciaCpkPdfDashboard(seta) {
@@ -1376,7 +1379,7 @@ function registrarExportacaoDashboard(prod, rep, ens, filtros, resumo) {
     nomeArquivo: 'dashboard',
     filtros: filtrosTela,
     graficos: graficosDashboardExportacao(),
-    observacao: 'Fonte: Supabase. Exportacao gerada a partir dos filtros aplicados na tela. Inclui Cpk do recorte filtrado e saude estatistica por projeto no historico completo. O quadro de avisos do Dashboard nao entra neste PDF.',
+    observacao: 'Fonte: Supabase. Exportacao gerada a partir dos filtros aplicados na tela. Inclui Cpk do recorte filtrado e saude estatistica por projeto no historico completo. Leitura do Cpk por bom senso: 1,33 continua como referencia ideal de processo; 1,00 e alvo operacional bom; 0,67 indica atencao; 0,50 indica baixa capabilidade. O quadro de avisos do Dashboard nao entra neste PDF.',
     secoes: [
       {
         titulo: 'Resumo do Dashboard',
@@ -1392,6 +1395,10 @@ function registrarExportacaoDashboard(prod, rep, ens, filtros, resumo) {
           { indicador: 'Ensaios de liberação', valor: ens.length },
           { indicador: 'Ensaios aprovados', valor: resumo.ensAprov },
           { indicador: 'Período', valor: resumo.periodoTxt },
+          { indicador: 'CPK - referência ideal de processo', valor: '1,33' },
+          { indicador: 'CPK - alvo operacional bom', valor: '1,00' },
+          { indicador: 'CPK - faixa de atenção', valor: '0,67 a 1,00' },
+          { indicador: 'CPK - baixa capabilidade', valor: '0,50 a 0,67' },
           ...resumoCpkDashboardExportacao(Dashboard.prod)
         ]
       },

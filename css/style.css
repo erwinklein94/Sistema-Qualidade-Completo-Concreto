@@ -6595,7 +6595,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   gap: 10px;
 }
 .cap-card.ok { border-left-color: var(--ok); }
+.cap-card.bom { border-left-color: var(--azul-claro); }
 .cap-card.aviso { border-left-color: var(--amarelo); }
+.cap-card.baixo { border-left-color: #f59e0b; }
 .cap-card.critico { border-left-color: var(--erro); }
 .cap-cabecalho { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .cap-rotulo { font-weight: 800; font-size: 0.92rem; }
@@ -6604,7 +6606,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   padding: 3px 10px; border-radius: 999px; white-space: nowrap;
 }
 .cap-status.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.cap-status.bom { background: color-mix(in srgb, var(--azul-claro) 16%, transparent); color: var(--azul-escuro); }
 .cap-status.aviso { background: color-mix(in srgb, var(--amarelo) 22%, transparent); color: var(--amarelo-texto, #8a6d00); }
+.cap-status.baixo { background: rgba(245,158,11,0.16); color: #b45309; }
 .cap-status.critico { background: color-mix(in srgb, var(--erro) 14%, transparent); color: var(--erro); }
 .cap-status.neutro { background: rgba(127,127,127,0.14); opacity: 0.85; }
 
@@ -6612,7 +6616,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .cap-tag { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.65; }
 .cap-valor { font-size: 2.1rem; font-weight: 800; line-height: 1; }
 .cap-card.ok .cap-valor { color: var(--ok); }
+.cap-card.bom .cap-valor { color: var(--azul-claro); }
 .cap-card.aviso .cap-valor { color: var(--amarelo-texto, #b58900); }
+.cap-card.baixo .cap-valor { color: #d97706; }
 .cap-card.critico .cap-valor { color: var(--erro); }
 .cap-meta-alvo { font-size: 0.74rem; opacity: 0.7; }
 
@@ -6624,7 +6630,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .cap-zona:first-child { border-radius: 999px 0 0 999px; }
 .cap-zona:last-child { border-radius: 0 999px 999px 0; }
 .cap-zona.critico { background: var(--erro); }
+.cap-zona.baixo { background: #f59e0b; }
 .cap-zona.aviso { background: var(--amarelo); }
+.cap-zona.bom { background: var(--azul-claro); }
 .cap-zona.ok { background: var(--ok); }
 .cap-gauge-meta {
   position: absolute; top: -3px; bottom: -3px; width: 2px;
@@ -6725,7 +6733,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   display: flex; flex-direction: column; gap: 8px;
 }
 .saude-card.ok { border-left-color: var(--ok); }
+.saude-card.bom { border-left-color: var(--azul-claro); }
 .saude-card.aviso { border-left-color: var(--amarelo); }
+.saude-card.baixo { border-left-color: #f59e0b; }
 .saude-card.critico { border-left-color: var(--erro); }
 .saude-card.clicavel { cursor: pointer; transition: transform 0.12s ease, box-shadow 0.12s ease; }
 .saude-card.clicavel:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
@@ -6742,7 +6752,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .saude-ensaio { grid-area: ensaio; font-size: 0.78rem; font-weight: 600; }
 .saude-cpk { grid-area: cpk; font-size: 1.15rem; font-weight: 800; }
 .saude-cpk.ok { color: var(--ok); }
+.saude-cpk.bom { color: var(--azul-claro); }
 .saude-cpk.aviso { color: var(--amarelo-texto, #b58900); }
+.saude-cpk.baixo { color: #d97706; }
 .saude-cpk.critico { color: var(--erro); }
 .saude-cpk.neutro { opacity: 0.6; }
 .saude-seta { grid-area: seta; font-style: normal; font-size: 1rem; }
@@ -6752,7 +6764,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .cap-spark { grid-area: spark; display: inline-block; width: 150px; max-width: 100%; height: 36px; }
 .cap-spark svg { width: 100%; height: 100%; }
 .cap-spark.ok { color: var(--ok); }
+.cap-spark.bom { color: var(--azul-claro); }
 .cap-spark.aviso { color: var(--amarelo-texto, #b58900); }
+.cap-spark.baixo { color: #d97706; }
 .cap-spark.critico { color: var(--erro); }
 .cap-spark.neutro { color: var(--cinza, #8a93a2); }
 
@@ -6772,7 +6786,9 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .cap-ranking-tabela td, .cap-ranking-tabela th { font-size: 0.8rem; }
 .cap-ranking-tabela td em { font-style: normal; }
 .cap-ranking-tabela td.ok strong { color: var(--ok); }
+.cap-ranking-tabela td.bom strong { color: var(--azul-claro); }
 .cap-ranking-tabela td.aviso strong { color: var(--amarelo-texto, #b58900); }
+.cap-ranking-tabela td.baixo strong { color: #d97706; }
 .cap-ranking-tabela td.critico strong { color: var(--erro); }
 .cap-ranking-tabela td small { opacity: 0.7; }
 
