@@ -56,7 +56,8 @@ async function carregarAuditoria() {
       acao: document.getElementById('fAcao')?.value || '',
       dataIni: document.getElementById('fDataIni')?.value || '',
       dataFim: document.getElementById('fDataFim')?.value || '',
-      limite: 500,
+      todos: true,
+      limite: 20000,
     });
     atualizarAuditoriaTela();
     registrarExportacaoAuditoria();
@@ -64,6 +65,7 @@ async function carregarAuditoria() {
     console.error('Erro ao carregar auditoria', err);
     if (status) status.textContent = 'Não foi possível carregar auditoria.';
     document.getElementById('auditoriaKpis').innerHTML = '';
+    limparGraficoAuditoria('Gráfico indisponível enquanto a auditoria não carregar.');
     document.getElementById('auditoriaTabela').innerHTML = `
       <tr><td colspan="6">
         <div class="vazio compacto">
@@ -79,6 +81,7 @@ function atualizarAuditoriaTela() {
   auditoriaVisivel = registrosAuditoriaFiltrados();
   atualizarStatusAuditoria();
   renderKpisAuditoria();
+  renderGraficoAuditoriaDiario();
   renderAuditoria();
   registrarExportacaoAuditoria();
 }
@@ -133,7 +136,7 @@ function atualizarStatusAuditoria() {
 
   const total = auditoria.length;
   const exibindo = auditoriaVisivel.length;
-  const limite = total >= 500 ? ' · limite de 500 registros carregados' : '';
+  const limite = total >= 20000 ? ' · limite técnico de 20000 registros carregados' : '';
   status.textContent = total === exibindo
     ? `${total} alteração(ões) carregada(s)${limite}`
     : `${exibindo} de ${total} alteração(ões) exibida(s)${limite}`;
@@ -170,6 +173,109 @@ function renderKpisAuditoria() {
       <strong>${usuariosUnicos}</strong>
       <small>${lista.length} alteração(ões) exibida(s)</small>
     </article>`;
+}
+
+function renderGraficoAuditoriaDiario() {
+  const alvo = document.getElementById('auditoriaGraficoBarras');
+  const status = document.getElementById('auditoriaGraficoStatus');
+  const scroll = document.getElementById('auditoriaGraficoScroll');
+  if (!alvo) return;
+
+  const registrosComData = auditoriaVisivel
+    .map(r => ({ ...r, _dataAuditoria: dataAuditoriaValida(r.criado_em) }))
+    .filter(r => r._dataAuditoria);
+
+  if (!registrosComData.length) {
+    limparGraficoAuditoria('Nenhuma alteração com data válida para montar o gráfico.');
+    return;
+  }
+
+  const contagem = new Map();
+  registrosComData.forEach(r => {
+    const chave = chaveDataAuditoria(r._dataAuditoria);
+    contagem.set(chave, (contagem.get(chave) || 0) + 1);
+  });
+
+  const datasOrdenadas = registrosComData
+    .map(r => inicioDiaAuditoria(r._dataAuditoria))
+    .sort((a, b) => a - b);
+
+  const primeira = datasOrdenadas[0];
+  const ultima = datasOrdenadas[datasOrdenadas.length - 1];
+  const dias = intervaloDiasAuditoria(primeira, ultima);
+  const maiorValor = Math.max(...dias.map(d => contagem.get(chaveDataAuditoria(d)) || 0), 1);
+  const larguraMinima = Math.max(720, dias.length * 58);
+
+  alvo.style.minWidth = `${larguraMinima}px`;
+  alvo.innerHTML = dias.map(d => {
+    const chave = chaveDataAuditoria(d);
+    const valor = contagem.get(chave) || 0;
+    const altura = valor > 0 ? Math.max(8, Math.round((valor / maiorValor) * 100)) : 2;
+    const rotuloDia = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const rotuloCompleto = d.toLocaleDateString('pt-BR');
+    const titulo = `${rotuloCompleto}: ${valor} alteração(ões)`;
+    return `
+      <div class="auditoria-grafico-dia ${valor ? '' : 'sem-movimento'}" title="${U.esc(titulo)}">
+        <span class="auditoria-grafico-valor">${valor}</span>
+        <div class="auditoria-grafico-coluna" aria-label="${U.esc(titulo)}">
+          <i style="height:${altura}%"></i>
+        </div>
+        <span class="auditoria-grafico-rotulo">${U.esc(rotuloDia)}</span>
+      </div>`;
+  }).join('');
+
+  const diasComMovimento = Array.from(contagem.values()).filter(Boolean).length;
+  if (status) {
+    status.textContent = `${registrosComData.length} alteração(ões) distribuída(s) em ${diasComMovimento} dia(s), de ${primeira.toLocaleDateString('pt-BR')} até ${ultima.toLocaleDateString('pt-BR')}.`;
+  }
+
+  if (scroll) {
+    window.requestAnimationFrame(() => {
+      scroll.scrollLeft = scroll.scrollWidth;
+    });
+  }
+}
+
+function limparGraficoAuditoria(mensagem) {
+  const alvo = document.getElementById('auditoriaGraficoBarras');
+  const status = document.getElementById('auditoriaGraficoStatus');
+  if (alvo) {
+    alvo.style.minWidth = '100%';
+    alvo.innerHTML = `
+      <div class="vazio compacto auditoria-grafico-vazio">
+        <h3>Sem dados para o gráfico</h3>
+        <p>${U.esc(mensagem || 'Nenhuma alteração encontrada para o período selecionado.')}</p>
+      </div>`;
+  }
+  if (status) status.textContent = mensagem || 'Nenhuma alteração encontrada para montar o gráfico.';
+}
+
+function dataAuditoriaValida(valor) {
+  if (!valor) return null;
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function inicioDiaAuditoria(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function chaveDataAuditoria(d) {
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function intervaloDiasAuditoria(inicio, fim) {
+  const dias = [];
+  const cursor = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+  const limite = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+  while (cursor <= limite) {
+    dias.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dias;
 }
 
 function renderAuditoria() {

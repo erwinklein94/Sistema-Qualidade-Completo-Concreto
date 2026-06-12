@@ -563,19 +563,40 @@ const StoreSupabase = (() => {
 
   async function listarAuditoria(filtros = {}) {
     exigirPermissao('verAuditoria', 'consultar auditoria');
-    let q = db()
-      .from('auditoria_alteracoes')
-      .select('*')
-      .order('criado_em', { ascending: false })
-      .limit(filtros.limite || 300);
 
-    if (filtros.tabela) q = q.eq('tabela', filtros.tabela);
-    if (filtros.acao) q = q.eq('acao', filtros.acao);
-    if (filtros.usuarioId) q = q.eq('usuario_id', filtros.usuarioId);
-    if (filtros.dataIni) q = q.gte('criado_em', `${filtros.dataIni}T00:00:00`);
-    if (filtros.dataFim) q = q.lte('criado_em', `${filtros.dataFim}T23:59:59`);
+    const montarQuery = () => {
+      let q = db()
+        .from('auditoria_alteracoes')
+        .select('*')
+        .order('criado_em', { ascending: false });
 
-    const { data, error } = await q;
+      if (filtros.tabela) q = q.eq('tabela', filtros.tabela);
+      if (filtros.acao) q = q.eq('acao', filtros.acao);
+      if (filtros.usuarioId) q = q.eq('usuario_id', filtros.usuarioId);
+      if (filtros.dataIni) q = q.gte('criado_em', `${filtros.dataIni}T00:00:00`);
+      if (filtros.dataFim) q = q.lte('criado_em', `${filtros.dataFim}T23:59:59`);
+      return q;
+    };
+
+    if (filtros.todos) {
+      const pagina = 1000;
+      const limiteTotal = Number(filtros.limite || 20000);
+      const acumulado = [];
+
+      for (let inicio = 0; inicio < limiteTotal; inicio += pagina) {
+        const fim = Math.min(inicio + pagina - 1, limiteTotal - 1);
+        const { data, error } = await montarQuery().range(inicio, fim);
+        if (error) throw error;
+
+        const lote = data || [];
+        acumulado.push(...lote);
+        if (lote.length < pagina) break;
+      }
+
+      return acumulado;
+    }
+
+    const { data, error } = await montarQuery().limit(filtros.limite || 300);
     if (error) throw error;
     return data || [];
   }

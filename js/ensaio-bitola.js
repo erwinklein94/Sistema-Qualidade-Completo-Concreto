@@ -1,6 +1,6 @@
 /* =====================================================================
    ENSAIO-BITOLA.JS — Histórico consultivo de ensaios de bitola.
-   Independente das demais telas: leitura de iAuditor + registro com link.
+   Independente das demais telas: leitura de iAuditor + registro com link opcional.
    ===================================================================== */
 let BITOLA_REGISTROS = [];
 let BITOLA_CARREGANDO = false;
@@ -17,7 +17,7 @@ const RESULTADOS_BITOLA = ['Aprovado', 'Reprovado', 'Pendente'];
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   document.body.classList.add('pagina-ensaios-liberacao');
-  App.montarLayout('ensaioBitola', 'Ensaio de Bitola', 'Histórico consultivo de ensaios de bitola — abre o relatório pelo link');
+  App.montarLayout('ensaioBitola', 'Ensaio de Bitola', 'Histórico consultivo de ensaios de bitola — link do relatório opcional');
   App.acoesTopo(`
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo relatório</button>` : App.avisoModoConsulta()}
@@ -255,7 +255,6 @@ async function salvar() {
   if (!Auth.pode('criar') && !Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('salvar registros'), 'aviso'); return; }
   const reg = lerFormulario();
   if (!reg.dataEnsaio) { App.toast('Informe a data do ensaio.', 'aviso'); return; }
-  if (!reg.linkRelatorio) { App.toast('Informe o link do relatório — é por ele que o ensaio será consultado.', 'aviso'); return; }
 
   try {
     const salvo = await StoreSupabase.salvarEnsaioBitola(mapParaBanco(reg));
@@ -443,7 +442,7 @@ function renderLeituraIauditor(item) {
   alvo.innerHTML = `
     <div class="iauditor-status ok">
       <h3>Relatório lido — confira e salve no histórico</h3>
-      <p>Cole o link do relatório (SharePoint/iAuditor) e salve. Os campos abaixo podem ser ajustados antes.</p>
+      <p>Confira os dados lidos e salve. O link do relatório (SharePoint/iAuditor) é opcional e pode ser informado quando existir.</p>
       <div class="iauditor-meta-grid">
         ${metaItem('Arquivo', item.fileName)}
         ${metaItem('Tipo', r.tipo)}
@@ -456,7 +455,7 @@ function renderLeituraIauditor(item) {
       </div>
       ${podeCriar ? `
       <div class="form-grid" style="margin-top:14px">
-        <div class="campo full"><label>Link do relatório <span class="obrig">*</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
+        <div class="campo full"><label>Link do relatório <span class="dica">(opcional)</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
       </div>
       <div class="iauditor-acoes">
         <button class="btn btn-primario" type="button" onclick="salvarLeituraIauditor()">${ICN.check}Salvar relatório</button>
@@ -475,7 +474,6 @@ async function salvarLeituraIauditor() {
   const atual = IAUDITOR_RELATORIO_ATUAL;
   if (!atual?.registro) { App.toast('Importe um PDF do iAuditor antes de salvar.', 'aviso'); return; }
   const link = (document.getElementById('iaLink')?.value || '').trim();
-  if (!link) { App.toast('Cole o link do relatório antes de salvar.', 'aviso'); document.getElementById('iaLink')?.focus(); return; }
 
   const reg = {
     dataEnsaio: atual.registro.dataEnsaio,
@@ -499,7 +497,8 @@ async function salvarLeituraIauditor() {
     BITOLA_REGISTROS.unshift(convertido);
     render();
     App.toast('Relatório de bitola salvo no histórico.');
-    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Relatório salvo</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de ensaios de bitola. <a class="link-relatorio" href="${U.esc(/^https?:\/\//i.test(link) ? link : 'https://' + link)}" target="_blank" rel="noopener">Abrir relatório</a></p></div>`;
+    const linkSalvo = link ? `<a class="link-relatorio" href="${U.esc(/^https?:\/\//i.test(link) ? link : 'https://' + link)}" target="_blank" rel="noopener">Abrir relatório</a>` : '<span class="badge badge-amarelo">Sem link de relatório</span>';
+    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Relatório salvo</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de ensaios de bitola. ${linkSalvo}</p></div>`;
     IAUDITOR_RELATORIO_ATUAL = null;
   } catch (err) {
     console.error('Erro ao salvar leitura iAuditor', err);

@@ -9,12 +9,10 @@ let PISTA_TABELA_FALTANDO = false;
 let IAUDITOR_RELATORIO_ATUAL = null;
 
 const CAMPOS_PISTA = [
-  'dataInspecao', 'lote', 'projeto', 'bitola', 'fornecedor', 'resultado', 'responsavel',
+  'dataInspecao', 'lote', 'projeto', 'bitola', 'fornecedor', 'responsavel',
   'pista', 'dormentesReprovados', 'trechoPosicao', 'molde', 'cavidade', 'atividade', 'itensInspecionados',
   'naoConformidades', 'acoesCorretivas', 'linkRelatorio', 'arquivoOrigem', 'observacoes'
 ];
-const RESULTADOS_PISTA = ['Aprovado', 'Reprovado', 'Pendente'];
-
 const PALAVRAS_PISTA_EXPLICITAS = [
   'inspecao de pista', 'inspeção de pista', 'checklist de pista', 'check list de pista',
   'liberacao de pista', 'liberação de pista', 'relatorio de pista', 'relatório de pista'
@@ -58,14 +56,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   preencherSelect('projeto', CFG.listas.projetos, 'Selecione...');
   preencherSelect('bitola', CFG.listas.bitolas, 'Selecione...');
   preencherSelect('fornecedor', CFG.listas.fornecedores, 'Selecione...');
-  preencherSelect('resultado', RESULTADOS_PISTA, 'Selecione...');
 
   preencherSelect('fFornecedor', CFG.listas.fornecedores, 'Todos');
   preencherSelect('fProjeto', CFG.listas.projetos, 'Todos');
   preencherSelect('fBitola', CFG.listas.bitolas, 'Todas');
-  preencherSelect('fResultado', RESULTADOS_PISTA, 'Todos');
 
-  ['busca', 'fFornecedor', 'fProjeto', 'fBitola', 'fResultado', 'fDataIni', 'fDataFim'].forEach(id => {
+  ['busca', 'fFornecedor', 'fProjeto', 'fBitola', 'fDataIni', 'fDataFim'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.addEventListener('input', render); el.addEventListener('change', render); }
   });
@@ -156,7 +152,7 @@ function mapParaBanco(reg) {
     itens_inspecionados: reg.itensInspecionados || null,
     nao_conformidades: reg.naoConformidades || null,
     acoes_corretivas: reg.acoesCorretivas || null,
-    resultado: reg.resultado || null,
+    resultado: null,
     responsavel: reg.responsavel || null,
     link_relatorio: reg.linkRelatorio || null,
     arquivo_origem: reg.arquivoOrigem || null,
@@ -175,7 +171,6 @@ function filtros() {
     fornecedor: document.getElementById('fFornecedor')?.value || '',
     projeto: document.getElementById('fProjeto')?.value || '',
     bitola: document.getElementById('fBitola')?.value || '',
-    resultado: document.getElementById('fResultado')?.value || '',
     dataIni: document.getElementById('fDataIni')?.value || '',
     dataFim: document.getElementById('fDataFim')?.value || '',
   };
@@ -188,11 +183,10 @@ function render() {
     if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
     if (f.projeto && r.projeto !== f.projeto) return false;
     if (f.bitola && r.bitola !== f.bitola) return false;
-    if (f.resultado && r.resultado !== f.resultado) return false;
     if (f.dataIni && (r.dataInspecao || '') < f.dataIni) return false;
     if (f.dataFim && (r.dataInspecao || '') > f.dataFim) return false;
     if (f.busca) {
-      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.pista} ${valorDormentesReprovados(r)} ${r.trechoPosicao} ${r.molde} ${r.cavidade} ${r.atividade} ${r.itensInspecionados} ${r.naoConformidades} ${r.acoesCorretivas} ${r.resultado} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
+      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.pista} ${valorDormentesReprovados(r)} ${r.trechoPosicao} ${r.molde} ${r.cavidade} ${r.atividade} ${r.itensInspecionados} ${r.naoConformidades} ${r.acoesCorretivas} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
       if (!blob.includes(f.busca)) return false;
     }
     return true;
@@ -203,20 +197,16 @@ function render() {
 }
 
 function renderKpis(lista) {
-  const aprovados = lista.filter(r => r.resultado === 'Aprovado').length;
-  const reprovados = lista.filter(r => r.resultado === 'Reprovado').length;
-  const pendentes = lista.filter(r => r.resultado === 'Pendente').length;
   const comLink = lista.filter(r => String(r.linkRelatorio || '').trim()).length;
+  const semLink = lista.length - comLink;
   const comNc = lista.filter(r => String(r.naoConformidades || '').trim()).length;
   const alvo = document.getElementById('kpis');
   if (!alvo) return;
   alvo.innerHTML = `
     <div class="kpi escuro"><div class="rotulo">Inspeções no filtro</div><div class="valor">${lista.length}</div><div class="extra">registros no histórico</div></div>
-    <div class="kpi verde"><div class="rotulo">Aprovadas</div><div class="valor">${aprovados}</div><div class="extra">pista conforme</div></div>
-    <div class="kpi vermelho"><div class="rotulo">Reprovadas</div><div class="valor">${reprovados}</div><div class="extra">pista não conforme</div></div>
-    <div class="kpi amarelo"><div class="rotulo">Pendentes</div><div class="valor">${pendentes}</div><div class="extra">aguardando conclusão</div></div>
     <div class="kpi"><div class="rotulo">Com NC</div><div class="valor">${comNc}</div><div class="extra">relatos de desvio</div></div>
-    <div class="kpi"><div class="rotulo">Com relatório</div><div class="valor">${comLink}</div><div class="extra">links anexados</div></div>`;
+    <div class="kpi"><div class="rotulo">Com relatório</div><div class="valor">${comLink}</div><div class="extra">links anexados</div></div>
+    <div class="kpi amarelo"><div class="rotulo">Sem relatório</div><div class="valor">${semLink}</div><div class="extra">sem link anexado</div></div>`;
 }
 
 function renderTabela(lista, total) {
@@ -248,7 +238,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th><th>Reprovados</th>
-      <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
+      <th>Responsável</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataInspecao)}</td>
@@ -257,7 +247,6 @@ function renderTabela(lista, total) {
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.pista || '—')}</td>
       <td><strong>${U.esc(valorDormentesReprovados(r))}</strong></td>
-      <td>${badgeResultado(r.resultado)}</td>
       <td>${U.esc(r.responsavel || '—')}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
@@ -318,10 +307,6 @@ function resumoTexto(txt) {
 function badgeBitolaValor(bitola) {
   const cls = bitola === 'Bitola Larga' ? 'badge-bitola-larga' : bitola === 'Bitola Mista' ? 'badge-bitola-mista' : 'badge-bitola-sem';
   return `<span class="badge ${cls}">${U.esc(bitola || 'Sem bitola definida')}</span>`;
-}
-function badgeResultado(resultado) {
-  const cls = resultado === 'Aprovado' ? 'badge-ok' : resultado === 'Reprovado' ? 'badge-reprovado' : 'badge-amarelo';
-  return `<span class="badge ${cls}">${U.esc(resultado || '—')}</span>`;
 }
 function linkRelatorio(r) {
   const link = String(r.linkRelatorio || '').trim();
@@ -435,7 +420,6 @@ function ver(id) {
       ${itemVer('Molde', r.molde)}
       ${itemVer('Cavidade', r.cavidade)}
       ${itemVer('Atividade / etapa', r.atividade)}
-      ${itemVer('Resultado', r.resultado)}
       ${itemVer('Responsável', r.responsavel)}
       ${itemVer('Arquivo de origem', r.arquivoOrigem)}
     </div>
@@ -488,7 +472,7 @@ async function lerRelatorioIauditor(file) {
   if (!window.pdfjsLib || !window.RumoParser) { renderErroIauditor('O leitor de PDF não foi carregado. Verifique sua conexão e recarregue a página.'); return; }
 
   IAUDITOR_RELATORIO_ATUAL = null;
-  alvo.innerHTML = `<div class="iauditor-status"><h3>Lendo ${U.esc(file.name)}...</h3><p>Extraindo identificação, pista, itens de inspeção e resultado encontrados.</p></div>`;
+  alvo.innerHTML = `<div class="iauditor-status"><h3>Lendo ${U.esc(file.name)}...</h3><p>Extraindo identificação, pista e itens de inspeção encontrados.</p></div>`;
   try {
     const pages = await extrairPaginasPdf(file);
     const data = RumoParser.parse(pages);
@@ -700,7 +684,6 @@ function renderLeituraIauditor(item) {
         ${metaItem('Atividade', r.atividade)}
         ${metaItem('Data', U.dataBR(r.dataInspecao))}
         ${metaItem('Responsável', r.responsavel)}
-        ${metaItem('Resultado sugerido', r.resultado)}
       </div>
       ${podeCriar && item.valido ? `
       <div class="form-grid" style="margin-top:14px">

@@ -1,6 +1,6 @@
 /* =====================================================================
    INSPECAO-CONCRETAGEM.JS — Histórico consultivo de inspeções de concretagem.
-   Independente das demais telas: leitura de iAuditor + registro com link.
+   Independente das demais telas: leitura de iAuditor + registro com link opcional.
    ===================================================================== */
 let CONCRETAGEM_REGISTROS = [];
 let CONCRETAGEM_CARREGANDO = false;
@@ -9,12 +9,10 @@ let CONCRETAGEM_TABELA_FALTANDO = false;
 let IAUDITOR_RELATORIO_ATUAL = null;
 
 const CAMPOS_CONCRETAGEM = [
-  'dataInspecao', 'lote', 'projeto', 'bitola', 'fornecedor', 'resultado', 'responsavel',
+  'dataInspecao', 'lote', 'projeto', 'bitola', 'fornecedor', 'responsavel',
   'pista', 'molde', 'cavidade', 'quantidadeProduzida', 'slumpAbatimento', 'slumpEspalhamento',
   'temperaturaLancamento', 'linkRelatorio', 'arquivoOrigem', 'observacoes'
 ];
-const RESULTADOS_CONCRETAGEM = ['Aprovado', 'Reprovado', 'Pendente'];
-
 const PALAVRAS_CONCRETAGEM = [
   'concretagem', 'slump', 'abatimento', 'espalhamento', 'temperatura de lancamento',
   'temperatura lancamento', 'lancamento do concreto', 'informacoes da concretagem',
@@ -34,7 +32,7 @@ const CHAVES_ESTRUTURAIS_NAO_CONCRETAGEM = [
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   document.body.classList.add('pagina-ensaios-liberacao');
-  App.montarLayout('inspecaoConcretagem', 'Inspeção de Concretagem', 'Histórico consultivo de inspeções de concretagem — abre o relatório pelo link');
+  App.montarLayout('inspecaoConcretagem', 'Inspeção de Concretagem', 'Histórico consultivo de inspeções de concretagem — link do relatório opcional');
   App.acoesTopo(`
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo relatório</button>` : App.avisoModoConsulta()}
@@ -43,14 +41,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   preencherSelect('projeto', CFG.listas.projetos, 'Selecione...');
   preencherSelect('bitola', CFG.listas.bitolas, 'Selecione...');
   preencherSelect('fornecedor', CFG.listas.fornecedores, 'Selecione...');
-  preencherSelect('resultado', RESULTADOS_CONCRETAGEM, 'Selecione...');
 
   preencherSelect('fFornecedor', CFG.listas.fornecedores, 'Todos');
   preencherSelect('fProjeto', CFG.listas.projetos, 'Todos');
   preencherSelect('fBitola', CFG.listas.bitolas, 'Todas');
-  preencherSelect('fResultado', RESULTADOS_CONCRETAGEM, 'Todos');
 
-  ['busca', 'fFornecedor', 'fProjeto', 'fBitola', 'fResultado', 'fDataIni', 'fDataFim'].forEach(id => {
+  ['busca', 'fFornecedor', 'fProjeto', 'fBitola', 'fDataIni', 'fDataFim'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.addEventListener('input', render); el.addEventListener('change', render); }
   });
@@ -115,7 +111,6 @@ function mapDoBanco(row) {
     slumpAbatimento: row.slump_abatimento || '',
     slumpEspalhamento: row.slump_espalhamento || '',
     temperaturaLancamento: row.temperatura_lancamento || '',
-    resultado: row.resultado || '',
     responsavel: row.responsavel || '',
     linkRelatorio: row.link_relatorio || '',
     arquivoOrigem: row.arquivo_origem || '',
@@ -138,7 +133,7 @@ function mapParaBanco(reg) {
     slump_abatimento: reg.slumpAbatimento || null,
     slump_espalhamento: reg.slumpEspalhamento || null,
     temperatura_lancamento: reg.temperaturaLancamento || null,
-    resultado: reg.resultado || null,
+    resultado: null,
     responsavel: reg.responsavel || null,
     link_relatorio: reg.linkRelatorio || null,
     arquivo_origem: reg.arquivoOrigem || null,
@@ -157,7 +152,6 @@ function filtros() {
     fornecedor: document.getElementById('fFornecedor')?.value || '',
     projeto: document.getElementById('fProjeto')?.value || '',
     bitola: document.getElementById('fBitola')?.value || '',
-    resultado: document.getElementById('fResultado')?.value || '',
     dataIni: document.getElementById('fDataIni')?.value || '',
     dataFim: document.getElementById('fDataFim')?.value || '',
   };
@@ -170,11 +164,10 @@ function render() {
     if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
     if (f.projeto && r.projeto !== f.projeto) return false;
     if (f.bitola && r.bitola !== f.bitola) return false;
-    if (f.resultado && r.resultado !== f.resultado) return false;
     if (f.dataIni && (r.dataInspecao || '') < f.dataIni) return false;
     if (f.dataFim && (r.dataInspecao || '') > f.dataFim) return false;
     if (f.busca) {
-      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.pista} ${r.molde} ${r.cavidade} ${r.quantidadeProduzida} ${r.slumpAbatimento} ${r.slumpEspalhamento} ${r.temperaturaLancamento} ${r.resultado} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
+      const blob = `${r.lote} ${r.projeto} ${r.bitola} ${r.fornecedor} ${r.pista} ${r.molde} ${r.cavidade} ${r.quantidadeProduzida} ${r.slumpAbatimento} ${r.slumpEspalhamento} ${r.temperaturaLancamento} ${r.responsavel} ${r.linkRelatorio} ${r.arquivoOrigem} ${r.observacoes}`.toLowerCase();
       if (!blob.includes(f.busca)) return false;
     }
     return true;
@@ -185,18 +178,14 @@ function render() {
 }
 
 function renderKpis(lista) {
-  const aprovados = lista.filter(r => r.resultado === 'Aprovado').length;
-  const reprovados = lista.filter(r => r.resultado === 'Reprovado').length;
-  const pendentes = lista.filter(r => r.resultado === 'Pendente').length;
   const comLink = lista.filter(r => String(r.linkRelatorio || '').trim()).length;
+  const semLink = lista.length - comLink;
   const alvo = document.getElementById('kpis');
   if (!alvo) return;
   alvo.innerHTML = `
     <div class="kpi escuro"><div class="rotulo">Inspeções no filtro</div><div class="valor">${lista.length}</div><div class="extra">registros no histórico</div></div>
-    <div class="kpi verde"><div class="rotulo">Aprovadas</div><div class="valor">${aprovados}</div><div class="extra">concretagem conforme</div></div>
-    <div class="kpi vermelho"><div class="rotulo">Reprovadas</div><div class="valor">${reprovados}</div><div class="extra">concretagem não conforme</div></div>
-    <div class="kpi amarelo"><div class="rotulo">Pendentes</div><div class="valor">${pendentes}</div><div class="extra">aguardando conclusão</div></div>
-    <div class="kpi"><div class="rotulo">Com relatório</div><div class="valor">${comLink}</div><div class="extra">links anexados</div></div>`;
+    <div class="kpi"><div class="rotulo">Com relatório</div><div class="valor">${comLink}</div><div class="extra">links anexados</div></div>
+    <div class="kpi amarelo"><div class="rotulo">Sem relatório</div><div class="valor">${semLink}</div><div class="extra">sem link anexado</div></div>`;
 }
 
 function renderTabela(lista, total) {
@@ -228,7 +217,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th>
-      <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
+      <th>Responsável</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataInspecao)}</td>
@@ -236,7 +225,6 @@ function renderTabela(lista, total) {
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.pista || '—')}</td>
-      <td>${badgeResultado(r.resultado)}</td>
       <td>${U.esc(r.responsavel || '—')}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
@@ -255,10 +243,6 @@ function resumoSlump(r) {
 function badgeBitolaValor(bitola) {
   const cls = bitola === 'Bitola Larga' ? 'badge-bitola-larga' : bitola === 'Bitola Mista' ? 'badge-bitola-mista' : 'badge-bitola-sem';
   return `<span class="badge ${cls}">${U.esc(bitola || 'Sem bitola definida')}</span>`;
-}
-function badgeResultado(resultado) {
-  const cls = resultado === 'Aprovado' ? 'badge-ok' : resultado === 'Reprovado' ? 'badge-reprovado' : 'badge-amarelo';
-  return `<span class="badge ${cls}">${U.esc(resultado || '—')}</span>`;
 }
 function linkRelatorio(r) {
   const link = String(r.linkRelatorio || '').trim();
@@ -307,8 +291,6 @@ async function salvar() {
   if (!Auth.pode('criar') && !Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('salvar registros'), 'aviso'); return; }
   const reg = lerFormulario();
   if (!reg.dataInspecao) { App.toast('Informe a data da inspeção.', 'aviso'); return; }
-  if (!reg.linkRelatorio) { App.toast('Informe o link do relatório — é por ele que a inspeção será consultada.', 'aviso'); return; }
-
   try {
     const salvo = await StoreSupabase.salvarInspecaoConcretagem(mapParaBanco(reg));
     const convertido = mapDoBanco(salvo);
@@ -359,7 +341,6 @@ function ver(id) {
       ${itemVer('Slump — abatimento', r.slumpAbatimento)}
       ${itemVer('Slump — espalhamento', r.slumpEspalhamento)}
       ${itemVer('Temperatura de lançamento', r.temperaturaLancamento)}
-      ${itemVer('Resultado', r.resultado)}
       ${itemVer('Responsável', r.responsavel)}
       ${itemVer('Arquivo de origem', r.arquivoOrigem)}
     </div>
@@ -449,10 +430,8 @@ function montarRegistroIauditor(data, fileName) {
   const fornecedor = normalizarFornecedor(meta['Fornecedor'] || '');
   const dataInspecao = dataPtParaISO(meta['Data da fabricação/inspeção'] || meta['Data de produção'] || meta['Data da fabricação'] || meta['Data do ensaio']) || hojeISO();
   const responsavel = limparValor(meta['Fiscal responsável'] || meta['Responsável'] || '');
-  const resultado = inferirResultado(data, linhas);
-
   return {
-    dataInspecao, lote, projeto, bitola, fornecedor, resultado, responsavel,
+    dataInspecao, lote, projeto, bitola, fornecedor, responsavel,
     pista: limparValor(meta['Pista'] || encontrarValor(linhas, ['pista'])),
     molde: limparValor(meta['Molde'] || encontrarValor(linhas, ['molde'])),
     cavidade: limparValor(meta['Cavidade'] || encontrarValor(linhas, ['cavidade'])),
@@ -503,14 +482,6 @@ function encontrarValor(linhas, chaves) {
   return linha?.valor && linha.valor !== '—' ? linha.valor : '';
 }
 
-function inferirResultado(data, linhas) {
-  if (data?.conclusao?.situacao === 'ok') return 'Aprovado';
-  if (data?.conclusao?.situacao === 'fail') return 'Reprovado';
-  if ((linhas || []).some(l => l.situacao === 'fail')) return 'Reprovado';
-  if ((linhas || []).some(l => l.situacao === 'ok')) return 'Aprovado';
-  return 'Pendente';
-}
-
 function ehRelatorioConcretagem(data, registro, fileName) {
   const parts = [fileName, registro?.tipo, registro?.pista, registro?.molde, registro?.cavidade, registro?.slumpAbatimento, registro?.slumpEspalhamento, registro?.temperaturaLancamento];
   const meta = data?.meta || {};
@@ -556,7 +527,7 @@ function renderLeituraIauditor(item) {
     ${avisoNaoValido}
     <div class="iauditor-status ${item.valido ? 'ok' : ''}">
       <h3>${item.valido ? 'Inspeção de Concretagem lida — confira e salve no histórico' : 'Prévia da leitura'}</h3>
-      <p>${item.valido ? 'Cole o link do relatório (SharePoint/iAuditor) e salve. Os campos abaixo podem ser ajustados antes.' : 'Os dados extraídos aparecem abaixo apenas para conferência.'}</p>
+      <p>${item.valido ? 'O link do relatório (SharePoint/iAuditor) pode ser anexado, mas não é obrigatório. Os campos abaixo podem ser ajustados antes.' : 'Os dados extraídos aparecem abaixo apenas para conferência.'}</p>
       <div class="iauditor-meta-grid">
         ${metaItem('Arquivo', item.fileName)}
         ${metaItem('Tipo', r.tipo)}
@@ -572,14 +543,13 @@ function renderLeituraIauditor(item) {
         ${metaItem('Temperatura', r.temperaturaLancamento)}
         ${metaItem('Data', U.dataBR(r.dataInspecao))}
         ${metaItem('Responsável', r.responsavel)}
-        ${metaItem('Resultado sugerido', r.resultado)}
       </div>
       ${podeCriar && item.valido ? `
       <div class="form-grid" style="margin-top:14px">
-        <div class="campo full"><label>Link do relatório <span class="obrig">*</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
+        <div class="campo full"><label>Link do relatório <span class="dica">(opcional)</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
       </div>
       <div class="iauditor-acoes">
-        <button class="btn btn-primario" type="button" onclick="salvarLeituraIauditor()">${ICN.check}Salvar relatório</button>
+        <button class="btn btn-primario" type="button" onclick="salvarLeituraIauditor()">${ICN.check}Salvar inspeção</button>
         <button class="btn btn-secundario" type="button" onclick="preencherModalComLeitura()">Editar antes de salvar</button>
       </div>` : (podeCriar ? '<div class="iauditor-acoes"><span class="badge badge-amarelo">Este PDF não será salvo nesta página por não ter sido identificado como Inspeção de Concretagem.</span></div>' : '<div class="iauditor-acoes"><span class="badge badge-amarelo">Modo consulta: leitura sem registro</span></div>')}
       ${linhasMostradas.length ? `<div class="iauditor-mini-tabela"><table><thead><tr><th>Seção</th><th>Campo lido</th><th>Valor</th></tr></thead><tbody>${linhasMostradas.map(l => `<tr><td>${U.esc(l.secao)}</td><td>${U.esc(l.campo)}</td><td>${U.esc(l.valor)}</td></tr>`).join('')}</tbody></table></div>` : ''}
@@ -596,7 +566,6 @@ async function salvarLeituraIauditor() {
   if (!atual?.registro) { App.toast('Importe um PDF do iAuditor antes de salvar.', 'aviso'); return; }
   if (!atual.valido) { App.toast('Este PDF não foi identificado como Inspeção de Concretagem.', 'aviso'); return; }
   const link = (document.getElementById('iaLink')?.value || '').trim();
-  if (!link) { App.toast('Cole o link do relatório antes de salvar.', 'aviso'); document.getElementById('iaLink')?.focus(); return; }
 
   const reg = {};
   CAMPOS_CONCRETAGEM.forEach(c => { reg[c] = atual.registro[c] != null ? atual.registro[c] : ''; });
@@ -610,14 +579,15 @@ async function salvarLeituraIauditor() {
     const convertido = mapDoBanco(salvo);
     CONCRETAGEM_REGISTROS.unshift(convertido);
     render();
-    App.toast('Relatório de inspeção de concretagem salvo no histórico.');
-    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Relatório salvo</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de inspeções de concretagem. <a class="link-relatorio" href="${U.esc(/^https?:\/\//i.test(link) ? link : 'https://' + link)}" target="_blank" rel="noopener">Abrir relatório</a></p></div>`;
+    App.toast('Inspeção de concretagem salva no histórico.');
+    const linkHtml = link ? ` <a class="link-relatorio" href="${U.esc(/^https?:\/\//i.test(link) ? link : 'https://' + link)}" target="_blank" rel="noopener">Abrir relatório</a>` : ' Sem link de relatório anexado.';
+    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Inspeção salva</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de inspeções de concretagem.${linkHtml}</p></div>`;
     IAUDITOR_RELATORIO_ATUAL = null;
   } catch (err) {
     console.error('Erro ao salvar leitura iAuditor', err);
     App.toast(mensagemErro(err, 'Não foi possível salvar o relatório de inspeção de concretagem.'), 'erro');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = txt || 'Salvar relatório'; }
+    if (btn) { btn.disabled = false; btn.innerHTML = txt || 'Salvar inspeção'; }
   }
 }
 

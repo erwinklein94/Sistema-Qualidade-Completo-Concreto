@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Auditoria · Controle de Dormentes</title>
-  <link rel="stylesheet" href="css/style.css?v=20260609-mobile-topo-v1" />
+  <link rel="stylesheet" href="css/style.css?v=20260612-auditoria-grafico-v1" />
 </head>
 <body>
   <div id="app">
@@ -36,6 +36,20 @@
         </section>
 
         <section class="auditoria-resumo-grid" id="auditoriaKpis" aria-label="Resumo dos registros de auditoria"></section>
+
+        <section class="card auditoria-grafico-card" aria-label="Gráfico diário de alterações">
+          <div class="auditoria-grafico-topo">
+            <div class="card-titulo" style="margin:0;padding-bottom:0;border-bottom:0">
+              <span class="acento">Alterações por dia</span>
+              <span class="card-sub">Histórico diário completo dos registros carregados</span>
+            </div>
+            <span class="auditoria-grafico-dica">Role para o lado para ver dias mais antigos</span>
+          </div>
+          <p id="auditoriaGraficoStatus" class="auditoria-status">Carregando gráfico...</p>
+          <div class="auditoria-grafico-scroll" id="auditoriaGraficoScroll">
+            <div class="auditoria-grafico-barras" id="auditoriaGraficoBarras"></div>
+          </div>
+        </section>
 
         <section class="card auditoria-filtros-card">
           <div class="card-titulo">
@@ -122,10 +136,10 @@
   <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
   <script>Auth.exigirLogin();</script>
   <script src="js/config.js"></script>
-  <script src="js/store-supabase.js?v=20260523-audit"></script>
+  <script src="js/store-supabase.js?v=20260612-auditoria-grafico-v1"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260609-mobile-topo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/auditoria.js?v=20260526-auditoria-ui"></script>
+  <script src="js/auditoria.js?v=20260612-auditoria-grafico-v1"></script>
 </body>
 </html>
