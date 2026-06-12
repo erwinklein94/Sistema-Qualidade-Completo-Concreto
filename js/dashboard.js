@@ -12,6 +12,7 @@ const Dashboard = {
   erro: '',
   periodoPadrao: null,
   aviso: null,
+  evolucaoCpkProjeto: null,
   avisoCarregando: true,
   avisoErro: '',
   avisoSalvando: false,
@@ -397,19 +398,100 @@ function render() {
 }
 
 function renderIndicadoresDashboard(prod, rep) {
+  const saude = document.getElementById('saudeProjetosDashboard');
   const cap = document.getElementById('capabilidadeDashboard');
   const moldes = document.getElementById('moldesCavidadesDashboard');
-  if (!window.IndicadoresQualidade) { if (cap) cap.innerHTML = ''; if (moldes) moldes.innerHTML = ''; return; }
+  if (!window.IndicadoresQualidade) { [saude, cap, moldes].forEach(el => { if (el) el.innerHTML = ''; }); return; }
+
+  // Saúde estatística: sempre sobre o conjunto COMPLETO (Dashboard.prod),
+  // independente dos filtros — tendência exige o histórico inteiro.
+  if (saude) {
+    saude.innerHTML = IndicadoresQualidade.htmlPainelSaudeProjetos(Dashboard.prod, {
+      clicavel: true,
+      idEvolucao: 'evolucaoCpkProjeto',
+    });
+    if (Dashboard.evolucaoCpkProjeto) abrirEvolucaoCpkProjeto(Dashboard.evolucaoCpkProjeto, { manterScroll: true });
+  }
+
   if (cap) cap.innerHTML = IndicadoresQualidade.htmlPainelCapabilidade(prod, {
-    subtitulo: 'Cp/Cpk dos corpos de prova (CP 1 e CP 2) da Produção no recorte dos filtros acima · limites da EM-SPE-035 rev.10 · meta Cpk ≥ 1,33'
+    subtitulo: 'Cpk dos ensaios de 28 dias sobre os corpos de prova (CP 1 e CP 2) da Produção, no recorte dos filtros acima · limites da EM-SPE-035 rev.10 · meta Cpk ≥ 1,33'
   });
   if (moldes) moldes.innerHTML = IndicadoresQualidade.htmlPainelMoldesCavidades(rep, {
     subtitulo: 'Espelho da aba Dormentes Reprovados: moldes e cavidades com mais refugos por projeto e por tipo de problema, no recorte dos filtros acima.'
   });
 }
 
+const CORES_EVOLUCAO_CPK = { comp: '#1E9F80', tracao: '#4d8dd6', meta: '#FBD300', critico: '#e23b3b', barras: 'rgba(127,127,127,0.25)' };
+
+function abrirEvolucaoCpkProjeto(projeto, opcoes = {}) {
+  const area = document.getElementById('evolucaoCpkProjeto');
+  if (!area || !window.IndicadoresQualidade) return;
+  Dashboard.evolucaoCpkProjeto = projeto;
+
+  document.querySelectorAll('#saudeProjetosDashboard .saude-card').forEach(el => {
+    el.classList.toggle('ativo', el.dataset.projeto === projeto);
+  });
+
+  const s = IndicadoresQualidade.seriesEvolucaoProjeto(Dashboard.prod, projeto);
+  if (charts.cpkEvolucao) { charts.cpkEvolucao.destroy(); delete charts.cpkEvolucao; }
+
+  if (!s.rotulos.length) {
+    area.innerHTML = `<div class="evolucao-cpk-vazio">Sem corpos de prova de 28 dias com data de fabricação para o projeto ${U.esc(projeto)}.</div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="evolucao-cpk">
+    <div class="evolucao-cpk-topo">
+      <strong>Evolução mensal do Cpk — ${U.esc(projeto)}</strong>
+      <span class="txt-mini txt-cinza">Pontos exibidos apenas com n ≥ ${s.minN} CPs no mês · barras = CPs ensaiados · histórico completo, independente dos filtros</span>
+      <button class="btn btn-secundario btn-sm" onclick="fecharEvolucaoCpk()">Fechar</button>
+    </div>
+    <div class="chart-box alto"><canvas id="chartEvolucaoCpk"></canvas></div>
+  </div>`;
+
+  const ctx = document.getElementById('chartEvolucaoCpk');
+  if (!ctx || typeof Chart === 'undefined') return;
+  charts.cpkEvolucao = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: s.rotulos,
+      datasets: [
+        { type: 'line', label: 'Cpk Compressão 28d', data: s.comp.cpk, borderColor: CORES_EVOLUCAO_CPK.comp, backgroundColor: CORES_EVOLUCAO_CPK.comp, spanGaps: true, tension: 0.25, pointRadius: 4, yAxisID: 'y' },
+        { type: 'line', label: 'Cpk Tração 28d', data: s.tracao.cpk, borderColor: CORES_EVOLUCAO_CPK.tracao, backgroundColor: CORES_EVOLUCAO_CPK.tracao, spanGaps: true, tension: 0.25, pointRadius: 4, yAxisID: 'y' },
+        { type: 'line', label: 'Meta 1,33', data: s.rotulos.map(() => 1.33), borderColor: CORES_EVOLUCAO_CPK.meta, borderDash: [7, 6], pointRadius: 0, borderWidth: 2, yAxisID: 'y' },
+        { type: 'line', label: 'Crítico 1,00', data: s.rotulos.map(() => 1.0), borderColor: CORES_EVOLUCAO_CPK.critico, borderDash: [4, 5], pointRadius: 0, borderWidth: 1.5, yAxisID: 'y' },
+        { type: 'bar', label: 'CPs de compressão no mês', data: s.comp.n, backgroundColor: CORES_EVOLUCAO_CPK.barras, yAxisID: 'y1', order: 10 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        y: { suggestedMin: 0, suggestedMax: 2, title: { display: true, text: 'Cpk' } },
+        y1: { position: 'right', beginAtZero: true, grid: { display: false }, title: { display: true, text: 'CPs' } },
+      },
+      plugins: { legend: { position: 'bottom' } },
+    },
+  });
+
+  if (!opcoes.manterScroll) area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function fecharEvolucaoCpk() {
+  Dashboard.evolucaoCpkProjeto = null;
+  if (charts.cpkEvolucao) { charts.cpkEvolucao.destroy(); delete charts.cpkEvolucao; }
+  const area = document.getElementById('evolucaoCpkProjeto');
+  if (area) area.innerHTML = '';
+  document.querySelectorAll('#saudeProjetosDashboard .saude-card.ativo').forEach(el => el.classList.remove('ativo'));
+}
+
+window.__cpkEvolucao = abrirEvolucaoCpkProjeto;
+window.fecharEvolucaoCpk = fecharEvolucaoCpk;
+
 function limparIndicadoresDashboard() {
-  ['capabilidadeDashboard', 'moldesCavidadesDashboard'].forEach(id => {
+  if (charts.cpkEvolucao) { charts.cpkEvolucao.destroy(); delete charts.cpkEvolucao; }
+  ['saudeProjetosDashboard', 'capabilidadeDashboard', 'moldesCavidadesDashboard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
   });

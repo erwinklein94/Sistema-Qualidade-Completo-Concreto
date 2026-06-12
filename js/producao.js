@@ -447,7 +447,17 @@ function badgePreenchimento(info) {
 function renderIndicadorCapabilidade(lista) {
   const alvo = document.getElementById('indicadorCapabilidade');
   if (!alvo || !window.IndicadoresQualidade) return;
-  alvo.innerHTML = PRODUCAO_CARREGANDO ? '' : IndicadoresQualidade.htmlPainelCapabilidade(lista);
+  if (PRODUCAO_CARREGANDO) { alvo.innerHTML = ''; return; }
+  const fp = document.getElementById('fProjeto')?.value || '';
+  const todos = PRODUCAO_REGISTROS;
+  // Histórico para tendência/sparkline: completo, restrito só ao projeto
+  // selecionado (misturar projetos diferentes distorceria a série).
+  const historico = fp ? todos.filter(r => r.projeto === fp) : todos;
+  alvo.innerHTML = IndicadoresQualidade.htmlPainelCapabilidade(lista, {
+    historico,
+    rotuloHistorico: fp ? `projeto ${fp}` : 'todos os projetos',
+    rankingProjetos: fp ? null : todos,
+  });
 }
 
 function renderAlertasPreenchimento(lista) {
