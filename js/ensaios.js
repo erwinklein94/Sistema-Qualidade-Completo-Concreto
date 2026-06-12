@@ -12,6 +12,7 @@ let PAINEL_DOSSIE_AVISOS = [];
 let PAINEL_CARREGANDO = false;
 let PAINEL_ERRO = '';
 let PAINEL_DADOS = null;
+let PAINEL_DOSSIES_LOTE = new Map();
 
 const STATUS_OPCOES = [
   { valor: '', texto: 'Todos' },
@@ -68,6 +69,24 @@ function configurarEventos() {
       sincronizarSemanaPainel();
       render();
     });
+  });
+
+  document.addEventListener('click', (ev) => {
+    const abrir = ev.target.closest?.('[data-abrir-dossie]');
+    if (abrir) {
+      ev.preventDefault();
+      abrirDossieLote(abrir.dataset.dossieKey || '');
+      return;
+    }
+
+    if (ev.target.closest?.('[data-fechar-dossie]') || ev.target.classList?.contains('dossie-modal-backdrop')) {
+      ev.preventDefault();
+      fecharDossieLote();
+    }
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') fecharDossieLote();
   });
 
   window.render = render;
@@ -243,6 +262,8 @@ function montarLinhasFiltradas(dados, f) {
 
 function renderTabelaFluxo(linhas, dados) {
   const alvo = document.getElementById('painelSeriesFluxo');
+  PAINEL_DOSSIES_LOTE = new Map();
+  fecharDossieLote();
   if (!linhas.length) {
     alvo.innerHTML = `<div class="vazio compacto">${ICN.vazioBox}<h3>Nenhum lote encontrado</h3><p>Altere os filtros ou cadastre produção para visualizar o fluxo.</p></div>`;
     return;
@@ -431,18 +452,75 @@ function textoBuscaDossie(dossie) {
 function dossieLoteHtml(ctx) {
   const dossie = ctx.dossie || montarDossieLote(ctx);
   const resumoLinks = dossie.links.length ? `${dossie.links.length} link(s)` : 'sem links';
+  const key = dossieKey(ctx);
+  PAINEL_DOSSIES_LOTE.set(key, { dossie, ctx });
+
   return `<td class="dossie-col">
-    <details class="dossie-lote">
-      <summary>
-        <span>Dossiê do lote</span>
-        <strong>${dossie.encontrados}/${dossie.total}</strong>
-        <small>${U.esc(resumoLinks)}</small>
-      </summary>
-      <div class="dossie-lista">
+    <button type="button" class="dossie-lote-card" data-abrir-dossie data-dossie-key="${U.esc(key)}" title="Abrir Dossiê do lote">
+      <span>Dossiê do lote</span>
+      <strong>${dossie.encontrados}/${dossie.total}</strong>
+      <small>${U.esc(resumoLinks)}</small>
+    </button>
+  </td>`;
+}
+
+function dossieKey(ctx) {
+  return [
+    ctx?.lote?.id || '',
+    ctx?.lote?.lote || '',
+    ctx?.serieRef?.fornecedor || '',
+    ctx?.serieRef?.projeto || '',
+    ctx?.serieRef?.bitola || '',
+    ctx?.serieRef?.serie || '',
+  ].map(v => String(v).trim()).join('|');
+}
+
+function abrirDossieLote(key) {
+  const registro = PAINEL_DOSSIES_LOTE.get(String(key || ''));
+  if (!registro) {
+    App.toast('Não foi possível abrir o dossiê deste lote. Atualize o fluxo e tente novamente.', 'erro');
+    return;
+  }
+
+  fecharDossieLote();
+
+  const { dossie, ctx } = registro;
+  const lote = ctx?.lote || {};
+  const serie = ctx?.serieRef || {};
+  const linksTexto = dossie.links.length ? `${dossie.links.length} link(s) de relatório` : 'Sem links de relatório';
+  const overlay = document.createElement('div');
+  overlay.className = 'dossie-modal-backdrop';
+  overlay.innerHTML = `
+    <section class="dossie-modal" role="dialog" aria-modal="true" aria-labelledby="dossieModalTitulo">
+      <header class="dossie-modal-cabecalho">
+        <div>
+          <span>Dossiê do lote</span>
+          <h3 id="dossieModalTitulo">Lote ${U.esc(lote.lote || '—')}</h3>
+          <p>${U.esc(serie.projeto || '—')} · ${U.esc(serie.bitola || '—')} · ${U.esc(serie.fornecedor || '—')} · ${U.esc(serie.serie || '—')}</p>
+        </div>
+        <button type="button" class="dossie-modal-fechar" data-fechar-dossie aria-label="Fechar dossiê">×</button>
+      </header>
+
+      <div class="dossie-modal-resumo">
+        <span><b>${dossie.encontrados}/${dossie.total}</b> grupos com registro</span>
+        <span><b>${U.esc(linksTexto)}</b></span>
+        <span><b>${ctx?.loteDeEnsaio ? 'Lote de ensaio' : 'Acompanha a série'}</b></span>
+      </div>
+
+      <div class="dossie-lista dossie-modal-lista">
         ${dossie.itens.map(dossieItemHtml).join('')}
       </div>
-    </details>
-  </td>`;
+    </section>
+  `;
+
+  document.body.appendChild(overlay);
+  document.body.classList.add('dossie-modal-aberto');
+  overlay.querySelector('[data-fechar-dossie]')?.focus();
+}
+
+function fecharDossieLote() {
+  document.querySelector('.dossie-modal-backdrop')?.remove();
+  document.body.classList.remove('dossie-modal-aberto');
 }
 
 function dossieItemHtml(item) {

@@ -6824,13 +6824,9 @@ body.pagina-painel-series .tabela-fluxo-lotes .dossie-col {
   min-width: 210px;
 }
 
-body.pagina-painel-series .dossie-lote {
-  position: relative;
+body.pagina-painel-series .dossie-lote-card {
+  width: 100%;
   min-width: 190px;
-}
-
-body.pagina-painel-series .dossie-lote summary {
-  list-style: none;
   cursor: pointer;
   border: 1px solid rgba(0, 56, 101, .14);
   background: linear-gradient(135deg, rgba(0, 170, 200, .08), rgba(141, 198, 63, .08));
@@ -6840,56 +6836,159 @@ body.pagina-painel-series .dossie-lote summary {
   grid-template-columns: 1fr auto;
   gap: 2px 8px;
   align-items: center;
+  text-align: left;
+  font: inherit;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
 }
 
-body.pagina-painel-series .dossie-lote summary::-webkit-details-marker {
-  display: none;
+body.pagina-painel-series .dossie-lote-card:hover,
+body.pagina-painel-series .dossie-lote-card:focus-visible {
+  border-color: rgba(0, 170, 200, .42);
+  box-shadow: 0 8px 18px rgba(0, 56, 101, .10);
+  transform: translateY(-1px);
+  outline: none;
 }
 
-body.pagina-painel-series .dossie-lote summary span {
+body.pagina-painel-series .dossie-lote-card span {
   color: var(--azul-escuro);
   font-size: 10.8px;
   font-weight: 900;
 }
 
-body.pagina-painel-series .dossie-lote summary strong {
+body.pagina-painel-series .dossie-lote-card strong {
   justify-self: end;
   color: var(--verde);
   font-size: 13px;
   font-weight: 900;
 }
 
-body.pagina-painel-series .dossie-lote summary small {
+body.pagina-painel-series .dossie-lote-card small {
   grid-column: 1 / -1;
   color: var(--cinza-texto);
   font-size: 9.6px;
   font-weight: 800;
 }
 
-body.pagina-painel-series .dossie-lote[open] summary {
-  border-color: rgba(0, 170, 200, .42);
-  box-shadow: 0 8px 18px rgba(0, 56, 101, .10);
+body.dossie-modal-aberto {
+  overflow: hidden;
+}
+
+body.pagina-painel-series .dossie-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 25, 46, .44);
+  backdrop-filter: blur(3px);
+}
+
+body.pagina-painel-series .dossie-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(82vh, 760px);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid rgba(0, 170, 200, .24);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 26px 80px rgba(0, 25, 46, .34);
+}
+
+body.pagina-painel-series .dossie-modal-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(0, 56, 101, .10);
+  background: linear-gradient(135deg, rgba(0, 56, 101, .06), rgba(0, 170, 200, .05));
+}
+
+body.pagina-painel-series .dossie-modal-cabecalho span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--verde);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+body.pagina-painel-series .dossie-modal-cabecalho h3 {
+  margin: 0;
+  color: var(--azul-escuro);
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+body.pagina-painel-series .dossie-modal-cabecalho p {
+  margin: 6px 0 0;
+  color: var(--cinza-texto);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+body.pagina-painel-series .dossie-modal-fechar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(0, 56, 101, .15);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--azul-escuro);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+body.pagina-painel-series .dossie-modal-fechar:hover,
+body.pagina-painel-series .dossie-modal-fechar:focus-visible {
+  border-color: rgba(226, 59, 59, .32);
+  color: var(--erro);
+  outline: none;
+}
+
+body.pagina-painel-series .dossie-modal-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(0, 56, 101, .08);
+  background: #f8fbfd;
+}
+
+body.pagina-painel-series .dossie-modal-resumo span {
+  border: 1px solid rgba(0, 56, 101, .10);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--cinza-texto);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+body.pagina-painel-series .dossie-modal-resumo b {
+  color: var(--azul-escuro);
 }
 
 body.pagina-painel-series .dossie-lista {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 6px);
-  left: 0;
-  width: min(430px, calc(100vw - 42px));
   display: grid;
-  gap: 7px;
-  padding: 10px;
-  border: 1px solid var(--cinza-borda);
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 18px 42px rgba(0, 56, 101, .20);
+  gap: 9px;
+  padding: 14px;
+}
+
+body.pagina-painel-series .dossie-modal-lista {
+  overflow: auto;
+  padding: 14px 20px 20px;
 }
 
 body.pagina-painel-series .dossie-item {
   border: 1px solid var(--cinza-borda);
-  border-radius: 12px;
-  padding: 8px;
+  border-radius: 14px;
+  padding: 10px;
   background: #f8fbfd;
 }
 
@@ -6910,14 +7009,14 @@ body.pagina-painel-series .dossie-item.erro {
 
 body.pagina-painel-series .dossie-item-topo {
   display: grid;
-  grid-template-columns: 22px 1fr auto;
-  gap: 7px;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
   align-items: start;
 }
 
 body.pagina-painel-series .dossie-item-topo b {
-  width: 21px;
-  height: 21px;
+  width: 23px;
+  height: 23px;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -6945,33 +7044,38 @@ body.pagina-painel-series .dossie-item.erro .dossie-item-topo b {
 body.pagina-painel-series .dossie-item-topo strong {
   display: block;
   color: var(--azul-escuro);
-  font-size: 11.2px;
+  font-size: 12px;
   line-height: 1.15;
 }
 
 body.pagina-painel-series .dossie-item-topo span {
   display: block;
-  margin-top: 1px;
+  margin-top: 2px;
   color: var(--cinza-texto);
-  font-size: 9.7px;
-  line-height: 1.2;
+  font-size: 10px;
+  line-height: 1.25;
 }
 
 body.pagina-painel-series .dossie-item-topo a,
 body.pagina-painel-series .dossie-registro a {
   color: var(--azul-escuro);
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 900;
   text-decoration: none;
   border-bottom: 1px dashed currentColor;
   white-space: nowrap;
 }
 
+body.pagina-painel-series .dossie-item-topo a:hover,
+body.pagina-painel-series .dossie-registro a:hover {
+  color: var(--azul-claro);
+}
+
 body.pagina-painel-series .dossie-registros {
   display: grid;
-  gap: 4px;
-  margin-top: 6px;
-  padding-left: 29px;
+  gap: 5px;
+  margin-top: 7px;
+  padding-left: 32px;
 }
 
 body.pagina-painel-series .dossie-registro,
@@ -6980,10 +7084,10 @@ body.pagina-painel-series .dossie-mais {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   color: var(--cinza-texto);
-  font-size: 9.6px;
-  line-height: 1.22;
+  font-size: 10px;
+  line-height: 1.25;
 }
 
 body.pagina-painel-series .dossie-registro em {
@@ -7000,17 +7104,20 @@ body.pagina-painel-series .dossie-registro.aviso em {
   font-weight: 800;
 }
 
-body.pagina-painel-series[data-tema="escuro"] .dossie-lote summary {
+body.pagina-painel-series[data-tema="escuro"] .dossie-lote-card {
   background: rgba(255, 255, 255, .07);
   border-color: rgba(255, 255, 255, .16);
 }
 
-body.pagina-painel-series[data-tema="escuro"] .dossie-lote summary span,
-body.pagina-painel-series[data-tema="escuro"] .dossie-item-topo strong {
+body.pagina-painel-series[data-tema="escuro"] .dossie-lote-card span,
+body.pagina-painel-series[data-tema="escuro"] .dossie-item-topo strong,
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-cabecalho h3,
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-resumo b {
   color: #fff;
 }
 
-body.pagina-painel-series[data-tema="escuro"] .dossie-lote summary small,
+body.pagina-painel-series[data-tema="escuro"] .dossie-lote-card small,
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-cabecalho p,
 body.pagina-painel-series[data-tema="escuro"] .dossie-item-topo span,
 body.pagina-painel-series[data-tema="escuro"] .dossie-registro,
 body.pagina-painel-series[data-tema="escuro"] .dossie-vazio,
@@ -7018,10 +7125,22 @@ body.pagina-painel-series[data-tema="escuro"] .dossie-mais {
   color: #c9d8e8;
 }
 
-body.pagina-painel-series[data-tema="escuro"] .dossie-lista,
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal,
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-fechar,
 body.pagina-painel-series[data-tema="escuro"] .dossie-item {
   background: #07223f;
   border-color: rgba(255, 255, 255, .16);
+}
+
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-cabecalho,
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-resumo {
+  background: rgba(255, 255, 255, .05);
+  border-color: rgba(255, 255, 255, .12);
+}
+
+body.pagina-painel-series[data-tema="escuro"] .dossie-modal-resumo span {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .14);
 }
 
 body.pagina-painel-series[data-tema="escuro"] .dossie-item.ok { background: rgba(141, 198, 63, .12); }
@@ -7029,10 +7148,36 @@ body.pagina-painel-series[data-tema="escuro"] .dossie-item.aviso { background: r
 body.pagina-painel-series[data-tema="escuro"] .dossie-item.erro { background: rgba(255, 107, 107, .13); }
 
 @media (max-width: 680px) {
-  body.pagina-painel-series .dossie-lista {
-    position: static;
+  body.pagina-painel-series .dossie-modal-backdrop {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  body.pagina-painel-series .dossie-modal {
     width: 100%;
-    margin-top: 7px;
-    box-shadow: none;
+    max-height: calc(100vh - 20px);
+    border-radius: 16px;
+  }
+
+  body.pagina-painel-series .dossie-modal-cabecalho {
+    padding: 14px;
+  }
+
+  body.pagina-painel-series .dossie-modal-cabecalho h3 {
+    font-size: 20px;
+  }
+
+  body.pagina-painel-series .dossie-modal-resumo,
+  body.pagina-painel-series .dossie-modal-lista {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  body.pagina-painel-series .dossie-registro,
+  body.pagina-painel-series .dossie-vazio,
+  body.pagina-painel-series .dossie-mais {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
+
