@@ -6,7 +6,9 @@ let PISTA_REGISTROS = [];
 let PISTA_CARREGANDO = false;
 let PISTA_ERRO = '';
 let PISTA_TABELA_FALTANDO = false;
-let IAUDITOR_RELATORIO_ATUAL = null;
+let IAUDITOR_RELATORIOS = [];        // todos os PDFs lidos no lote atual
+let IAUDITOR_RELATORIO_ATUAL = null; // último relatório aberto para edição (compat)
+let IAUDITOR_EDIT_IDX = null;        // índice do relatório do lote aberto no modal de edição
 
 const CAMPOS_PISTA = [
   'dataInspecao', 'lote', 'projeto', 'bitola', 'fornecedor', 'responsavel',
@@ -49,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('pagina-ensaios-liberacao');
   App.montarLayout('inspecaoPista', 'Inspeção de Pista', 'Histórico consultivo de inspeções de pista — abre o relatório pelo link');
   App.acoesTopo(`
-    <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
+    <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDFs iAuditor</button>
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo relatório</button>` : App.avisoModoConsulta()}
   `);
 
@@ -320,6 +322,7 @@ function linkRelatorio(r) {
    --------------------------------------------------------------------- */
 function abrirNovo() {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
+  IAUDITOR_EDIT_IDX = null;
   document.getElementById('form').reset();
   document.getElementById('id').value = '';
   setValor('dataInspecao', hojeISO());
@@ -331,6 +334,7 @@ function editar(id) {
   if (!Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('editar registros'), 'aviso'); return; }
   const r = PISTA_REGISTROS.find(x => x.id === id);
   if (!r) return;
+  IAUDITOR_EDIT_IDX = null;
   document.getElementById('form').reset();
   document.getElementById('id').value = r.id;
   CAMPOS_PISTA.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
@@ -370,6 +374,7 @@ async function salvar() {
   const reg = lerFormulario();
   if (!reg.dataInspecao) { App.toast('Informe a data da inspeção.', 'aviso'); return; }
   // Link do relatório é opcional: pode ser anexado depois, lote a lote.
+  const loteIdx = IAUDITOR_EDIT_IDX; // se veio de um relatório lido em lote, consome esse item depois
 
   try {
     const salvo = await StoreSupabase.salvarInspecaoPista(mapParaBanco(reg));
@@ -378,6 +383,12 @@ async function salvar() {
     if (idx >= 0) PISTA_REGISTROS[idx] = convertido;
     else PISTA_REGISTROS.unshift(convertido);
     fecharModal();
+    if (typeof loteIdx === 'number' && loteIdx >= 0 && loteIdx < IAUDITOR_RELATORIOS.length) {
+      capturarLinksIauditor();
+      IAUDITOR_RELATORIOS.splice(loteIdx, 1);
+      if (IAUDITOR_RELATORIOS.length) renderLeituraIauditorLote();
+      else { const alvo = document.getElementById('iauditorResultado'); if (alvo) alvo.innerHTML = ''; }
+    }
     render();
     App.toast('Inspeção de pista salva.');
   } catch (err) {
@@ -438,7 +449,7 @@ function itemVer(rot, val) {
 }
 
 function setValor(id, val) { const el = document.getElementById(id); if (el) el.value = val == null ? '' : val; }
-function fecharModal() { document.getElementById('modal').classList.remove('aberto'); }
+function fecharModal() { IAUDITOR_EDIT_IDX = null; document.getElementById('modal').classList.remove('aberto'); }
 function fecharVer() { document.getElementById('modalVer').classList.remove('aberto'); }
 
 /* ---------------------------------------------------------------------
@@ -453,10 +464,10 @@ function inicializarLeitorIauditor() {
   btn?.addEventListener('click', (e) => { e.stopPropagation(); input.click(); });
   drop.addEventListener('click', (e) => { if (!e.target.closest('button')) input.click(); });
   drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
-  input.addEventListener('change', (e) => { const file = e.target.files?.[0]; if (file) lerRelatorioIauditor(file); input.value = ''; });
+  input.addEventListener('change', (e) => { const files = Array.from(e.target.files || []); if (files.length) lerRelatoriosIauditor(files); input.value = ''; });
   ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('arrastando'); }));
   ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('arrastando'); }));
-  drop.addEventListener('drop', (e) => { const file = e.dataTransfer?.files?.[0]; if (file) lerRelatorioIauditor(file); });
+  drop.addEventListener('drop', (e) => { const files = Array.from(e.dataTransfer?.files || []); if (files.length) lerRelatoriosIauditor(files); });
 }
 
 function abrirImportadorIauditor() {
@@ -465,25 +476,35 @@ function abrirImportadorIauditor() {
   setTimeout(() => document.getElementById('iauditorPdfInput')?.click(), 250);
 }
 
-async function lerRelatorioIauditor(file) {
+async function lerRelatoriosIauditor(files) {
   const alvo = document.getElementById('iauditorResultado');
   if (!alvo) return;
-  if (!/\.pdf$/i.test(file.name)) { renderErroIauditor('Selecione um arquivo PDF exportado do iAuditor.'); return; }
+  const pdfs = Array.from(files || []).filter(f => /\.pdf$/i.test(f.name));
+  const ignorados = Array.from(files || []).length - pdfs.length;
+  if (!pdfs.length) { renderErroIauditor('Selecione um ou mais arquivos PDF exportados do iAuditor.'); return; }
   if (!window.pdfjsLib || !window.RumoParser) { renderErroIauditor('O leitor de PDF não foi carregado. Verifique sua conexão e recarregue a página.'); return; }
 
+  IAUDITOR_RELATORIOS = [];
   IAUDITOR_RELATORIO_ATUAL = null;
-  alvo.innerHTML = `<div class="iauditor-status"><h3>Lendo ${U.esc(file.name)}...</h3><p>Extraindo identificação, pista e itens de inspeção encontrados.</p></div>`;
-  try {
-    const pages = await extrairPaginasPdf(file);
-    const data = RumoParser.parse(pages);
-    const registro = montarRegistroIauditor(data, file.name);
-    const valido = ehRelatorioPista(data, registro, file.name);
-    IAUDITOR_RELATORIO_ATUAL = { fileName: file.name, data, registro, valido };
-    renderLeituraIauditor(IAUDITOR_RELATORIO_ATUAL);
-  } catch (err) {
-    console.error('Erro ao ler relatório iAuditor', err);
-    renderErroIauditor('Não foi possível ler este PDF. Confira se é um relatório exportado do iAuditor e tente novamente.');
+  IAUDITOR_EDIT_IDX = null;
+
+  for (let i = 0; i < pdfs.length; i++) {
+    const file = pdfs[i];
+    alvo.innerHTML = `<div class="iauditor-status"><h3>Lendo ${i + 1} de ${pdfs.length} PDF(s)...</h3><p>Processando <strong>${U.esc(file.name)}</strong> — extraindo identificação, pista e itens de inspeção encontrados.</p></div>`;
+    try {
+      const pages = await extrairPaginasPdf(file);
+      const data = RumoParser.parse(pages);
+      const registro = montarRegistroIauditor(data, file.name);
+      const valido = ehRelatorioPista(data, registro, file.name);
+      IAUDITOR_RELATORIOS.push({ fileName: file.name, data, registro, valido, erro: false, linkDigitado: '' });
+    } catch (err) {
+      console.error('Erro ao ler relatório iAuditor', file.name, err);
+      IAUDITOR_RELATORIOS.push({ fileName: file.name, data: null, registro: null, valido: false, erro: true, linkDigitado: '' });
+    }
   }
+
+  if (ignorados > 0) App.toast(`${ignorados} arquivo(s) ignorado(s) por não ser(em) PDF.`, 'aviso');
+  renderLeituraIauditorLote();
 }
 
 async function extrairPaginasPdf(file) {
@@ -655,98 +676,189 @@ function montarObservacoes({ fileName, meta, tipo, linhas, dormentesReprovados }
   ).join('\n');
 }
 
-function renderLeituraIauditor(item) {
+function renderLeituraIauditorLote() {
   const alvo = document.getElementById('iauditorResultado');
   if (!alvo) return;
-  const r = item.registro;
-  const linhasMostradas = (r.linhas || []).slice(0, 10);
+  const itens = IAUDITOR_RELATORIOS;
+  if (!itens.length) { alvo.innerHTML = ''; return; }
+
   const podeCriar = Auth.pode('criar');
-  const avisoNaoValido = !item.valido ? `
-    <div class="iauditor-status erro" style="margin-bottom:12px">
-      <h3>Relatório lido, mas não identificado como Inspeção de Pista</h3>
-      <p>Esta página registra apenas inspeções de pista. Verifique se o PDF correto foi importado. A opção de salvar direto fica disponível somente para relatórios de pista identificados na leitura.</p>
-    </div>` : '';
-  alvo.innerHTML = `
-    ${avisoNaoValido}
-    <div class="iauditor-status ${item.valido ? 'ok' : ''}">
-      <h3>${item.valido ? 'Inspeção de Pista lida — confira e salve no histórico' : 'Prévia da leitura'}</h3>
-      <p>${item.valido ? 'O link do relatório (SharePoint/iAuditor) é opcional — pode salvar agora e anexar depois pelo botão Editar. Os campos abaixo podem ser ajustados antes.' : 'Os dados extraídos aparecem abaixo apenas para conferência.'}</p>
-      <div class="iauditor-meta-grid">
-        ${metaItem('Arquivo', item.fileName)}
-        ${metaItem('Tipo', r.tipo)}
-        ${metaItem('Lote', r.lote)}
-        ${metaItem('Projeto', r.projeto)}
-        ${metaItem('Bitola', r.bitola)}
-        ${metaItem('Pista', r.pista)}
-        ${metaItem('Trecho / posição', r.trechoPosicao)}
-        ${metaItem('Molde', r.molde)}
-        ${metaItem('Cavidade', r.cavidade)}
-        ${metaItem('Atividade', r.atividade)}
-        ${metaItem('Data', U.dataBR(r.dataInspecao))}
-        ${metaItem('Responsável', r.responsavel)}
-      </div>
-      ${podeCriar && item.valido ? `
-      <div class="form-grid" style="margin-top:14px">
-        <div class="campo full"><label>Link do relatório <span class="dica">(opcional — pode anexar depois)</span></label><input id="iaLink" type="url" placeholder="https://..."></div>
-      </div>
-      <div class="iauditor-acoes">
-        <button class="btn btn-primario" type="button" onclick="salvarLeituraIauditor()">${ICN.check}Salvar relatório</button>
-        <button class="btn btn-secundario" type="button" onclick="preencherModalComLeitura()">Editar antes de salvar</button>
-      </div>` : (podeCriar ? '<div class="iauditor-acoes"><span class="badge badge-amarelo">Este PDF não será salvo nesta página por não ter sido identificado como Inspeção de Pista.</span></div>' : '<div class="iauditor-acoes"><span class="badge badge-amarelo">Modo consulta: leitura sem registro</span></div>')}
-      ${linhasMostradas.length ? `<div class="iauditor-mini-tabela"><table><thead><tr><th>Seção</th><th>Campo lido</th><th>Valor</th></tr></thead><tbody>${linhasMostradas.map(l => `<tr><td>${U.esc(l.secao)}</td><td>${U.esc(l.campo)}</td><td>${U.esc(l.valor)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+  const validos = itens.filter(it => it.valido);
+  const invalidos = itens.filter(it => !it.valido);
+
+  const resumo = `
+    <div class="iauditor-status ${validos.length ? 'ok' : 'aviso'}">
+      <h3>Leitura concluída — ${itens.length} PDF(s) processado(s)</h3>
+      <p>
+        ${validos.length} identificado(s) como <strong>Inspeção de Pista</strong> · ${invalidos.length} não identificado(s).
+        ${validos.length
+          ? (podeCriar
+              ? 'Marque os relatórios que deseja registrar nesta página e salve todos de uma só vez. O link do relatório é opcional — você pode colar agora em cada um ou anexar depois pelo botão Editar.'
+              : 'Modo consulta: leitura sem registro.')
+          : 'Nenhum dos PDFs foi identificado como Inspeção de Pista, então não há o que salvar nesta página.'}
+      </p>
     </div>`;
+
+  const barra = (podeCriar && validos.length) ? `
+    <div class="iauditor-lote-barra">
+      <label class="iauditor-lote-seltodos"><input type="checkbox" id="iaSelTodos" checked onchange="alternarTodosIauditor(this.checked)"> Selecionar todos os identificados</label>
+      <span class="txt-mini txt-cinza" id="iaContadorSel"></span>
+      <button class="btn btn-primario" type="button" onclick="salvarLeiturasIauditorSelecionadas()">${ICN.check}Salvar selecionados</button>
+    </div>` : '';
+
+  const cardsValidos = validos.map(it => {
+    const idx = itens.indexOf(it);
+    const r = it.registro;
+    return `
+      <div class="iauditor-lote-item" data-idx="${idx}">
+        <div class="iauditor-lote-item-cab">
+          <label class="iauditor-lote-check">
+            ${podeCriar ? `<input type="checkbox" class="ia-check" data-idx="${idx}" checked onchange="atualizarContadorIauditor()">` : ''}
+            <strong>${U.esc(it.fileName)}</strong>
+          </label>
+          <span class="iauditor-chip ok">Inspeção de Pista</span>
+        </div>
+        <div class="iauditor-meta-grid">
+          ${metaItem('Lote', r.lote)}
+          ${metaItem('Projeto', r.projeto)}
+          ${metaItem('Bitola', r.bitola)}
+          ${metaItem('Pista', r.pista)}
+          ${metaItem('Trecho / posição', r.trechoPosicao)}
+          ${metaItem('Data', U.dataBR(r.dataInspecao))}
+          ${metaItem('Responsável', r.responsavel)}
+          ${metaItem('Reprovados', r.dormentesReprovados || '—')}
+        </div>
+        ${podeCriar ? `
+        <div class="form-grid" style="margin-top:10px">
+          <div class="campo full"><label>Link do relatório <span class="dica">(opcional — pode anexar depois)</span></label><input id="iaLink_${idx}" type="url" placeholder="https://..." value="${U.esc(it.linkDigitado || '')}"></div>
+        </div>
+        <div class="iauditor-acoes">
+          <button class="btn btn-secundario" type="button" onclick="preencherModalComLeitura(${idx})">Editar antes de salvar</button>
+        </div>` : ''}
+      </div>`;
+  }).join('');
+
+  const cardsInvalidos = invalidos.length ? `
+    <div class="iauditor-lote-grupo-titulo">Não identificados como Inspeção de Pista (não serão salvos)</div>
+    ${invalidos.map(it => {
+      const idx = itens.indexOf(it);
+      const r = it.registro;
+      return `
+        <div class="iauditor-lote-item invalido" data-idx="${idx}">
+          <div class="iauditor-lote-item-cab">
+            <strong>${U.esc(it.fileName)}</strong>
+            <span class="iauditor-chip ${it.erro ? 'erro' : 'aviso'}">${it.erro ? 'Falha na leitura' : 'Não identificado'}</span>
+          </div>
+          ${it.erro
+            ? '<p class="txt-mini txt-cinza" style="margin-top:8px">Não foi possível ler este PDF. Confira se é um relatório exportado do iAuditor.</p>'
+            : `<div class="iauditor-meta-grid">
+                 ${metaItem('Tipo', r?.tipo)}
+                 ${metaItem('Lote', r?.lote)}
+                 ${metaItem('Projeto', r?.projeto)}
+                 ${metaItem('Data', U.dataBR(r?.dataInspecao))}
+               </div>`}
+        </div>`;
+    }).join('')}` : '';
+
+  alvo.innerHTML = `${resumo}${barra}<div class="iauditor-lote-lista">${cardsValidos}${cardsInvalidos}</div>`;
+  atualizarContadorIauditor();
+}
+
+function indicesSelecionadosIauditor() {
+  return Array.from(document.querySelectorAll('#iauditorResultado .ia-check:checked'))
+    .map(cb => parseInt(cb.getAttribute('data-idx'), 10))
+    .filter(n => !Number.isNaN(n));
+}
+
+function atualizarContadorIauditor() {
+  const selecionados = indicesSelecionadosIauditor().length;
+  const total = IAUDITOR_RELATORIOS.filter(it => it.valido).length;
+  const cont = document.getElementById('iaContadorSel');
+  if (cont) cont.textContent = `${selecionados} de ${total} selecionado(s)`;
+  const todos = document.getElementById('iaSelTodos');
+  if (todos) todos.checked = total > 0 && selecionados === total;
+}
+
+function alternarTodosIauditor(marcar) {
+  document.querySelectorAll('#iauditorResultado .ia-check').forEach(cb => { cb.checked = !!marcar; });
+  atualizarContadorIauditor();
+}
+
+function capturarLinksIauditor() {
+  IAUDITOR_RELATORIOS.forEach((it, i) => {
+    const el = document.getElementById('iaLink_' + i);
+    if (el) it.linkDigitado = el.value.trim();
+  });
 }
 
 function metaItem(rot, val) {
   return `<div class="iauditor-meta-item"><div class="rot">${U.esc(rot)}</div><div class="val">${U.esc(val || '—')}</div></div>`;
 }
 
-async function salvarLeituraIauditor() {
+async function salvarLeiturasIauditorSelecionadas() {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
-  const atual = IAUDITOR_RELATORIO_ATUAL;
-  if (!atual?.registro) { App.toast('Importe um PDF do iAuditor antes de salvar.', 'aviso'); return; }
-  if (!atual.valido) { App.toast('Este PDF não foi identificado como Inspeção de Pista.', 'aviso'); return; }
-  const link = (document.getElementById('iaLink')?.value || '').trim();
-  // Link do relatório é opcional: salva mesmo sem link; pode anexar depois pelo botão Editar.
+  capturarLinksIauditor();
+  const indices = indicesSelecionadosIauditor();
+  if (!indices.length) { App.toast('Selecione ao menos um relatório identificado como Inspeção de Pista.', 'aviso'); return; }
 
-  const reg = {};
-  CAMPOS_PISTA.forEach(c => { reg[c] = atual.registro[c] != null ? atual.registro[c] : ''; });
-  reg.linkRelatorio = link;
-
-  const btn = document.querySelector('#iauditorResultado .btn-primario');
+  const btn = document.querySelector('#iauditorResultado .iauditor-lote-barra .btn-primario');
   const txt = btn?.innerHTML;
-  if (btn) { btn.disabled = true; btn.innerHTML = 'Salvando...'; }
-  try {
-    const salvo = await StoreSupabase.salvarInspecaoPista(mapParaBanco(reg));
-    const convertido = mapDoBanco(salvo);
-    PISTA_REGISTROS.unshift(convertido);
-    render();
-    App.toast('Relatório de inspeção de pista salvo no histórico.');
-    const linkSalvo = link ? (/^https?:\/\//i.test(link) ? link : 'https://' + link) : '';
-    const msgLink = linkSalvo
-      ? ` <a class="link-relatorio" href="${U.esc(linkSalvo)}" target="_blank" rel="noopener">Abrir relatório</a>`
-      : ' O link do relatório ainda não foi anexado — você pode adicioná-lo depois pelo botão Editar.';
-    document.getElementById('iauditorResultado').innerHTML = `<div class="iauditor-status ok"><h3>Relatório salvo</h3><p>${U.esc(atual.fileName)} foi registrado no histórico de inspeções de pista.${msgLink}</p></div>`;
-    IAUDITOR_RELATORIO_ATUAL = null;
-  } catch (err) {
-    console.error('Erro ao salvar leitura iAuditor', err);
-    App.toast(mensagemErro(err, 'Não foi possível salvar o relatório de inspeção de pista.'), 'erro');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = txt || 'Salvar relatório'; }
+  if (btn) btn.disabled = true;
+
+  const salvosIdx = [];
+  const falhas = [];
+  for (let k = 0; k < indices.length; k++) {
+    const idx = indices[k];
+    const atual = IAUDITOR_RELATORIOS[idx];
+    if (!atual?.registro || !atual.valido) continue;
+    if (btn) btn.innerHTML = `Salvando ${k + 1} de ${indices.length}...`;
+
+    const reg = {};
+    CAMPOS_PISTA.forEach(c => { reg[c] = atual.registro[c] != null ? atual.registro[c] : ''; });
+    reg.linkRelatorio = atual.linkDigitado || '';
+    try {
+      const salvo = await StoreSupabase.salvarInspecaoPista(mapParaBanco(reg));
+      PISTA_REGISTROS.unshift(mapDoBanco(salvo));
+      salvosIdx.push(idx);
+    } catch (err) {
+      console.error('Erro ao salvar leitura iAuditor (lote)', atual.fileName, err);
+      falhas.push(atual.fileName);
+    }
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = txt || 'Salvar selecionados'; }
+
+  // Mantém na tela apenas os que NÃO foram salvos (falhas + não selecionados + não identificados)
+  IAUDITOR_RELATORIOS = IAUDITOR_RELATORIOS.filter((_, i) => !salvosIdx.includes(i));
+  render();
+
+  if (salvosIdx.length) App.toast(`${salvosIdx.length} relatório(s) de inspeção de pista salvo(s) no histórico.`);
+  if (falhas.length) App.toast(`${falhas.length} relatório(s) não puderam ser salvos. Tente novamente.`, 'erro');
+
+  if (IAUDITOR_RELATORIOS.length) {
+    renderLeituraIauditorLote();
+  } else {
+    const alvo = document.getElementById('iauditorResultado');
+    if (alvo) {
+      const msgLinks = salvosIdx.length ? ' Para anexar o link de cada relatório, use o botão Editar na lista abaixo, lote a lote.' : '';
+      alvo.innerHTML = `<div class="iauditor-status ok"><h3>${salvosIdx.length} relatório(s) salvo(s)</h3><p>Os relatórios identificados foram registrados no histórico de inspeções de pista.${msgLinks}</p></div>`;
+    }
   }
 }
 
-function preencherModalComLeitura() {
+function preencherModalComLeitura(idx) {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
-  const atual = IAUDITOR_RELATORIO_ATUAL;
+  capturarLinksIauditor();
+  const atual = (typeof idx === 'number') ? IAUDITOR_RELATORIOS[idx] : null;
   if (!atual?.registro) { abrirNovo(); return; }
   if (!atual.valido) { App.toast('Este PDF não foi identificado como Inspeção de Pista.', 'aviso'); return; }
+  IAUDITOR_RELATORIO_ATUAL = atual;
+  IAUDITOR_EDIT_IDX = idx;
   const r = atual.registro;
   document.getElementById('form').reset();
   document.getElementById('id').value = '';
   CAMPOS_PISTA.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
-  const ia = document.getElementById('iaLink')?.value?.trim();
-  if (ia) setValor('linkRelatorio', ia);
+  if (atual.linkDigitado) setValor('linkRelatorio', atual.linkDigitado);
   document.getElementById('modalTitulo').textContent = `Salvar leitura iAuditor — ${r.lote || ''}`;
   document.getElementById('modal').classList.add('aberto');
 }
@@ -819,5 +931,7 @@ window.fecharModal = fecharModal;
 window.fecharVer = fecharVer;
 window.carregar = carregar;
 window.abrirImportadorIauditor = abrirImportadorIauditor;
-window.salvarLeituraIauditor = salvarLeituraIauditor;
+window.salvarLeiturasIauditorSelecionadas = salvarLeiturasIauditorSelecionadas;
+window.alternarTodosIauditor = alternarTodosIauditor;
+window.atualizarContadorIauditor = atualizarContadorIauditor;
 window.preencherModalComLeitura = preencherModalComLeitura;

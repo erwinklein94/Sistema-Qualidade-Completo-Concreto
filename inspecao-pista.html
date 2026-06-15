@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inspeção de Pista · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
-  <link rel="stylesheet" href="css/style.css?v=20260609-mobile-topo-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260615-lote-pdfs-v1">
 </head>
 <body>
   <div class="app" id="app">
@@ -31,16 +31,16 @@
             <div class="iauditor-drop" id="iauditorDropzone" role="button" tabindex="0" aria-label="Importar PDF do iAuditor">
               <div class="iauditor-drop-icone"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
               <div>
-                <strong>Solte o PDF do iAuditor aqui</strong>
-                <p>O leitor identifica lote, projeto, bitola, pista, trecho/posição, molde, cavidade, atividade, não conformidades e responsável encontrados no relatório.</p>
-                <button class="btn btn-secundario" type="button" id="iauditorEscolherPdf">Escolher PDF</button>
+                <strong>Solte os PDFs do iAuditor aqui</strong>
+                <p>Pode soltar <strong>vários de uma vez</strong>. O leitor identifica lote, projeto, bitola, pista, trecho/posição, molde, cavidade, atividade, não conformidades e responsável de cada relatório.</p>
+                <button class="btn btn-secundario" type="button" id="iauditorEscolherPdf">Escolher PDFs</button>
               </div>
-              <input id="iauditorPdfInput" type="file" accept="application/pdf,.pdf" hidden>
+              <input id="iauditorPdfInput" type="file" accept="application/pdf,.pdf" multiple hidden>
             </div>
             <div class="iauditor-orientacao">
               <h3>Como esta área funciona</h3>
-              <p>Quando o PDF for identificado como <strong>Inspeção de Pista</strong>, o sistema mostra a opção de salvar direto no histórico.</p>
-              <p>Após a leitura, se quiser já cole o <strong>link do relatório</strong> (SharePoint/iAuditor) — mas ele é <strong>opcional</strong> e pode ser anexado depois. Para lançar sem PDF, use <strong>Novo relatório</strong>.</p>
+              <p>Importe quantos PDFs quiser de uma vez. O sistema lê cada um e mostra quais foram identificados como <strong>Inspeção de Pista</strong> — só esses podem ser salvos aqui.</p>
+              <p>Marque os relatórios que deseja registrar e clique em <strong>Salvar selecionados</strong> para gravar todos de uma só vez. O <strong>link do relatório</strong> (SharePoint/iAuditor) é <strong>opcional</strong> e pode ser colado agora em cada um ou anexado depois pelo botão Editar. Para lançar sem PDF, use <strong>Novo relatório</strong>.</p>
             </div>
           </div>
           <div id="iauditorResultado" class="iauditor-resultado"></div>
@@ -129,6 +129,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
   <script src="js/iauditor-parser.js?v=20260526-1"></script>
-  <script src="js/inspecao-pista.js?v=20260612-sem-resultado-v1"></script>
+  <script src="js/inspecao-pista.js?v=20260615-lote-pdfs-v1"></script>
 </body>
 </html>

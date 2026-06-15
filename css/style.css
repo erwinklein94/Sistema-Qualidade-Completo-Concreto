@@ -1676,9 +1676,67 @@ body[data-tema="escuro"] .usuario-perfil {
 .iauditor-chip.aviso { background: rgba(255,212,1,.2); border-color: rgba(255,212,1,.6); color: var(--azul-escuro); }
 .iauditor-chip.erro { background: rgba(226,59,59,.12); border-color: rgba(226,59,59,.34); color: var(--erro); }
 
+/* ---- Leitor iAuditor em lote (vários PDFs de uma vez) ---- */
+.iauditor-lote-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  background: var(--cinza-bg);
+}
+.iauditor-lote-seltodos {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--azul-escuro);
+  cursor: pointer;
+}
+.iauditor-lote-barra .btn-primario { margin-left: auto; }
+.iauditor-lote-lista { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.iauditor-lote-item {
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio);
+  padding: 14px 16px;
+  background: var(--branco);
+}
+.iauditor-lote-item.invalido { opacity: .82; background: var(--cinza-bg); }
+.iauditor-lote-item-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.iauditor-lote-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--azul-escuro);
+}
+.iauditor-lote-check strong { font-weight: 700; }
+.iauditor-lote-check input[type="checkbox"],
+.iauditor-lote-seltodos input[type="checkbox"] { width: 17px; height: 17px; cursor: pointer; accent-color: var(--azul-claro); }
+.iauditor-lote-grupo-titulo {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--cinza-texto-claro);
+}
+
 @media (max-width: 900px) {
   .iauditor-grid { grid-template-columns: 1fr; }
   .iauditor-drop { grid-template-columns: 1fr; }
+  .iauditor-lote-barra .btn-primario { margin-left: 0; width: 100%; }
 }
 
 /* ===================== ADMINISTRAÇÃO DE USUÁRIOS ===================== */
