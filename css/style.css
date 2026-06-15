@@ -1218,7 +1218,7 @@ body[data-tema="escuro"] .usuario-perfil {
 
 
 /* Exportações */
-.exportacoes-grupo{display:flex;gap:8px;align-items:center;margin-left:8px;padding-left:8px;border-left:1px solid var(--borda, #d9e2ec)}
+.exportacoes-grupo{display:flex;gap:8px;align-items:center;margin-left:8px;padding-left:8px;border-left:1px solid var(--cinza-borda, #d9e2ec)}
 .exportacoes-grupo .btn{min-height:34px}
 @media (max-width: 760px){.exportacoes-grupo{width:100%;margin-left:0;padding-left:0;border-left:0}.exportacoes-grupo .btn{flex:1}}
 
@@ -6708,11 +6708,11 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   gap: 14px;
 }
 .cap-card {
-  border: 1px solid var(--borda, #e3e8ef);
-  border-left: 5px solid var(--cinza-claro, #c7cdd6);
+  border: 1px solid var(--cinza-borda, #e3e8ef);
+  border-left: 5px solid var(--cinza-borda, #c7cdd6);
   border-radius: 12px;
   padding: 14px 16px;
-  background: var(--card, #fff);
+  background: var(--cinza-card, #fff);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -6775,7 +6775,7 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .cap-histo-area {
   position: relative; display: flex; align-items: flex-end; gap: 2px;
   height: 54px; padding: 2px 0;
-  border-bottom: 1px solid var(--borda, #e3e8ef);
+  border-bottom: 1px solid var(--cinza-borda, #e3e8ef);
 }
 .cap-histo-barra {
   flex: 1; min-width: 4px; border-radius: 3px 3px 0 0;
@@ -6812,10 +6812,10 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   gap: 10px;
 }
 .molde-card {
-  border: 1px solid var(--borda, #e3e8ef);
+  border: 1px solid var(--cinza-borda, #e3e8ef);
   border-radius: 10px;
   padding: 10px 12px;
-  background: var(--card, #fff);
+  background: var(--cinza-card, #fff);
 }
 .molde-card.principal { border-color: var(--erro); box-shadow: 0 0 0 1px var(--erro) inset; }
 .molde-card-topo {
@@ -6835,7 +6835,7 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .saude-resumo {
   display: flex; flex-wrap: wrap; gap: 8px 22px;
   padding: 10px 12px; margin-bottom: 12px;
-  border: 1px dashed var(--borda, #e3e8ef); border-radius: 10px;
+  border: 1px dashed var(--cinza-borda, #e3e8ef); border-radius: 10px;
   font-size: 0.82rem;
 }
 .saude-resumo-item { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -6848,11 +6848,11 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   gap: 12px;
 }
 .saude-card {
-  border: 1px solid var(--borda, #e3e8ef);
-  border-left: 5px solid var(--cinza-claro, #c7cdd6);
+  border: 1px solid var(--cinza-borda, #e3e8ef);
+  border-left: 5px solid var(--cinza-borda, #c7cdd6);
   border-radius: 12px;
   padding: 12px 14px;
-  background: var(--card, #fff);
+  background: var(--cinza-card, #fff);
   display: flex; flex-direction: column; gap: 8px;
 }
 .saude-card.ok { border-left-color: var(--ok); }
@@ -6870,7 +6870,7 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   grid-template-columns: 1fr auto auto auto;
   grid-template-areas: "ensaio cpk seta delta" "spark spark spark base";
   align-items: center; column-gap: 8px; row-gap: 2px;
-  padding: 6px 0; border-top: 1px dashed var(--borda, #e3e8ef);
+  padding: 6px 0; border-top: 1px dashed var(--cinza-borda, #e3e8ef);
 }
 .saude-ensaio { grid-area: ensaio; font-size: 0.78rem; font-weight: 600; }
 .saude-cpk { grid-area: cpk; font-size: 1.15rem; font-weight: 800; }
@@ -6915,7 +6915,7 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 .cap-ranking-tabela td.critico strong { color: var(--erro); }
 .cap-ranking-tabela td small { opacity: 0.7; }
 
-.evolucao-cpk { margin-top: 14px; border-top: 1px dashed var(--borda, #e3e8ef); padding-top: 12px; }
+.evolucao-cpk { margin-top: 14px; border-top: 1px dashed var(--cinza-borda, #e3e8ef); padding-top: 12px; }
 .evolucao-cpk-topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .evolucao-cpk-topo strong { font-size: 0.9rem; }
 .evolucao-cpk-topo .btn { margin-left: auto; }
@@ -6924,6 +6924,20 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 @media (max-width: 600px) {
   .saude-grid { grid-template-columns: 1fr; }
 }
+
+/* ---- Tema escuro: ajuste de contraste dos painéis de capabilidade/saúde ----
+   Os cards (.cap-card / .saude-card / .molde-card) já herdam fundo e bordas
+   do tema via --cinza-card e --cinza-borda. Aqui só corrigimos os poucos
+   selos de status cujo texto resolvia para uma cor escura sobre o card
+   escuro, garantindo leitura confortável no modo noturno. */
+body[data-tema="escuro"] .cap-status.bom { color: #bfe3ff; }
+body[data-tema="escuro"] .cap-status.baixo { color: #fbbf24; }
+body[data-tema="escuro"] .cap-status.neutro { color: var(--cinza-texto); opacity: 0.9; }
+/* Histogramas, gauges e sparklines usam color-mix/currentColor das cores de
+   acento, que já têm versões vivas no escuro — apenas reforçamos a linha-base
+   dos histogramas para não somir sobre o card escuro. */
+body[data-tema="escuro"] .cap-histo-barra { background: color-mix(in srgb, var(--ok) 80%, transparent); }
+body[data-tema="escuro"] .cap-histo-barra.abaixo { background: color-mix(in srgb, var(--erro) 85%, transparent); }
 
 /* =====================================================================
    Dossiê do lote — Fluxo de Liberação
