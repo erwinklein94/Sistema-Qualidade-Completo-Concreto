@@ -6,6 +6,12 @@
   <title>Produção · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260609-mobile-topo-v1">
+  <style>
+    /* Tabela de pendências de preenchimento: oculta por padrão, revelada pelo botão */
+    .acoes-pendencias { margin-bottom: 14px; }
+    #btnVerificarPendencias .ic-seta { font-size: 11px; line-height: 1; transition: transform .2s ease; }
+    #btnVerificarPendencias[aria-expanded="true"] .ic-seta { transform: rotate(180deg); }
+  </style>
 </head>
 <body>
   <div class="app" id="app">
@@ -62,7 +68,18 @@
               <div class="extra">Abaixo de 70% preenchido</div>
             </div>
           </div>
-          <div id="alertasPreenchimento"></div>
+
+          <!-- Botão que revela/oculta a tabela de pendências de preenchimento -->
+          <div class="acoes-pendencias">
+            <button type="button" class="btn btn-secundario" id="btnVerificarPendencias"
+                    aria-expanded="false" aria-controls="alertasPreenchimento"
+                    onclick="togglePendencias()">
+              <span id="btnVerificarPendenciasTexto">Verificar pendências</span>
+              <span class="ic-seta" aria-hidden="true">▾</span>
+            </button>
+          </div>
+
+          <div id="alertasPreenchimento" hidden></div>
         </div>
 
         <div id="indicadorCapabilidade"></div>

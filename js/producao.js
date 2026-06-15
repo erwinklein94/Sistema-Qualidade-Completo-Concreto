@@ -525,6 +525,21 @@ function renderAlertasPreenchimento(lista) {
     ${incompletos.length > 12 ? `<p class="txt-mini txt-cinza margem-topo-sm">Mostrando os 12 lotes mais incompletos de ${incompletos.length} encontrados no filtro atual.</p>` : ''}`;
 }
 
+/* Mostra/oculta a tabela de pendências de preenchimento sob demanda.
+   Os KPIs do topo continuam sempre visíveis; apenas a lista detalhada é alternada. */
+function togglePendencias() {
+  const secao = document.getElementById('alertasPreenchimento');
+  if (!secao) return;
+  const vaiMostrar = secao.hidden;            // se está oculta agora, vamos exibir
+  secao.hidden = !vaiMostrar;
+
+  const btn = document.getElementById('btnVerificarPendencias');
+  if (btn) btn.setAttribute('aria-expanded', String(vaiMostrar));
+
+  const txt = document.getElementById('btnVerificarPendenciasTexto');
+  if (txt) txt.textContent = vaiMostrar ? 'Ocultar pendências' : 'Verificar pendências';
+}
+
 function abrirNovo() {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
   document.getElementById('form').reset();
