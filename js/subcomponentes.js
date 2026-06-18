@@ -1103,9 +1103,9 @@ function estoqueFilters(f) {
 }
 function estoqueTable(records) {
   if (!records.length) return empty('Nenhum registro de estoque', 'Cadastre uma entrada ou ajuste os filtros.');
-  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data</th><th>Empresa</th><th>Subcomponente</th><th>SAP</th><th>Lote</th><th class="right">Entrada</th><th class="right">Saldo</th><th class="right">Amostra</th><th>Status</th><th>Obs.</th>${actionHeader()}</tr></thead><tbody>${records.slice(0, 500).map((r) => {
+  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data</th><th>Empresa</th><th>Subcomponente</th><th>SAP</th><th>Lote</th><th class="right">Entrada</th><th class="right">Saldo</th><th class="right">Amostra</th><th>Status</th><th>Data inspeção</th><th>Obs.</th>${actionHeader()}</tr></thead><tbody>${records.slice(0, 500).map((r) => {
     const empresa = empresaNomeById(state.db, r.empresaId) || r.empresaNome;
-    return `<tr><td>${dataBR(r.data)}</td><td>${esc(empresa)}</td><td><strong>${esc(r.subcomponente)}</strong></td><td>${esc(r.codSap)}</td><td>${esc(r.lote)}</td><td class="right">${fmt(r.quantidadeEntrada)}</td><td class="right"><strong>${fmt(r.saldoAtual)}</strong></td><td class="right">${fmt(r.amostragem)}</td><td>${badge(r.statusEstoque)}</td><td>${esc(r.obs)}</td>${actionCell('estoque', r.id)}</tr>`;
+    return `<tr><td>${dataBR(r.data)}</td><td>${esc(empresa)}</td><td><strong>${esc(r.subcomponente)}</strong></td><td>${esc(r.codSap)}</td><td>${esc(r.lote)}</td><td class="right">${fmt(r.quantidadeEntrada)}</td><td class="right"><strong>${fmt(r.saldoAtual)}</strong></td><td class="right">${fmt(r.amostragem)}</td><td>${badge(r.statusEstoque)}</td><td>${dataBR(r.dataInspecao)}</td><td>${esc(r.obs)}</td>${actionCell('estoque', r.id)}</tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -1727,14 +1727,21 @@ async function saveModal(ev) {
   try {
     if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
     let registroSalvo = null;
+    let estoqueSincronizado = [];
     if (type === 'empresa') registroSalvo = saveEmpresa(data, id);
     if (type === 'material') registroSalvo = saveMaterial(data, id);
     if (type === 'estoque') registroSalvo = saveEstoque(data, id);
-    if (type === 'inspecao') registroSalvo = saveInspecao(data, id);
+    if (type === 'inspecao') {
+      registroSalvo = saveInspecao(data, id);
+      estoqueSincronizado = sincronizarEstoqueComInspecao(registroSalvo);
+    }
     if (type === 'rnc') registroSalvo = saveRnc(data, id);
     if (type === 'usuario') { await saveUsuarioPerfil(data, id); closeModal(); render(); SubcomponentesApp.toast(id ? 'Usuário atualizado com sucesso.' : 'Perfil de usuário cadastrado com sucesso.'); return; }
     if (DB.usingSupabase() && window.StoreSubcomponentesSupabase?.salvarRegistro) {
       await window.StoreSubcomponentesSupabase.salvarRegistro(type, registroSalvo);
+      if (type === 'inspecao' && estoqueSincronizado.length) {
+        await Promise.all(estoqueSincronizado.map((item) => window.StoreSubcomponentesSupabase.salvarRegistro('estoque', item)));
+      }
       state.db.meta = { ...(state.db.meta || {}), updatedAt: new Date().toISOString(), source: 'Supabase', storage: 'supabase', lastAction: id ? 'Registro editado' : 'Novo registro cadastrado' };
     } else {
       await DB.save(id ? 'Registro editado' : 'Novo registro cadastrado');
@@ -1742,7 +1749,13 @@ async function saveModal(ev) {
     if (isAdmin()) await DB.loadAudit();
     closeModal();
     render();
-    SubcomponentesApp.toast(id ? 'Registro atualizado com sucesso.' : 'Registro cadastrado com sucesso.');
+    if (type === 'inspecao' && estoqueSincronizado.length) {
+      SubcomponentesApp.toast(`Inspeção salva e ${fmt(estoqueSincronizado.length)} lote(s) do estoque atualizado(s).`);
+    } else if (type === 'inspecao') {
+      SubcomponentesApp.toast('Inspeção salva. Nenhum lote correspondente foi encontrado no estoque para sincronizar.', 'info');
+    } else {
+      SubcomponentesApp.toast(id ? 'Registro atualizado com sucesso.' : 'Registro cadastrado com sucesso.');
+    }
   } catch (error) {
     console.error('Erro ao salvar registro:', error);
     SubcomponentesApp.toast(traduzErroBanco(error), 'erro');
@@ -1819,6 +1832,44 @@ function saveEstoque(data, id) {
   if (!id) state.db.estoque.push(target);
   return target;
 }
+
+function estoqueCorrespondeInspecao(estoque, inspecao) {
+  if (!estoque || !inspecao) return false;
+  const mesmoSubcomponente = norm(estoque.subcomponente) && norm(estoque.subcomponente) === norm(inspecao.subcomponente);
+  const mesmoLote = norm(estoque.lote) && norm(estoque.lote) === norm(inspecao.lote);
+  if (!mesmoSubcomponente || !mesmoLote) return false;
+
+  const sapEstoque = norm(estoque.codSap);
+  const sapInspecao = norm(inspecao.codSap);
+  // Quando os dois lados têm SAP preenchido, evita atualizar lote homônimo de outro código.
+  if (sapEstoque && sapInspecao && sapEstoque !== sapInspecao) return false;
+  return true;
+}
+
+function sincronizarEstoqueComInspecao(inspecao) {
+  if (!inspecao || !Array.isArray(state.db.estoque)) return [];
+  const dataInspecao = normalizeDate(inspecao.diaInspecao) || inspecao.diaInspecao || todayIso();
+  const atualizados = [];
+
+  state.db.estoque.forEach((item) => {
+    if (!estoqueCorrespondeInspecao(item, inspecao)) return;
+    let alterado = false;
+
+    if (item.statusEstoque !== 'Fora do estoque' && item.statusEstoque !== 'Inspecionado') {
+      item.statusEstoque = 'Inspecionado';
+      alterado = true;
+    }
+    if (dataInspecao && item.dataInspecao !== dataInspecao) {
+      item.dataInspecao = dataInspecao;
+      alterado = true;
+    }
+
+    if (alterado) atualizados.push(item);
+  });
+
+  return atualizados;
+}
+
 function saveInspecao(data, id) {
   const empresaId = companyIdFromName(data.empresaNome);
   const target = state.db.inspecoes.find((e) => e.id === id) || { id: uid('INSP') };
@@ -1914,7 +1965,7 @@ function downloadCsv(type) {
   }
   if (type === 'estoque') {
     const csv = toCsv(state.db.estoque, [
-      { label: 'Data', get: (r) => r.data }, { label: 'Empresa', get: (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome }, { label: 'Subcomponente', get: (r) => r.subcomponente }, { label: 'SAP', get: (r) => r.codSap }, { label: 'Lote', get: (r) => r.lote }, { label: 'Entrada', get: (r) => r.quantidadeEntrada }, { label: 'Saldo', get: (r) => r.saldoAtual }, { label: 'Amostragem', get: (r) => r.amostragem }, { label: 'Status', get: (r) => r.statusEstoque }, { label: 'Obs', get: (r) => r.obs }
+      { label: 'Data', get: (r) => r.data }, { label: 'Empresa', get: (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome }, { label: 'Subcomponente', get: (r) => r.subcomponente }, { label: 'SAP', get: (r) => r.codSap }, { label: 'Lote', get: (r) => r.lote }, { label: 'Entrada', get: (r) => r.quantidadeEntrada }, { label: 'Saldo', get: (r) => r.saldoAtual }, { label: 'Amostragem', get: (r) => r.amostragem }, { label: 'Status', get: (r) => r.statusEstoque }, { label: 'Data inspeção', get: (r) => r.dataInspecao }, { label: 'Obs', get: (r) => r.obs }
     ]);
     download(`estoque-subcomponentes-${todayIso()}.csv`, csv, 'text/csv;charset=utf-8');
   }
