@@ -2378,14 +2378,41 @@ body {
 /* =====================================================================
    RNC — quadros de aviso de não conformidade (20260618)
    ===================================================================== */
-.rnc-quadros { align-items: start; }
-.rnc-quadro { display: flex; flex-direction: column; gap: 10px; }
+.rnc-quadros {
+  grid-template-columns: repeat(2, minmax(320px, 460px));
+  justify-content: start;
+  align-items: stretch;
+}
+.rnc-quadro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 320px;
+  height: 100%;
+}
 .rnc-quadro-cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .rnc-quadro-cab h3 { margin: 0; font-size: 16px; line-height: 1.25; color: var(--cinza-texto); }
 .rnc-acoes { display: inline-flex; gap: 6px; flex-shrink: 0; }
-.rnc-quadro-corpo { font-size: 14px; line-height: 1.55; color: var(--cinza-texto); white-space: normal; overflow-wrap: anywhere; }
+.rnc-quadro-corpo {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--cinza-texto);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .rnc-quadro .rnc-vazio { color: var(--cinza-texto-claro); font-style: italic; }
-.rnc-quadro .meta { margin-top: 2px; }
+.rnc-quadro .meta { margin-top: auto; padding-top: 4px; }
+
+@media (max-width: 980px) {
+  .rnc-quadros { grid-template-columns: repeat(2, minmax(260px, 1fr)); }
+  .rnc-quadro { min-height: 280px; }
+}
+
+@media (max-width: 768px) {
+  .rnc-quadros { grid-template-columns: 1fr !important; }
+  .rnc-quadro { min-height: auto; }
+}
 
 /* Link do relatório (iAuditor) dentro das tabelas */
 .tabela a { color: var(--azul-claro); font-weight: 700; text-decoration: none; }
