@@ -1200,11 +1200,30 @@ function renderIndicadorSemanal() {
   const ncPorSubcomp = groupSum(registros, (r) => r.subcomponente, (r) => r.qtdNc).filter((d) => d.value > 0).slice(0, 10);
   const statusCount = groupCount(registros, (r) => r.status);
 
+  // Quantidade liberada = estoque dos lotes aprovados (Aprovado / Aprovado com ressalva), por subcomponente
+  const liberadoMap = new Map();
+  registros.forEach((r) => {
+    const key = text(r.subcomponente, 'Sem subcomponente');
+    const item = liberadoMap.get(key) || { name: key, value: 0, lotes: 0, lotesLiberados: 0 };
+    item.lotes += 1;
+    if (norm(r.status).startsWith('APROVADO')) {
+      item.value += num(r.qtdEstoque);
+      item.lotesLiberados += 1;
+    }
+    liberadoMap.set(key, item);
+  });
+  const liberado = [...liberadoMap.values()].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'pt-BR'));
+  const totalLiberado = liberado.reduce((s, d) => s + d.value, 0);
+  const liberadoBody = liberado.length
+    ? `<div class="liberado-grid">${liberado.map((d) => `<div class="liberado-card"><div class="liberado-sub">${esc(d.name)}</div><div class="liberado-num" title="${esc(fmt(d.value))}">${fmt(d.value)}</div><div class="liberado-meta">${fmt(d.lotesLiberados)} de ${fmt(d.lotes)} lote(s) liberado(s)</div></div>`).join('')}</div>`
+    : empty('Nenhum lote liberado nesta semana', 'Nenhuma inspeção da semana ficou com status Aprovado ou Aprovado com ressalva.');
+
   const seletor = `<div class="campo"><label>Semana</label><select data-filter="indicador-semanal.semana">${semanas.map((w) => `<option value="${esc(w)}" ${w === semanaAtiva ? 'selected' : ''}>${esc(semanaLabelLonga(w))}${semanaIntervalo(w) ? ` (${esc(semanaIntervalo(w))})` : ''}</option>`).join('')}</select></div>`;
 
   return `${hero()}
     <div class="periodo-dashboard-info"><strong>${esc(semanaLabelLonga(semanaAtiva))}</strong><span>${intervalo ? `Período de ${esc(intervalo)} · ` : ''}${fmt(registros.length)} inspeção(ões) registrada(s) nesta semana.</span></div>
     <div class="barra-filtros">${seletor}</div>
+    ${panel('Quantidade liberada do estoque por subcomponente', `Estoque dos lotes aprovados na semana · total ${fmt(totalLiberado)} un.`, liberadoBody, 'painel-liberado')}
     <div class="grid-kpi">
       ${kpi('Inspeções', fmt(registros.length), `${fmt(subcomponentes)} subcomponente(s)`, 'var(--azul-claro)')}
       ${kpi('Qtd. inspecionada', fmt(insp), `amostra: ${fmt(amostra)}`, 'var(--verde)')}
