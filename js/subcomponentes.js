@@ -26,6 +26,8 @@ const PAGE_COPY = {
   materiais: ['Materiais', 'Cadastro técnico dos subcomponentes, normas, planos de amostragem e ETM.'],
   estoque: ['Estoque de subcomponentes', 'Lançamento e controle dos lotes em estoque, sem importação de planilha.'],
   inspecoes: ['Inspeções realizadas', 'Registro de inspeções por lote/BAG, fornecedor e status de aprovação.'],
+  'indicador-semanal': ['Indicador Semanal', 'Resumo das inspeções de subcomponentes realizadas na semana selecionada.'],
+  rnc: ['RNC', 'Quadro de não conformidades registradas nas inspeções de subcomponentes.'],
   dados: ['Dados e backup', 'Exportação de segurança dos dados salvos no Supabase.'],
   auditoria: ['Auditoria', 'Histórico de cadastros, edições e exclusões feitos no sistema.'],
   usuarios: ['Usuários e perfis', 'Controle dos perfis admin, fiscalização e consulta.']
@@ -49,6 +51,7 @@ let state = {
     materiais: { fornecedor: '', tipo: '', criticidade: '', search: '' },
     estoque: { component: '', empresa: '', status: '', search: '' },
     inspecoes: { material: '', empresa: '', status: '', semana: '', search: '' },
+    'indicador-semanal': { semana: '' },
     cards: { query: '', hasNc: '', hasStock: '', empresa: '' },
     auditoria: { acao: '', tabela: '', usuario: '', search: '' },
     usuarios: { perfil: '', ativo: '', search: '' }
@@ -69,7 +72,8 @@ function emptyDb() {
     empresas: [],
     materiais: [],
     estoque: [],
-    inspecoes: []
+    inspecoes: [],
+    rnc: []
   };
 }
 
@@ -252,7 +256,7 @@ const SubcomponentesApp = {
   },
   activeFromHash() {
     const key = String(location.hash || '').replace('#', '').trim();
-    const allowed = new Set(['dashboard', 'cards', 'empresas', 'materiais', 'estoque', 'inspecoes', 'dados', 'auditoria', 'usuarios']);
+    const allowed = new Set(['dashboard', 'cards', 'empresas', 'materiais', 'estoque', 'inspecoes', 'indicador-semanal', 'rnc', 'dados', 'auditoria', 'usuarios']);
     if (allowed.has(key)) state.active = key;
     if ((state.active === 'auditoria' || state.active === 'usuarios') && !isAdmin()) state.active = 'dashboard';
   },
@@ -602,8 +606,17 @@ function normalizeDb(input) {
     qtdInspecionado: num(r.qtdInspecionado),
     qtdNc: num(r.qtdNc),
     status: text(r.status, 'Pendente'),
-    observacao: text(r.observacao || r.obs, '')
+    observacao: text(r.observacao || r.obs, ''),
+    linkIauditor: text(r.linkIauditor || r.link_iauditor, '')
   })).filter((r) => r.subcomponente);
+
+  if (input && Array.isArray(input.rnc)) db.rnc = input.rnc.map((r) => ({
+    id: r.id || uid('RNC'),
+    titulo: text(r.titulo, 'Não conformidade'),
+    conteudo: text(r.conteudo, ''),
+    criadoEm: r.criadoEm || r.criado_em || '',
+    atualizadoEm: r.atualizadoEm || r.atualizado_em || ''
+  })).filter((r) => r.titulo || r.conteudo);
 
   ensureCompaniesForRecords(db);
   db.meta = { ...emptyDb().meta, ...(input?.meta || {}), updatedAt: input?.meta?.updatedAt || new Date().toISOString() };
@@ -829,6 +842,9 @@ function topActions() {
   if (state.active === 'inspecoes') {
     actions.push(canWrite() ? `<button class="btn btn-primario btn-sm" type="button" data-top-modal="inspecao">${add}<span>Nova inspeção</span></button>` : readonly);
   }
+  if (state.active === 'rnc' && isAdmin()) {
+    actions.push(`<button class="btn btn-primario btn-sm" type="button" data-top-modal="rnc">${add}<span>Novo quadro de aviso</span></button>`);
+  }
   if (state.active === 'dados') {
     actions.push(`<button class="btn btn-primario btn-sm" type="button" id="topDownloadJson">Baixar backup JSON</button>`);
     actions.push(`<button class="btn btn-secundario btn-sm" type="button" id="topDownloadCsvMateriais">CSV materiais</button>`);
@@ -871,6 +887,8 @@ function render() {
     materiais: renderMateriais,
     estoque: renderEstoque,
     inspecoes: renderInspecoes,
+    'indicador-semanal': renderIndicadorSemanal,
+    rnc: renderRnc,
     cards: renderCards,
     dados: renderDados,
     auditoria: renderAuditoria,
@@ -1124,12 +1142,104 @@ function inspecaoFilters(f) {
     <div class="campo"><label>Busca</label><input type="search" value="${esc(f.search)}" data-filter="inspecoes.search" placeholder="Lote, SAP, local..."></div>
     <button class="btn btn-secundario" data-clear-filters="inspecoes" type="button">Limpar filtros</button>`;
 }
+function linkRelatorio(url) {
+  const u = String(url || '').trim();
+  if (!u) return '—';
+  if (!/^https?:\/\//i.test(u)) return esc(u);
+  return `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="${esc(u)}">Abrir</a>`;
+}
 function inspecaoTable(records) {
   if (!records.length) return empty('Nenhuma inspeção encontrada', 'Registre uma nova inspeção ou ajuste os filtros.');
-  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data</th><th>Semana</th><th>Local</th><th>Subcomponente</th><th>SAP</th><th>Empresa</th><th>Lote</th><th class="right">Qtd estoque</th><th class="right">Amostra</th><th class="right">Inspecionado</th><th class="right">NC</th><th>Status</th>${actionHeader()}</tr></thead><tbody>${records.slice(0, 500).map((r) => {
+  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data</th><th>Semana</th><th>Local</th><th>Subcomponente</th><th>SAP</th><th>Empresa</th><th>Lote</th><th class="right">Qtd estoque</th><th class="right">Amostra</th><th class="right">Inspecionado</th><th class="right">NC</th><th>Status</th><th>Relatório</th>${actionHeader()}</tr></thead><tbody>${records.slice(0, 500).map((r) => {
     const empresa = empresaNomeById(state.db, r.empresaId) || r.empresaNome;
-    return `<tr><td>${dataBR(r.diaInspecao)}</td><td>${esc(r.semana)}</td><td>${esc(r.local)}</td><td><strong>${esc(r.subcomponente)}</strong></td><td>${esc(r.codSap)}</td><td>${esc(empresa)}</td><td>${esc(r.lote)}</td><td class="right">${fmt(r.qtdEstoque)}</td><td class="right">${fmt(r.qtdAmostra)}</td><td class="right"><strong>${fmt(r.qtdInspecionado)}</strong></td><td class="right"><strong>${fmt(r.qtdNc)}</strong></td><td>${badge(r.status)}</td>${actionCell('inspecao', r.id)}</tr>`;
+    return `<tr><td>${dataBR(r.diaInspecao)}</td><td>${esc(r.semana)}</td><td>${esc(r.local)}</td><td><strong>${esc(r.subcomponente)}</strong></td><td>${esc(r.codSap)}</td><td>${esc(empresa)}</td><td>${esc(r.lote)}</td><td class="right">${fmt(r.qtdEstoque)}</td><td class="right">${fmt(r.qtdAmostra)}</td><td class="right"><strong>${fmt(r.qtdInspecionado)}</strong></td><td class="right"><strong>${fmt(r.qtdNc)}</strong></td><td>${badge(r.status)}</td><td>${linkRelatorio(r.linkIauditor)}</td>${actionCell('inspecao', r.id)}</tr>`;
   }).join('')}</tbody></table></div>`;
+}
+
+function semanaIntervalo(weekLabel) {
+  const m = String(weekLabel || '').match(/(\d{4}).*?(\d{1,2})/);
+  if (!m) return '';
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (day - 1) + (week - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const fmtD = (d) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+  return `${fmtD(monday)} a ${fmtD(sunday)}`;
+}
+function semanaLabelLonga(weekLabel) {
+  const m = String(weekLabel || '').match(/(\d{4}).*?(\d{1,2})/);
+  if (!m) return text(weekLabel);
+  return `Semana ${Number(m[2])} · ${m[1]}`;
+}
+function renderIndicadorSemanal() {
+  const semanas = unique(state.db.inspecoes, (r) => text(r.semana, '') || isoWeek(r.diaInspecao))
+    .sort((a, b) => weekSortValue(a) - weekSortValue(b));
+  if (!semanas.length) {
+    return `${hero()}${panel('Indicador semanal de inspeções', 'Resumo por semana', empty('Nenhuma inspeção registrada ainda', 'Cadastre inspeções na aba "Inspeções realizadas" para gerar o indicador semanal.'))}`;
+  }
+  const f = state.filters['indicador-semanal'];
+  const semanaAtiva = (f.semana && semanas.includes(f.semana)) ? f.semana : semanas[semanas.length - 1];
+  const intervalo = semanaIntervalo(semanaAtiva);
+  const registros = state.db.inspecoes
+    .filter((r) => (text(r.semana, '') || isoWeek(r.diaInspecao)) === semanaAtiva)
+    .sort((a, b) => (b.diaInspecao || '').localeCompare(a.diaInspecao || ''));
+
+  const insp = registros.reduce((s, r) => s + num(r.qtdInspecionado), 0);
+  const amostra = registros.reduce((s, r) => s + num(r.qtdAmostra), 0);
+  const nc = registros.reduce((s, r) => s + num(r.qtdNc), 0);
+  const subcomponentes = unique(registros, (r) => r.subcomponente).length;
+  const empresas = unique(registros, (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome).length;
+  const comNc = registros.filter((r) => num(r.qtdNc) > 0).length;
+
+  const inspPorSubcomp = groupSum(registros, (r) => r.subcomponente, (r) => r.qtdInspecionado).slice(0, 10);
+  const inspPorEmpresa = groupSum(registros, (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome, (r) => r.qtdInspecionado).slice(0, 10);
+  const ncPorSubcomp = groupSum(registros, (r) => r.subcomponente, (r) => r.qtdNc).filter((d) => d.value > 0).slice(0, 10);
+  const statusCount = groupCount(registros, (r) => r.status);
+
+  const seletor = `<div class="campo"><label>Semana</label><select data-filter="indicador-semanal.semana">${semanas.map((w) => `<option value="${esc(w)}" ${w === semanaAtiva ? 'selected' : ''}>${esc(semanaLabelLonga(w))}${semanaIntervalo(w) ? ` (${esc(semanaIntervalo(w))})` : ''}</option>`).join('')}</select></div>`;
+
+  return `${hero()}
+    <div class="periodo-dashboard-info"><strong>${esc(semanaLabelLonga(semanaAtiva))}</strong><span>${intervalo ? `Período de ${esc(intervalo)} · ` : ''}${fmt(registros.length)} inspeção(ões) registrada(s) nesta semana.</span></div>
+    <div class="barra-filtros">${seletor}</div>
+    <div class="grid-kpi">
+      ${kpi('Inspeções', fmt(registros.length), `${fmt(subcomponentes)} subcomponente(s)`, 'var(--azul-claro)')}
+      ${kpi('Qtd. inspecionada', fmt(insp), `amostra: ${fmt(amostra)}`, 'var(--verde)')}
+      ${kpi('Não conformidades', fmt(nc), `${fmt(comNc)} inspeção(ões) com NC`, 'var(--amarelo)')}
+      ${kpi('Taxa NC', pct(insp ? nc / insp * 100 : 0), 'NC / qtd. inspecionada', 'var(--erro)')}
+      ${kpi('Empresas', fmt(empresas), 'fornecedores/fábricas na semana', 'var(--azul-escuro)')}
+    </div>
+    <div class="grid-graficos">
+      ${panel('Inspecionado por subcomponente', 'Top 10 da semana', inspPorSubcomp.length ? barList(inspPorSubcomp, 'un.') : empty('Sem dados na semana'))}
+      ${panel('Inspecionado por empresa', 'Top 10 da semana', inspPorEmpresa.length ? barList(inspPorEmpresa, 'un.') : empty('Sem dados na semana'))}
+      ${panel('Não conformidades por subcomponente', 'Somatório de NC na semana', ncPorSubcomp.length ? barList(ncPorSubcomp, 'NC') : empty('Nenhuma NC na semana', 'Nenhuma não conformidade registrada nas inspeções desta semana.'))}
+      ${panel('Status das inspeções', 'Distribuição na semana', statusCount.length ? donut(statusCount) : empty('Sem dados na semana'))}
+      ${panel('Inspeções da semana', `${fmt(registros.length)} registro(s)`, inspecaoTable(registros), 'span2')}
+    </div>`;
+}
+
+function rncCard(c) {
+  const conteudo = String(c.conteudo || '').trim();
+  const corpo = conteudo ? esc(conteudo).replace(/\n/g, '<br>') : '<span class="rnc-vazio">Sem descrição.</span>';
+  const atualizado = c.atualizadoEm ? dataHoraBR(c.atualizadoEm) : '';
+  const acoes = isAdmin() ? `<div class="rnc-acoes"><button class="icone-btn" title="Editar" data-edit="rnc" data-id="${esc(c.id)}">✎</button><button class="icone-btn del" title="Excluir" data-delete="rnc" data-id="${esc(c.id)}">🗑</button></div>` : '';
+  return `<div class="subcard nc rnc-quadro">
+    <div class="rnc-quadro-cab"><h3>${esc(c.titulo || 'Não conformidade')}</h3>${acoes}</div>
+    <div class="rnc-quadro-corpo">${corpo}</div>
+    ${atualizado ? `<div class="meta">Atualizado em ${esc(atualizado)}</div>` : ''}
+  </div>`;
+}
+function renderRnc() {
+  const registros = [...(state.db.rnc || [])].sort((a, b) => String(b.criadoEm || '').localeCompare(String(a.criadoEm || '')));
+  const corpo = registros.length
+    ? `<div class="subcards rnc-quadros">${registros.map(rncCard).join('')}</div>`
+    : empty('Nenhuma não conformidade registrada', 'Não há quadros de aviso publicados no momento.');
+  return `${hero()}
+    <div class="toolbar toolbar-contador"><div class="contador">${fmt(registros.length)} quadro(s) de aviso</div></div>
+    ${corpo}`;
 }
 
 function combineCards() {
@@ -1444,6 +1554,7 @@ function bindPage() {
 
 function openModal(type, id = '') {
   if (type === 'usuario' && !isAdmin()) { SubcomponentesApp.toast('Somente admin pode gerenciar usuários.', 'erro'); return; }
+  if (type === 'rnc' && !isAdmin()) { SubcomponentesApp.toast('Somente o administrador pode editar a RNC.', 'erro'); return; }
   if (['empresa', 'material', 'estoque', 'inspecao'].includes(type) && !canWrite()) { SubcomponentesApp.toast('Seu perfil é de consulta. Você pode visualizar, mas não cadastrar nem editar.', 'erro'); return; }
   state.modal = { type, id };
   const overlay = $('#modalOverlay');
@@ -1476,6 +1587,7 @@ function modalHtml(type, id) {
     material: { title: id ? 'Editar material' : 'Novo material', body: materialForm(id) },
     estoque: { title: id ? 'Editar lançamento de estoque' : 'Novo lançamento de estoque', body: estoqueForm(id) },
     inspecao: { title: id ? 'Editar inspeção' : 'Nova inspeção', body: inspecaoForm(id) },
+    rnc: { title: id ? 'Editar quadro de aviso' : 'Novo quadro de aviso', body: rncForm(id) },
     usuario: { title: id ? 'Editar perfil de usuário' : 'Novo perfil de usuário', body: usuarioForm(id) }
   }[type];
   return `<div class="modal" role="dialog" aria-modal="true"><div class="modal-cab"><h2>${esc(config.title)}</h2><button class="fechar-modal" id="closeModal" type="button" aria-label="Fechar">×</button></div><div class="modal-corpo"><form id="modalForm"><div id="modalData">${config.body}</div><div class="form-acoes"><button class="btn btn-secundario" type="button" id="cancelModal">Cancelar</button><button class="btn btn-primario" type="submit">Salvar</button></div></form></div></div>`;
@@ -1559,6 +1671,7 @@ function inspecaoForm(id) {
     ${field('QTD NC', 'qtdNc', r.qtdNc, 'number', 'min="0" step="1"')}
     ${selectField('Status', 'status', STATUS_INSPECAO, r.status)}
     ${textareaField('Observação', 'observacao', r.observacao)}
+    <div class="campo full"><label>Link do relatório (iAuditor) <span style="font-weight:500;color:var(--cinza-texto)">— opcional</span></label><input type="url" name="linkIauditor" value="${esc(r.linkIauditor)}" placeholder="https://..."></div>
   </div>`;
 }
 
@@ -1572,6 +1685,14 @@ function usuarioForm(id) {
     ${field('E-mail *', 'email', r.email, 'email', 'required')}
     ${selectField('Perfil', 'perfil', PERFIS_USUARIO, r.perfil || 'consulta')}
     <div class="campo"><label>Status</label><select name="ativo"><option value="true" ${r.ativo !== false ? 'selected' : ''}>Ativo</option><option value="false" ${r.ativo === false ? 'selected' : ''}>Inativo</option></select></div>
+  </div>`;
+}
+
+function rncForm(id) {
+  const r = (state.db.rnc || []).find((x) => x.id === id) || { titulo: '', conteudo: '' };
+  return `<div class="form-grid">
+    ${field('Título *', 'titulo', r.titulo, 'text', 'required maxlength="160" placeholder="Ex.: RNC 001 — Trinca no lote 1234"')}
+    <div class="campo full"><label>Não conformidade *</label><textarea name="conteudo" rows="7" required placeholder="Descreva a não conformidade registrada na inspeção...">${esc(r.conteudo)}</textarea></div>
   </div>`;
 }
 
@@ -1591,6 +1712,7 @@ async function saveModal(ev) {
     if (type === 'material') registroSalvo = saveMaterial(data, id);
     if (type === 'estoque') registroSalvo = saveEstoque(data, id);
     if (type === 'inspecao') registroSalvo = saveInspecao(data, id);
+    if (type === 'rnc') registroSalvo = saveRnc(data, id);
     if (type === 'usuario') { await saveUsuarioPerfil(data, id); closeModal(); render(); SubcomponentesApp.toast(id ? 'Usuário atualizado com sucesso.' : 'Perfil de usuário cadastrado com sucesso.'); return; }
     if (DB.usingSupabase() && window.StoreSubcomponentesSupabase?.salvarRegistro) {
       await window.StoreSubcomponentesSupabase.salvarRegistro(type, registroSalvo);
@@ -1695,9 +1817,20 @@ function saveInspecao(data, id) {
     qtdInspecionado: num(data.qtdInspecionado),
     qtdNc: num(data.qtdNc),
     status: text(data.status, 'Pendente'),
-    observacao: text(data.observacao, '')
+    observacao: text(data.observacao, ''),
+    linkIauditor: text(data.linkIauditor, '')
   });
   if (!id) state.db.inspecoes.push(target);
+  return target;
+}
+function saveRnc(data, id) {
+  if (!Array.isArray(state.db.rnc)) state.db.rnc = [];
+  const target = state.db.rnc.find((x) => x.id === id) || { id: uid('RNC') };
+  Object.assign(target, {
+    titulo: text(data.titulo, 'Não conformidade'),
+    conteudo: String(data.conteudo ?? '')
+  });
+  if (!id) state.db.rnc.push(target);
   return target;
 }
 function syncCompanyNames() {
@@ -1708,7 +1841,7 @@ function syncCompanyNames() {
 
 async function deleteRecord(type, id) {
   if (!canDelete()) { SubcomponentesApp.toast('Somente administradores podem excluir registros.', 'erro'); return; }
-  const labels = { empresa: 'empresa', material: 'material', estoque: 'registro de estoque', inspecao: 'inspeção' };
+  const labels = { empresa: 'empresa', material: 'material', estoque: 'registro de estoque', inspecao: 'inspeção', rnc: 'quadro de aviso' };
   if (!confirm(`Excluir este ${labels[type]}? Esta ação não pode ser desfeita.`)) return;
   try {
     if (type === 'empresa') {
@@ -1722,6 +1855,7 @@ async function deleteRecord(type, id) {
     if (type === 'material') state.db.materiais = state.db.materiais.filter((r) => r.id !== id);
     if (type === 'estoque') state.db.estoque = state.db.estoque.filter((r) => r.id !== id);
     if (type === 'inspecao') state.db.inspecoes = state.db.inspecoes.filter((r) => r.id !== id);
+    if (type === 'rnc') state.db.rnc = (state.db.rnc || []).filter((r) => r.id !== id);
     await DB.remove(type, id);
     if (isAdmin()) await DB.loadAudit();
     render();
@@ -1767,7 +1901,7 @@ function downloadCsv(type) {
   }
   if (type === 'inspecoes') {
     const csv = toCsv(state.db.inspecoes, [
-      { label: 'Data', get: (r) => r.diaInspecao }, { label: 'Semana', get: (r) => r.semana }, { label: 'Local', get: (r) => r.local }, { label: 'Subcomponente', get: (r) => r.subcomponente }, { label: 'SAP', get: (r) => r.codSap }, { label: 'Empresa', get: (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome }, { label: 'Lote', get: (r) => r.lote }, { label: 'Qtd estoque', get: (r) => r.qtdEstoque }, { label: 'Qtd amostra', get: (r) => r.qtdAmostra }, { label: 'Qtd inspecionado', get: (r) => r.qtdInspecionado }, { label: 'Qtd NC', get: (r) => r.qtdNc }, { label: 'Status', get: (r) => r.status }, { label: 'Observação', get: (r) => r.observacao }
+      { label: 'Data', get: (r) => r.diaInspecao }, { label: 'Semana', get: (r) => r.semana }, { label: 'Local', get: (r) => r.local }, { label: 'Subcomponente', get: (r) => r.subcomponente }, { label: 'SAP', get: (r) => r.codSap }, { label: 'Empresa', get: (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome }, { label: 'Lote', get: (r) => r.lote }, { label: 'Qtd estoque', get: (r) => r.qtdEstoque }, { label: 'Qtd amostra', get: (r) => r.qtdAmostra }, { label: 'Qtd inspecionado', get: (r) => r.qtdInspecionado }, { label: 'Qtd NC', get: (r) => r.qtdNc }, { label: 'Status', get: (r) => r.status }, { label: 'Observação', get: (r) => r.observacao }, { label: 'Link iAuditor', get: (r) => r.linkIauditor }
     ]);
     download(`inspecoes-subcomponentes-${todayIso()}.csv`, csv, 'text/csv;charset=utf-8');
   }

@@ -9,6 +9,7 @@ const StoreSubcomponentesSupabase = (() => {
     materiais: 'materiais_subcomponentes',
     estoque: 'estoque_subcomponentes',
     inspecoes: 'inspecoes_subcomponentes',
+    rnc: 'rnc_subcomponentes',
     auditoria: 'auditoria_alteracoes',
     usuarios: 'usuarios_app'
   };
@@ -165,6 +166,7 @@ const StoreSubcomponentesSupabase = (() => {
       qtdNc: n(r.qtd_nc),
       status: r.status || 'Pendente',
       observacao: r.observacao || '',
+      linkIauditor: r.link_iauditor || '',
       criadoEm: r.criado_em || '',
       atualizadoEm: r.atualizado_em || '',
       criadoPor: r.criado_por || '',
@@ -188,7 +190,28 @@ const StoreSubcomponentesSupabase = (() => {
       qtd_inspecionado: n(r.qtdInspecionado),
       qtd_nc: n(r.qtdNc),
       status: clean(r.status) || 'Pendente',
-      observacao: clean(r.observacao)
+      observacao: clean(r.observacao),
+      link_iauditor: clean(r.linkIauditor)
+    };
+  }
+
+  function fromRnc(r) {
+    return {
+      id: r.id,
+      titulo: r.titulo || 'Não conformidade',
+      conteudo: r.conteudo || '',
+      criadoEm: r.criado_em || '',
+      atualizadoEm: r.atualizado_em || '',
+      criadoPor: r.criado_por || '',
+      atualizadoPor: r.atualizado_por || ''
+    };
+  }
+
+  function toRnc(r) {
+    return {
+      id: r.id,
+      titulo: clean(r.titulo) || 'Não conformidade',
+      conteudo: String(r.conteudo ?? '')
     };
   }
 
@@ -252,6 +275,17 @@ const StoreSubcomponentesSupabase = (() => {
     return data || [];
   }
 
+  /* Igual a selectAll, mas não derruba o carregamento do restante da área
+     caso a tabela ainda não exista no banco (ex.: SQL da RNC não rodado). */
+  async function selectAllSafe(table, orderColumn, ascending = true) {
+    try {
+      return await selectAll(table, orderColumn, ascending);
+    } catch (error) {
+      console.warn(`Não foi possível carregar ${table} (seguindo sem ela):`, error?.message || error);
+      return [];
+    }
+  }
+
   async function carregarDb() {
     const [empresas, materiais, estoque, inspecoes] = await Promise.all([
       selectAll(TABLES.empresas, 'nome', true),
@@ -259,6 +293,7 @@ const StoreSubcomponentesSupabase = (() => {
       selectAll(TABLES.estoque, 'data', false),
       selectAll(TABLES.inspecoes, 'dia_inspecao', false)
     ]);
+    const rnc = await selectAllSafe(TABLES.rnc, 'criado_em', false);
 
     return normalizeDb({
       meta: {
@@ -270,7 +305,8 @@ const StoreSubcomponentesSupabase = (() => {
       empresas: empresas.map(fromEmpresa),
       materiais: materiais.map(fromMaterial),
       estoque: estoque.map(fromEstoque),
-      inspecoes: inspecoes.map(fromInspecao)
+      inspecoes: inspecoes.map(fromInspecao),
+      rnc: rnc.map(fromRnc)
     });
   }
 
@@ -291,6 +327,9 @@ const StoreSubcomponentesSupabase = (() => {
     await upsertMany(TABLES.materiais, normalized.materiais.map(toMaterial));
     await upsertMany(TABLES.estoque, normalized.estoque.map(toEstoque));
     await upsertMany(TABLES.inspecoes, normalized.inspecoes.map(toInspecao));
+    if (Array.isArray(normalized.rnc) && normalized.rnc.length) {
+      await upsertMany(TABLES.rnc, normalized.rnc.map(toRnc));
+    }
     return true;
   }
 
@@ -301,7 +340,8 @@ const StoreSubcomponentesSupabase = (() => {
       empresa: { table: TABLES.empresas, map: toEmpresa },
       material: { table: TABLES.materiais, map: toMaterial },
       estoque: { table: TABLES.estoque, map: toEstoque },
-      inspecao: { table: TABLES.inspecoes, map: toInspecao }
+      inspecao: { table: TABLES.inspecoes, map: toInspecao },
+      rnc: { table: TABLES.rnc, map: toRnc }
     }[type];
     if (!config || !record) throw new Error('Tipo de registro inválido para salvar.');
     const { data, error } = await db()
@@ -315,7 +355,7 @@ const StoreSubcomponentesSupabase = (() => {
 
   async function remover(type, id) {
     exigirPermissao('excluir', 'excluir registros de subcomponentes');
-    const table = { empresa: TABLES.empresas, material: TABLES.materiais, estoque: TABLES.estoque, inspecao: TABLES.inspecoes }[type];
+    const table = { empresa: TABLES.empresas, material: TABLES.materiais, estoque: TABLES.estoque, inspecao: TABLES.inspecoes, rnc: TABLES.rnc }[type];
     if (!table || !id) return true;
     const { error } = await db().from(table).delete().eq('id', id);
     if (error) throw error;

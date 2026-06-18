@@ -36,6 +36,8 @@ const App = {
       { k: 'sub-materiais', t: 'Materiais Subcomponentes', ic: ICN.producao, href: 'subcomponentes.html#materiais', group: 'subcomponentes' },
       { k: 'sub-estoque', t: 'Estoque Subcomponentes', ic: ICN.trem, href: 'subcomponentes.html#estoque', group: 'subcomponentes' },
       { k: 'sub-inspecoes', t: 'Inspeções Subcomponentes', ic: ICN.check, href: 'subcomponentes.html#inspecoes', group: 'subcomponentes' },
+      { k: 'sub-indicador-semanal', t: 'Indicador Semanal', ic: ICN.semanal, href: 'subcomponentes.html#indicador-semanal', group: 'subcomponentes' },
+      { k: 'sub-rnc', t: 'RNC', ic: ICN.alerta, href: 'subcomponentes.html#rnc', group: 'subcomponentes' },
       { k: 'especSubcomponentes', t: 'Medidas e Tolerâncias', ic: ICN.ensaios, href: 'especificacoes-subcomponentes.html', group: 'subcomponentes' },
       { k: 'sub-dados', t: 'Dados Subcomponentes', ic: ICN.config, href: 'subcomponentes.html#dados', group: 'subcomponentes', adminOnly: true },
 
