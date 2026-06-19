@@ -11,6 +11,11 @@
     .acoes-pendencias { margin-bottom: 14px; }
     #btnVerificarPendencias .ic-seta { font-size: 11px; line-height: 1; transition: transform .2s ease; }
     #btnVerificarPendencias[aria-expanded="true"] .ic-seta { transform: rotate(180deg); }
+    /* Lotes de ombreira: lista de caixas (um lote por caixa) */
+    .lotes-ombreira-grupo { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .lote-ombreira-linha { display: flex; align-items: center; gap: 8px; }
+    .lote-ombreira-linha input { flex: 1 1 auto; }
+    .lote-ombreira-linha .icone-btn { flex: 0 0 auto; }
   </style>
 </head>
 <body>
@@ -130,7 +135,11 @@
             <div class="campo"><label>Com USP</label><select id="comUsp"></select></div>
             <div class="campo"><label>USP (Lote)</label><input id="uspLote" type="text"></div>
             <div class="campo"><label>Tipo de Ombreiras</label><select id="ombreira"></select></div>
-            <div class="campo"><label>Lote Ombreiras</label><input id="loteOmbreira" type="text"></div>
+            <div class="campo full">
+              <label>Lote Ombreiras <span class="dica">(um campo por lote de ombreira usado)</span></label>
+              <div id="lotesOmbreiraWrap" class="lotes-ombreira-grupo"></div>
+              <button type="button" class="btn btn-secundario btn-sm" onclick="adicionarLoteOmbreira()">+ Adicionar lote de ombreira</button>
+            </div>
 
             <div class="form-secao">Temperatura (°C)</div>
             <div class="campo"><label>Inicial</label><input id="tempIni" type="text"></div>
@@ -204,11 +213,11 @@
   <script src="js/store.js"></script>
   <script src="js/store-supabase.js?v=20260523-3"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
-  <script src="js/comum.js?v=20260619-menu-concreto-sem-scroll-v1"></script>
+  <script src="js/comum.js?v=20260619-lotes-ombreira-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
   <script src="js/indicadores-qualidade.js?v=20260612-saude-projetos-v3"></script>
-  <script src="js/producao.js?v=20260612-lote-url-v1"></script>
+  <script src="js/producao.js?v=20260619-lotes-ombreira-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

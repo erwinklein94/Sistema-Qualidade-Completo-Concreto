@@ -116,7 +116,6 @@ function construirLinhas() {
   RT_LINHAS = RT_PRODUCAO.map((p) => {
     const projeto = p.projeto || '';
     const loteDormente = p.lote || '';
-    const loteOmbreira = p.lote_ombreira || '';
     const esperada = ombreiraEsperada(projeto);
 
     // Responsável pela inspeção do lote do dormente -> Inspeção de Pista (mesmo lote).
@@ -126,26 +125,37 @@ function construirLinhas() {
       .sort((a, b) => String(b.data_inspecao || '').localeCompare(String(a.data_inspecao || '')));
     const pista = pistas[0] || null;
 
-    // Inspeção da ombreira -> Inspeções Subcomponentes (mesmo lote da ombreira + subcomponente do projeto).
-    let insp = null;
-    let situacao = 'sem-lote';
-    if (loteOmbreira) {
-      const keyOmb = lotKey(loteOmbreira);
+    // Um lote de dormente pode ter usado mais de um lote de ombreira.
+    // Lê a coluna nova (lotes_ombreira) e, no histórico, separa o texto antigo.
+    const lotesOmbreira = (Array.isArray(p.lotes_ombreira) && p.lotes_ombreira.length)
+      ? U.parseLotesOmbreira(p.lotes_ombreira)
+      : U.parseLotesOmbreira(p.lote_ombreira);
+
+    // Para CADA lote de ombreira, cruza com as Inspeções Subcomponentes
+    // (mesmo lote da ombreira + subcomponente do projeto).
+    const ombreiras = lotesOmbreira.map((loteOmb) => {
+      const keyOmb = lotKey(loteOmb);
       const candidatos = RT_OMBREIRA
         .filter((i) => lotKey(i.lote) === keyOmb && norm(i.subcomponente).includes(esperada.codigo))
         .sort((a, b) => String(b.diaInspecao || '').localeCompare(String(a.diaInspecao || '')));
-      insp = candidatos[0] || null;
-      situacao = insp ? 'inspecionada' : 'nao-inspecionada';
-    }
-
-    const statusOmb = insp ? (insp.status || '') : '';
-    let aprovada = null; // true / false / null (pendente ou sem inspeção)
-    if (insp) {
-      const s = norm(statusOmb);
-      if (s.startsWith('APROVADO')) aprovada = true;
-      else if (s.startsWith('REPROVADO')) aprovada = false;
-    }
-    const temNc = insp ? num(insp.qtdNc) > 0 : null;
+      const insp = candidatos[0] || null;
+      const statusOmb = insp ? (insp.status || '') : '';
+      let aprovada = null; // true / false / null (pendente ou sem inspeção)
+      if (insp) {
+        const s = norm(statusOmb);
+        if (s.startsWith('APROVADO')) aprovada = true;
+        else if (s.startsWith('REPROVADO')) aprovada = false;
+      }
+      return {
+        lote: loteOmb,
+        insp,
+        situacao: insp ? 'inspecionada' : 'nao-inspecionada',
+        statusOmb,
+        aprovada,
+        temNc: insp ? num(insp.qtdNc) > 0 : null,
+        respOmbreira: insp ? (insp.responsavel || '') : '',
+      };
+    });
 
     return {
       id: p.id,
@@ -155,16 +165,11 @@ function construirLinhas() {
       loteDormente,
       statusDormente: p.status || '',
       tipoOmbreiraProd: p.tipo_ombreira || '',
-      loteOmbreira,
+      loteOmbreira: U.juntarLotesOmbreira(lotesOmbreira), // texto juntado p/ busca/exibição
       esperada,
       respDormente: pista ? (pista.responsavel || '') : '',
       pista,
-      insp,
-      situacao,
-      statusOmb,
-      aprovada,
-      temNc,
-      respOmbreira: insp ? (insp.responsavel || '') : '',
+      ombreiras, // lista: um item por lote de ombreira (vazia = sem lote)
     };
   });
 }
@@ -196,9 +201,13 @@ function linhasFiltradas() {
   return RT_LINHAS.filter((r) => {
     if (fForn && r.fornecedor !== fForn) return false;
     if (fProj && r.projeto !== fProj) return false;
-    if (fSit && r.situacao !== fSit) return false;
+    if (fSit) {
+      if (fSit === 'sem-lote') { if (r.ombreiras.length) return false; }
+      else if (!r.ombreiras.some((o) => o.situacao === fSit)) return false;
+    }
     if (q) {
-      const blob = `${r.loteDormente} ${r.loteOmbreira} ${r.fornecedor} ${r.projeto} ${r.respDormente} ${r.respOmbreira} ${r.esperada.nome} ${r.tipoOmbreiraProd}`.toLowerCase();
+      const resp = r.ombreiras.map((o) => o.respOmbreira).join(' ');
+      const blob = `${r.loteDormente} ${r.loteOmbreira} ${r.fornecedor} ${r.projeto} ${r.respDormente} ${resp} ${r.esperada.nome} ${r.tipoOmbreiraProd}`.toLowerCase();
       if (!blob.includes(q)) return false;
     }
     return true;
@@ -229,15 +238,16 @@ function render() {
   const podeEditar = (Auth.pode('criar') || Auth.pode('editar'));
   if (contador) contador.textContent = `${linhas.length} de ${RT_LINHAS.length} lote(s)`;
 
-  // KPIs
-  const inspecionadas = linhas.filter((r) => r.situacao === 'inspecionada').length;
-  const naoInspecionadas = linhas.filter((r) => r.situacao === 'nao-inspecionada').length;
-  const comNc = linhas.filter((r) => r.temNc === true).length;
+  // KPIs (contam lotes de ombreira, somando todos os lotes de cada dormente)
+  const todasOmbreiras = linhas.flatMap((r) => r.ombreiras);
+  const inspecionadas = todasOmbreiras.filter((o) => o.situacao === 'inspecionada').length;
+  const naoInspecionadas = todasOmbreiras.filter((o) => o.situacao === 'nao-inspecionada').length;
+  const comNc = todasOmbreiras.filter((o) => o.temNc === true).length;
   if (kpis) {
     kpis.innerHTML = `
       <div class="kpi escuro"><div class="rotulo">Lotes no filtro</div><div class="valor">${linhas.length}</div><div class="extra">dormentes produzidos</div></div>
-      <div class="kpi"><div class="rotulo">Ombreira inspecionada</div><div class="valor">${inspecionadas}</div><div class="extra">com inspeção encontrada</div></div>
-      <div class="kpi amarelo"><div class="rotulo">Ombreira não inspecionada</div><div class="valor">${naoInspecionadas}</div><div class="extra">lote sem inspeção</div></div>
+      <div class="kpi"><div class="rotulo">Ombreira inspecionada</div><div class="valor">${inspecionadas}</div><div class="extra">lotes de ombreira com inspeção</div></div>
+      <div class="kpi amarelo"><div class="rotulo">Ombreira não inspecionada</div><div class="valor">${naoInspecionadas}</div><div class="extra">lotes de ombreira sem inspeção</div></div>
       <div class="kpi"><div class="rotulo">Com não conformidade</div><div class="valor">${comNc}</div><div class="extra">NC na inspeção da ombreira</div></div>`;
   }
 
@@ -249,20 +259,24 @@ function render() {
   }
 
   const linhasHtml = linhas.map((r) => {
+    // Uma linha por lote de dormente; cada coluna de ombreira empilha um
+    // sub-bloco por lote de ombreira (alinhados entre as colunas).
+    const obs = r.ombreiras.length ? r.ombreiras : [null]; // null = sem lote de ombreira
+    const col = (fn) => obs.map((o) => `<div class="rt-sub">${fn(o)}</div>`).join('');
     return `<tr>
       <td>${esc(r.fornecedor || '—')}</td>
       <td>${esc(r.projeto || '—')}</td>
       <td><strong>${esc(r.loteDormente || '—')}</strong></td>
       <td>${badgeStatusDormente(r.statusDormente)}</td>
       <td>${esc(r.respDormente || '—')}</td>
-      <td><strong>${esc(r.loteOmbreira || '—')}</strong></td>
-      <td>${esc(r.esperada.tipo)} <span class="txt-mini txt-cinza">${esc(r.esperada.codigo)}</span></td>
-      <td>${badgeSituacao(r.situacao)}</td>
-      <td>${r.insp ? dataBR(r.insp.diaInspecao) : '—'}</td>
-      <td>${r.situacao === 'inspecionada' ? esc(r.respOmbreira || '—') : '—'}</td>
-      <td>${badgeAprovada(r)}</td>
-      <td>${badgeNc(r)}</td>
-      <td>${r.insp ? linkRel(r.insp.linkIauditor) : '—'}</td>
+      <td class="rt-multi">${col((o) => o ? `<strong>${esc(o.lote)}</strong>` : '—')}</td>
+      <td class="rt-multi">${col(() => `${esc(r.esperada.tipo)} <span class="txt-mini txt-cinza">${esc(r.esperada.codigo)}</span>`)}</td>
+      <td class="rt-multi">${col((o) => o ? badgeSituacao(o.situacao) : badgeSituacao('sem-lote'))}</td>
+      <td class="rt-multi">${col((o) => o && o.insp ? dataBR(o.insp.diaInspecao) : '—')}</td>
+      <td class="rt-multi">${col((o) => o && o.situacao === 'inspecionada' ? esc(o.respOmbreira || '—') : '—')}</td>
+      <td class="rt-multi">${col((o) => badgeAprovada(o))}</td>
+      <td class="rt-multi">${col((o) => badgeNc(o))}</td>
+      <td class="rt-multi">${col((o) => o && o.insp ? linkRel(o.insp.linkIauditor) : '—')}</td>
       <td><button class="icone-btn" title="Ver rastreabilidade do lote" onclick="abrirVer('${esc(r.id)}')">${ICN.olho}</button>${podeEditar ? `<button class="icone-btn" title="Editar lote de dormente" onclick="abrirEditar('${esc(r.id)}')">${ICN.edit}</button>` : ''}</td>
     </tr>`;
   }).join('');
@@ -285,15 +299,15 @@ function badgeSituacao(situacao) {
   if (situacao === 'nao-inspecionada') return badge('Não inspecionada', 'badge-amarelo');
   return badge('Sem lote de ombreira', 'badge-entregue');
 }
-function badgeAprovada(r) {
-  if (!r.insp) return '—';
-  if (r.aprovada === true) return badge('Aprovada', 'badge-ok');
-  if (r.aprovada === false) return badge('Reprovada', 'badge-reprovado');
-  return badge(r.statusOmb || 'Pendente', 'badge-amarelo');
+function badgeAprovada(o) {
+  if (!o || !o.insp) return '—';
+  if (o.aprovada === true) return badge('Aprovada', 'badge-ok');
+  if (o.aprovada === false) return badge('Reprovada', 'badge-reprovado');
+  return badge(o.statusOmb || 'Pendente', 'badge-amarelo');
 }
-function badgeNc(r) {
-  if (!r.insp) return '—';
-  return r.temNc ? badge('Com NC', 'badge-reprovado') : badge('Sem NC', 'badge-ok');
+function badgeNc(o) {
+  if (!o || !o.insp) return '—';
+  return o.temNc ? badge('Com NC', 'badge-reprovado') : badge('Sem NC', 'badge-ok');
 }
 
 /* ---- detalhe ---- */
@@ -303,9 +317,33 @@ function itemVer(rot, val) {
 function abrirVer(id) {
   const r = RT_LINHAS.find((x) => x.id === id);
   if (!r) return;
-  const i = r.insp;
   const pistaHref = r.pista && r.pista.link_relatorio ? (/^https?:\/\//i.test(r.pista.link_relatorio) ? r.pista.link_relatorio : `https://${r.pista.link_relatorio}`) : '';
-  const ombHref = i && i.linkIauditor ? (/^https?:\/\//i.test(i.linkIauditor) ? i.linkIauditor : `https://${i.linkIauditor}`) : '';
+
+  const ombreirasHtml = r.ombreiras.map((o, idx) => {
+    const i = o.insp;
+    const ombHref = i && i.linkIauditor ? (/^https?:\/\//i.test(i.linkIauditor) ? i.linkIauditor : `https://${i.linkIauditor}`) : '';
+    const titulo = r.ombreiras.length > 1 ? `Ombreira #${idx + 1} — lote ${esc(o.lote)}` : `Ombreira — lote ${esc(o.lote)}`;
+    return `
+    <div class="detalhe-secao"><strong>${titulo}</strong></div>
+    <div class="detalhe-grid">
+      ${itemVer('Lote da ombreira', o.lote)}
+      ${itemVer('Subcomponente esperado', r.esperada.nome)}
+      ${itemVer('Situação', SITUACAO_LABEL[o.situacao])}
+      ${itemVer('Inspecionada', i ? 'Sim' : 'Não')}
+      ${itemVer('Data da inspeção', i ? dataBR(i.diaInspecao) : '—')}
+      ${itemVer('Responsável pela inspeção da ombreira', i ? o.respOmbreira : '—')}
+      ${itemVer('Empresa / fábrica', i ? i.empresaNome : '—')}
+      ${itemVer('Status', i ? o.statusOmb : '—')}
+      ${itemVer('Aprovada', i ? (o.aprovada === true ? 'Sim' : (o.aprovada === false ? 'Não' : 'Pendente')) : '—')}
+      ${itemVer('Não conformidade', i ? (o.temNc ? `Sim (${num(i.qtdNc)})` : 'Não') : '—')}
+    </div>
+    ${i && i.observacao ? `<div class="detalhe-secao"><strong>Observação da inspeção</strong><p style="white-space:pre-wrap">${esc(i.observacao)}</p></div>` : ''}
+    <div class="form-acoes" style="justify-content:flex-start">
+      ${ombHref ? `<a class="btn btn-primario" href="${esc(ombHref)}" target="_blank" rel="noopener">${ICN.olho}Abrir relatório da ombreira (${esc(o.lote)})</a>` : (i ? '<span class="badge badge-amarelo">Inspeção sem link de relatório</span>' : '<span class="badge badge-amarelo">Ombreira ainda não inspecionada</span>')}
+    </div>`;
+  }).join('');
+  const ombreirasBloco = r.ombreiras.length ? ombreirasHtml
+    : `<div class="detalhe-secao"><strong>Ombreira</strong></div><div class="form-acoes" style="justify-content:flex-start"><span class="badge badge-entregue">Sem lote de ombreira na produção</span></div>`;
 
   document.getElementById('verTitulo').textContent = `Rastreabilidade — lote ${r.loteDormente || '—'}`;
   document.getElementById('verCorpo').innerHTML = `
@@ -316,28 +354,13 @@ function abrirVer(id) {
       ${itemVer('Lote do dormente', r.loteDormente)}
       ${itemVer('Status do lote', statusCanon(r.statusDormente))}
       ${itemVer('Tipo de ombreira (produção)', r.tipoOmbreiraProd)}
+      ${itemVer('Lotes de ombreira', r.loteOmbreira)}
       ${itemVer('Responsável pela inspeção do dormente', r.respDormente)}
       ${itemVer('Data da inspeção de pista', r.pista ? dataBR(r.pista.data_inspecao) : '—')}
     </div>
     ${pistaHref ? `<div class="form-acoes" style="justify-content:flex-start"><a class="btn btn-secundario" href="${esc(pistaHref)}" target="_blank" rel="noopener">${ICN.olho}Relatório da inspeção de pista</a></div>` : ''}
 
-    <div class="detalhe-secao"><strong>Ombreira</strong></div>
-    <div class="detalhe-grid">
-      ${itemVer('Lote da ombreira', r.loteOmbreira)}
-      ${itemVer('Subcomponente esperado', r.esperada.nome)}
-      ${itemVer('Situação', SITUACAO_LABEL[r.situacao])}
-      ${itemVer('Inspecionada', r.situacao === 'sem-lote' ? '—' : (i ? 'Sim' : 'Não'))}
-      ${itemVer('Data da inspeção', i ? dataBR(i.diaInspecao) : '—')}
-      ${itemVer('Responsável pela inspeção da ombreira', i ? r.respOmbreira : '—')}
-      ${itemVer('Empresa / fábrica', i ? i.empresaNome : '—')}
-      ${itemVer('Status', i ? r.statusOmb : '—')}
-      ${itemVer('Aprovada', i ? (r.aprovada === true ? 'Sim' : (r.aprovada === false ? 'Não' : 'Pendente')) : '—')}
-      ${itemVer('Não conformidade', i ? (r.temNc ? `Sim (${num(i.qtdNc)})` : 'Não') : '—')}
-    </div>
-    ${i && i.observacao ? `<div class="detalhe-secao"><strong>Observação da inspeção</strong><p style="white-space:pre-wrap">${esc(i.observacao)}</p></div>` : ''}
-    <div class="form-acoes">
-      ${ombHref ? `<a class="btn btn-primario" href="${esc(ombHref)}" target="_blank" rel="noopener">${ICN.olho}Abrir relatório da ombreira</a>` : (r.situacao === 'sem-lote' ? '<span class="badge badge-entregue">Sem lote de ombreira na produção</span>' : (i ? '<span class="badge badge-amarelo">Inspeção sem link de relatório</span>' : '<span class="badge badge-amarelo">Ombreira ainda não inspecionada</span>'))}
-    </div>`;
+    ${ombreirasBloco}`;
   document.getElementById('modalVer').classList.add('aberto');
 }
 function fecharVer() { document.getElementById('modalVer').classList.remove('aberto'); }
@@ -345,6 +368,37 @@ function fecharVer() { document.getElementById('modalVer').classList.remove('abe
 /* ---- edição do lote de dormente (grava em producao_lotes) ---- */
 function opcoes(lista, selecionado) {
   return (lista || []).map((o) => `<option value="${esc(o)}" ${o === selecionado ? 'selected' : ''}>${esc(o)}</option>`).join('');
+}
+
+/* ---- Lotes de ombreira no modal de edição (várias caixas) ---- */
+function linhaLoteOmbreiraEdit(valor = '') {
+  return `<div class="lote-ombreira-linha">
+    <input type="text" class="ed-lote-ombreira-input" value="${esc(valor)}" placeholder="Lote da ombreira">
+    <button type="button" class="icone-btn" title="Remover este lote de ombreira" onclick="removerLoteOmbreiraEdit(this)">${ICN.del}</button>
+  </div>`;
+}
+function preencherLotesOmbreiraEdit(valor) {
+  const wrap = document.getElementById('edLotesOmbreiraWrap');
+  if (!wrap) return;
+  const lotes = U.parseLotesOmbreira(valor);
+  const linhas = lotes.length >= 2 ? lotes : [...lotes, ...Array(2 - lotes.length).fill('')];
+  wrap.innerHTML = linhas.map(linhaLoteOmbreiraEdit).join('');
+}
+function adicionarLoteOmbreiraEdit() {
+  const wrap = document.getElementById('edLotesOmbreiraWrap');
+  if (wrap) wrap.insertAdjacentHTML('beforeend', linhaLoteOmbreiraEdit(''));
+}
+function removerLoteOmbreiraEdit(btn) {
+  const wrap = document.getElementById('edLotesOmbreiraWrap');
+  if (!wrap) return;
+  const linhas = wrap.querySelectorAll('.lote-ombreira-linha');
+  if (linhas.length <= 2) { const inp = btn.closest('.lote-ombreira-linha')?.querySelector('input'); if (inp) inp.value = ''; return; }
+  btn.closest('.lote-ombreira-linha')?.remove();
+}
+function coletarLotesOmbreiraEdit() {
+  const wrap = document.getElementById('edLotesOmbreiraWrap');
+  if (!wrap) return [];
+  return [...wrap.querySelectorAll('.ed-lote-ombreira-input')].map((i) => i.value.trim()).filter(Boolean);
 }
 function abrirEditar(id) {
   if (!(Auth.pode('criar') || Auth.pode('editar'))) { App.toast(Auth.mensagemSemPermissao('editar registros'), 'aviso'); return; }
@@ -363,19 +417,25 @@ function abrirEditar(id) {
 
       <div class="form-secao">Ombreira</div>
       <div class="campo"><label>Tipo de ombreira</label><select id="edTipoOmbreira"><option value="">Selecione...</option>${opcoes(CFG.listas.ombreiras, r.tipoOmbreiraProd)}</select></div>
-      <div class="campo"><label>Lote da ombreira</label><input id="edLoteOmbreira" type="text" value="${esc(r.loteOmbreira)}"></div>
+      <div class="campo full">
+        <label>Lotes da ombreira <span class="txt-mini txt-cinza">(um campo por lote de ombreira usado)</span></label>
+        <div id="edLotesOmbreiraWrap" class="lotes-ombreira-grupo"></div>
+        <button type="button" class="btn btn-secundario btn-sm" onclick="adicionarLoteOmbreiraEdit()">+ Adicionar lote de ombreira</button>
+      </div>
       <div class="campo full"><label class="txt-mini txt-cinza">A inspeção da ombreira (data, relatório, responsável, aprovação e NC) é editada na tela Inspeções Subcomponentes.</label></div>
     </div>
     <div class="form-acoes">
       <button type="button" class="btn btn-secundario" onclick="fecharEditar()">Cancelar</button>
       <button type="button" class="btn btn-primario" onclick="salvarEditar()">Salvar</button>
     </div>`;
+  preencherLotesOmbreiraEdit(r.ombreiras.map((o) => o.lote));
   document.getElementById('modalEditar').classList.add('aberto');
 }
 async function salvarEditar() {
   if (!(Auth.pode('criar') || Auth.pode('editar'))) { App.toast(Auth.mensagemSemPermissao('salvar registros'), 'aviso'); return; }
   const id = RT_EDIT_ID;
   if (!id) return;
+  const lotesOmbreira = coletarLotesOmbreiraEdit();
   const payload = {
     id,
     fornecedor: gv('edFornecedor') || null,
@@ -383,7 +443,8 @@ async function salvarEditar() {
     lote: gv('edLote') || null,
     status: gv('edStatus') || null,
     tipo_ombreira: gv('edTipoOmbreira') || null,
-    lote_ombreira: gv('edLoteOmbreira') || null,
+    lote_ombreira: U.juntarLotesOmbreira(lotesOmbreira) || null,
+    lotes_ombreira: lotesOmbreira,
   };
   try {
     await StoreSupabase.salvarProducao(payload);
@@ -403,3 +464,5 @@ window.fecharVer = fecharVer;
 window.abrirEditar = abrirEditar;
 window.salvarEditar = salvarEditar;
 window.fecharEditar = fecharEditar;
+window.adicionarLoteOmbreiraEdit = adicionarLoteOmbreiraEdit;
+window.removerLoteOmbreiraEdit = removerLoteOmbreiraEdit;

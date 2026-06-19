@@ -132,6 +132,38 @@ function aplicarLoteDaUrl() {
 
 function sel(id, arr, ph) { document.getElementById(id).innerHTML = U.opcoes(arr, '', ph); }
 
+/* ---- Lotes de ombreira (várias caixas, uma por lote usado) ---- */
+function linhaLoteOmbreira(valor = '') {
+  return `<div class="lote-ombreira-linha">
+    <input type="text" class="lote-ombreira-input" value="${U.esc(valor)}" placeholder="Lote da ombreira">
+    <button type="button" class="icone-btn" title="Remover este lote de ombreira" onclick="removerLoteOmbreira(this)">${ICN.del}</button>
+  </div>`;
+}
+// Sempre mantém no mínimo 2 caixas. Aceita array (coluna nova) ou texto (legado).
+function preencherLotesOmbreira(valor) {
+  const wrap = document.getElementById('lotesOmbreiraWrap');
+  if (!wrap) return;
+  const lotes = U.parseLotesOmbreira(valor);
+  const linhas = lotes.length >= 2 ? lotes : [...lotes, ...Array(2 - lotes.length).fill('')];
+  wrap.innerHTML = linhas.map(linhaLoteOmbreira).join('');
+}
+function adicionarLoteOmbreira() {
+  const wrap = document.getElementById('lotesOmbreiraWrap');
+  if (wrap) wrap.insertAdjacentHTML('beforeend', linhaLoteOmbreira(''));
+}
+function removerLoteOmbreira(btn) {
+  const wrap = document.getElementById('lotesOmbreiraWrap');
+  if (!wrap) return;
+  const linhas = wrap.querySelectorAll('.lote-ombreira-linha');
+  if (linhas.length <= 2) { const inp = btn.closest('.lote-ombreira-linha')?.querySelector('input'); if (inp) inp.value = ''; return; }
+  btn.closest('.lote-ombreira-linha')?.remove();
+}
+function coletarLotesOmbreira() {
+  const wrap = document.getElementById('lotesOmbreiraWrap');
+  if (!wrap) return [];
+  return [...wrap.querySelectorAll('.lote-ombreira-input')].map(i => i.value.trim()).filter(Boolean);
+}
+
 async function carregarPedidosProducao() {
   try {
     if (!StoreSupabase.listarPedidosDormentes) return;
@@ -261,6 +293,8 @@ function registroDoFormulario() {
     const el = document.getElementById(c);
     if (el) reg[c] = el.value;
   });
+  reg.lotesOmbreira = coletarLotesOmbreira();
+  reg.loteOmbreira = U.juntarLotesOmbreira(reg.lotesOmbreira);
   return reg;
 }
 
@@ -544,6 +578,7 @@ function abrirNovo() {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
   document.getElementById('form').reset();
   document.getElementById('id').value = '';
+  preencherLotesOmbreira([]);
   aplicarStatusAutomaticoFormulario();
   document.getElementById('modalTitulo').textContent = 'Novo lançamento de produção';
   document.getElementById('modal').classList.add('aberto');
@@ -559,6 +594,7 @@ function editar(id) {
   if (!r) return;
   document.getElementById('id').value = r.id;
   CAMPOS.forEach(c => { const el = document.getElementById(c); if (el) el.value = r[c] != null ? r[c] : ''; });
+  preencherLotesOmbreira((r.lotesOmbreira && r.lotesOmbreira.length) ? r.lotesOmbreira : r.loteOmbreira);
   const statusCalculado = statusAutomaticoDoLote(r, ensaiosDoLoteProducao(r));
   if (statusCalculado) document.getElementById('status').value = statusCalculado;
   document.getElementById('modalTitulo').textContent = `Editar lote ${r.lote}`;
@@ -713,6 +749,9 @@ function mapPedidoDormenteDoBancoSimples(r) {
 }
 
 function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
+  const lotesOmbreira = (Array.isArray(r.lotes_ombreira) && r.lotes_ombreira.length)
+    ? U.parseLotesOmbreira(r.lotes_ombreira)
+    : U.parseLotesOmbreira(r.lote_ombreira);
   const reg = {
     id: r.id,
     fornecedor: r.fornecedor || '',
@@ -730,7 +769,8 @@ function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
     comUsp: boolParaSimNao(r.com_usp),
     uspLote: r.usp_lote || '',
     ombreira: r.tipo_ombreira || '',
-    loteOmbreira: r.lote_ombreira || '',
+    loteOmbreira: U.juntarLotesOmbreira(lotesOmbreira) || (r.lote_ombreira || ''),
+    lotesOmbreira,
     tempIni: valorBanco(r.temp_inicial),
     tempMeio: valorBanco(r.temp_meio),
     tempFim: valorBanco(r.temp_final),
@@ -782,6 +822,9 @@ function mapEnsaioLiberacaoDoBancoSimples(r) {
 function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
   const info = U.semanaOperacionalInfo(reg.dataFabricacao);
   const bitola = U.bitolaDe({ bitola: reg.bitola, tipo: reg.tipo, projeto: reg.projeto });
+  const lotesOmbreira = Array.isArray(reg.lotesOmbreira)
+    ? reg.lotesOmbreira.map(v => String(v == null ? '' : v).trim()).filter(Boolean)
+    : U.parseLotesOmbreira(reg.loteOmbreira);
   const base = {
     fornecedor: textoOuNull(reg.fornecedor),
     pista: textoOuNull(reg.pista),
@@ -797,7 +840,8 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
     com_usp: simNaoParaBool(reg.comUsp),
     usp_lote: textoOuNull(reg.uspLote),
     tipo_ombreira: textoOuNull(reg.ombreira),
-    lote_ombreira: textoOuNull(reg.loteOmbreira),
+    lote_ombreira: textoOuNull(U.juntarLotesOmbreira(lotesOmbreira) || reg.loteOmbreira),
+    lotes_ombreira: lotesOmbreira,
     serie: textoOuNull(reg.serie),
     iauditor: textoOuNull(reg.iauditor),
     dorm_ensaiados: inteiroOuZero(reg.ensaiados),

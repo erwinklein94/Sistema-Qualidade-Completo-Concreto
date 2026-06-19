@@ -6,6 +6,18 @@
   <title>Rastreabilidade · Controle de Dormentes Rumo</title>
   <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260619-subir-pagina-v1">
+  <style>
+    /* Uma linha por lote de dormente; cada coluna de ombreira empilha um
+       sub-bloco por lote de ombreira, alinhados entre as colunas. */
+    .tabela td.rt-multi { vertical-align: top; padding-top: 0; padding-bottom: 0; }
+    .rt-sub { padding: 8px 0; display: flex; align-items: center; min-height: 38px; }
+    .rt-multi .rt-sub + .rt-sub { border-top: 1px dashed var(--linha, #e3e6ea); }
+    /* Caixas de lote de ombreira (modal de edição) */
+    .lotes-ombreira-grupo { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .lote-ombreira-linha { display: flex; align-items: center; gap: 8px; }
+    .lote-ombreira-linha input { flex: 1 1 auto; }
+    .lote-ombreira-linha .icone-btn { flex: 0 0 auto; }
+  </style>
 </head>
 <body>
   <div class="app" id="app">
@@ -74,10 +86,10 @@
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/store-supabase.js?v=20260609-inspecao-pista"></script>
-  <script src="js/comum.js?v=20260619-menu-concreto-sem-scroll-v1"></script>
+  <script src="js/comum.js?v=20260619-lotes-ombreira-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/store-subcomponentes-supabase.js?v=20260619-responsavel-inspecao-v1"></script>
-  <script src="js/rastreabilidade.js?v=20260619-rastreabilidade-edit-v1"></script>
+  <script src="js/rastreabilidade.js?v=20260619-lotes-ombreira-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

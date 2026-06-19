@@ -394,6 +394,28 @@ const U = {
 
   esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); },
 
+  // Lotes de ombreira: um lote de dormente pode ter usado mais de um lote de
+  // ombreira. No histórico esses lotes foram digitados num campo só, separados
+  // por "/", espaço, vírgula ou a palavra "e" (ex.: "M222 e N999", "2854/2855",
+  // "3000, 3001"). Como os lotes de ombreira são códigos curtos sem "/" nem
+  // espaço internos, esses separadores nunca quebram um lote legítimo.
+  // Aceita tanto um array (coluna nova lotes_ombreira) quanto texto (legado).
+  parseLotesOmbreira(valor) {
+    if (Array.isArray(valor)) {
+      return valor.map(v => String(v == null ? '' : v).trim()).filter(Boolean);
+    }
+    return String(valor == null ? '' : valor)
+      .split(/[\s,;/+&]+/)
+      .map(s => s.trim())
+      .filter(s => s && !/^e$/i.test(s));
+  },
+  // Junta a lista de lotes de ombreira num texto legível (mantém o campo antigo
+  // lote_ombreira preenchido para cards, exportações e telas que ainda o leem).
+  juntarLotesOmbreira(lista) {
+    return (Array.isArray(lista) ? lista.map(v => String(v == null ? '' : v).trim()) : this.parseLotesOmbreira(lista))
+      .filter(Boolean).join(', ');
+  },
+
   // Semana operacional usada pela área: quinta-feira até quarta-feira.
   // A numeração segue a planilha da especialista: a semana é identificada
   // pela quinta-feira de fechamento/referência. Ex.: Semana 21/2026 =
