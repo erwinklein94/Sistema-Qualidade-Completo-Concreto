@@ -140,8 +140,10 @@ const App = {
     if (painel && !jaAberto) {
       this.posicionarDropdownMobile(painel);
       painel.classList.add('aberto');
+      document.body.classList.add('menu-dropdown-aberto');
       const botao = painel.previousElementSibling;
       if (botao) botao.setAttribute('aria-expanded', 'true');
+      requestAnimationFrame(() => this.ajustarEspacoDropdown(painel));
     }
   },
 
@@ -151,18 +153,28 @@ const App = {
     if (!window.matchMedia || !window.matchMedia('(max-width: 820px)').matches) return;
 
     const topo = document.querySelector('.topo');
-    const rect = topo ? topo.getBoundingClientRect() : null;
     const margem = 10;
-    const top = Math.max(margem, Math.round((rect?.bottom || 88) + 8));
+    const top = Math.max(margem, Math.round((topo?.offsetHeight || 88) + 8));
 
-    painel.style.position = 'fixed';
+    painel.style.position = 'absolute';
     painel.style.left = `${margem}px`;
     painel.style.right = `${margem}px`;
     painel.style.top = `${top}px`;
     painel.style.width = 'auto';
     painel.style.minWidth = '0';
     painel.style.maxWidth = 'none';
-    painel.style.maxHeight = `calc(100vh - ${top + margem}px)`;
+    painel.style.maxHeight = 'none';
+    painel.style.overflow = 'visible';
+  },
+
+  ajustarEspacoDropdown(painel) {
+    document.documentElement.style.setProperty('--menu-dropdown-extra-space', '0px');
+    if (!painel || !painel.classList.contains('aberto')) return;
+
+    const margem = 24;
+    const rect = painel.getBoundingClientRect();
+    const extra = Math.max(0, Math.ceil(rect.bottom - window.innerHeight + margem));
+    document.documentElement.style.setProperty('--menu-dropdown-extra-space', `${extra}px`);
   },
 
   fecharDropdowns() {
@@ -172,6 +184,8 @@ const App = {
       const botao = p.previousElementSibling;
       if (botao) botao.setAttribute('aria-expanded', 'false');
     });
+    document.body.classList.remove('menu-dropdown-aberto');
+    document.documentElement.style.removeProperty('--menu-dropdown-extra-space');
   },
 
   atualizarMenuPorPermissoes() {

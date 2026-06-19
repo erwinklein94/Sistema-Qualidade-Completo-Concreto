@@ -6549,10 +6549,23 @@ body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); borde
   flex-direction: column;
   gap: 2px;
   z-index: 60;
-  max-height: min(70vh, 520px);
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
 }
 .menu-dd-painel.aberto { display: flex; }
+
+/* Menu aberto sem rolagem interna: a página passa a rolar quando necessário. */
+body.menu-dropdown-aberto {
+  min-height: calc(100vh + var(--menu-dropdown-extra-space, 0px));
+}
+body.menu-dropdown-aberto .conteudo {
+  padding-bottom: var(--menu-dropdown-extra-space, 0px);
+}
+body.menu-dropdown-aberto .topo {
+  position: relative;
+  z-index: 120;
+  overflow: visible !important;
+}
 
 .menu-dd-link {
   display: flex;
@@ -6714,6 +6727,8 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
     border-radius: 18px !important;
     padding: 10px !important;
     max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
     box-shadow: 0 18px 50px rgba(0, 38, 77, .28) !important;
   }
 

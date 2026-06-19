@@ -2380,8 +2380,15 @@ body {
    ===================================================================== */
 .rnc-quadros {
   grid-template-columns: repeat(2, minmax(320px, 460px));
-  justify-content: start;
+  justify-content: center;
   align-items: stretch;
+}
+.rnc-dormentes-page .rnc-quadros {
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
 }
 .rnc-quadro {
   display: flex;
