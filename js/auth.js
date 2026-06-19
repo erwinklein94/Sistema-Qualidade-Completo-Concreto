@@ -87,8 +87,7 @@ var Auth = (() => {
   }
 
   function avisoChave() {
-    if (!chavePodeEstarIncompleta()) return '';
-    return 'A Publishable key parece curta. Se o login falhar com erro de API key, copie novamente pelo botão Copy do Supabase, não pelo texto visível na tela.';
+    return '';
   }
 
 
