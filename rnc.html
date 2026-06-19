@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="RNC de dormentes de concreto integrada ao Supabase." />
+  <title>RNC · Controle de Dormentes Rumo</title>
+  <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png" />
+  <link rel="stylesheet" href="css/subcomponentes-base.css?v=20260618-rnc-layout-v4" />
+  <link rel="stylesheet" href="css/style.css?v=20260619-rnc-dormentes-v1" />
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <section class="pagina rnc-dormentes-page" id="rncPage">
+        <div class="vazio">
+          <div class="loader"></div>
+          <h3>Carregando RNC</h3>
+          <p>Preparando quadros de não conformidade dos dormentes de concreto.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+  <div class="modal-overlay" id="rncModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-cab">
+        <h2 id="rncModalTitulo">Novo quadro de aviso</h2>
+        <button class="fechar-modal" type="button" onclick="fecharRnc()" aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-corpo">
+        <form id="rncForm" onsubmit="salvarRnc(event)">
+          <div id="rncFormCorpo"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/config.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/store.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/store-supabase.js?v=20260619-rnc-dormentes-v1"></script>
+  <script src="js/exportacoes.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/comum.js?v=20260619-rnc-dormentes-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/rnc.js?v=20260619-rnc-dormentes-v1"></script>
+</body>
+</html>

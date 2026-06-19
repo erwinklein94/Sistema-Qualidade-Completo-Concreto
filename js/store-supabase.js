@@ -456,6 +456,55 @@ const StoreSupabase = (() => {
     return true;
   }
 
+
+  /* ---------------------------------------------------------------------
+     RNC — dormentes de concreto.
+     Quadro de avisos independente da RNC de subcomponentes.
+     --------------------------------------------------------------------- */
+  async function listarRncDormentes(filtros = {}) {
+    let q = db()
+      .from('rnc_dormentes')
+      .select('*')
+      .order('criado_em', { ascending: false, nullsFirst: false })
+      .limit(filtros.limite || 10000);
+
+    if (filtros.id) q = q.eq('id', filtros.id);
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function salvarRncDormente(registro) {
+    exigirAdmin(registro?.id ? 'editar a RNC de dormentes' : 'criar RNC de dormentes');
+    const user = await usuarioAtual();
+    const payload = {
+      titulo: String(registro?.titulo || 'Não conformidade').trim() || 'Não conformidade',
+      conteudo: String(registro?.conteudo || ''),
+      atualizado_por: user?.id || null,
+    };
+    const id = registro?.id;
+
+    let query;
+    if (id) {
+      query = db().from('rnc_dormentes').update(payload).eq('id', id);
+    } else {
+      payload.criado_por = user?.id || null;
+      query = db().from('rnc_dormentes').insert(payload);
+    }
+
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function removerRncDormente(id) {
+    exigirAdmin('excluir a RNC de dormentes');
+    const { error } = await db().from('rnc_dormentes').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
   async function listarConfiguracoes(tipoLista = '') {
     let q = db().from('listas_configuracao').select('*').eq('ativo', true).order('tipo_lista').order('ordem');
     if (tipoLista) q = q.eq('tipo_lista', tipoLista);
@@ -718,6 +767,9 @@ const StoreSupabase = (() => {
     listarInspecoesPista,
     salvarInspecaoPista,
     removerInspecaoPista,
+    listarRncDormentes,
+    salvarRncDormente,
+    removerRncDormente,
     obterAvisoDashboard,
     salvarAvisoDashboard,
     obterConfiguracaoSistema,

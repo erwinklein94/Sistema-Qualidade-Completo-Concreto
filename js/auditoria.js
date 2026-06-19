@@ -15,6 +15,7 @@ const AUDITORIA_TABELA_META = {
   pedidos_dormentes: { rotulo: 'Pedidos', classe: 'auditoria-area-producao' },
   reprovados: { rotulo: 'Reprovados', classe: 'auditoria-area-reprovados' },
   ensaios_liberacao: { rotulo: 'Ensaios de Liberação', classe: 'auditoria-area-ensaios' },
+  rnc_dormentes: { rotulo: 'Concreto · RNC', classe: 'auditoria-area-reprovados' },
   empresas_subcomponentes: { rotulo: 'Subcomponentes · Empresas', classe: 'auditoria-area-subcomponentes' },
   materiais_subcomponentes: { rotulo: 'Subcomponentes · Materiais', classe: 'auditoria-area-subcomponentes' },
   estoque_subcomponentes: { rotulo: 'Subcomponentes · Estoque', classe: 'auditoria-area-subcomponentes' },

@@ -24,6 +24,7 @@ const App = {
       { k: 'inspecaoConcretagem', t: 'Inspeção de Concretagem', ic: ICN.ensaios, href: 'inspecao-concretagem.html', group: 'concreto' },
       { k: 'inspecaoPista', t: 'Inspeção de Pista', ic: ICN.ensaios, href: 'inspecao-pista.html', group: 'concreto' },
       { k: 'rastreabilidade', t: 'Rastreabilidade', ic: ICN.trem, href: 'rastreabilidade.html', group: 'concreto' },
+      { k: 'rncDormentes', t: 'RNC', ic: ICN.alerta, href: 'rnc.html', group: 'concreto' },
       { k: 'especDormentes', t: 'Especificações e Limites', ic: ICN.ensaios, href: 'especificacoes-dormentes.html', group: 'concreto' },
 
       {
