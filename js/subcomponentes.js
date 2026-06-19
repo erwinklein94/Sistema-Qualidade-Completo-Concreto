@@ -607,7 +607,8 @@ function normalizeDb(input) {
     qtdNc: num(r.qtdNc),
     status: text(r.status, 'Pendente'),
     observacao: text(r.observacao || r.obs, ''),
-    linkIauditor: text(r.linkIauditor || r.link_iauditor, '')
+    linkIauditor: text(r.linkIauditor || r.link_iauditor, ''),
+    responsavel: text(r.responsavel, '')
   })).filter((r) => r.subcomponente);
 
   if (input && Array.isArray(input.rnc)) db.rnc = input.rnc.map((r) => ({
@@ -1117,7 +1118,7 @@ function renderInspecoes() {
       (!f.empresa || empresa === f.empresa) &&
       (!f.status || r.status === f.status) &&
       (!f.semana || r.semana === f.semana) &&
-      matches(`${r.subcomponente} ${r.lote} ${empresa} ${r.codSap} ${r.status} ${r.local} ${r.observacao}`, f.search);
+      matches(`${r.subcomponente} ${r.lote} ${empresa} ${r.codSap} ${r.status} ${r.local} ${r.observacao} ${r.responsavel}`, f.search);
   }).sort((a, b) => (b.diaInspecao || '').localeCompare(a.diaInspecao || ''));
   const ins = records.reduce((s, r) => s + num(r.qtdInspecionado), 0);
   const nc = records.reduce((s, r) => s + num(r.qtdNc), 0);
@@ -1150,9 +1151,9 @@ function linkRelatorio(url) {
 }
 function inspecaoTable(records) {
   if (!records.length) return empty('Nenhuma inspeção encontrada', 'Registre uma nova inspeção ou ajuste os filtros.');
-  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data</th><th>Semana</th><th>Local</th><th>Subcomponente</th><th>SAP</th><th>Empresa</th><th>Lote</th><th class="right">Qtd estoque</th><th class="right">Amostra</th><th class="right">Inspecionado</th><th class="right">NC</th><th>Status</th><th>Relatório</th>${actionHeader()}</tr></thead><tbody>${records.slice(0, 500).map((r) => {
+  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data</th><th>Semana</th><th>Local</th><th>Subcomponente</th><th>SAP</th><th>Empresa</th><th>Lote</th><th class="right">Qtd estoque</th><th class="right">Amostra</th><th class="right">Inspecionado</th><th class="right">NC</th><th>Status</th><th>Responsável</th><th>Relatório</th>${actionHeader()}</tr></thead><tbody>${records.slice(0, 500).map((r) => {
     const empresa = empresaNomeById(state.db, r.empresaId) || r.empresaNome;
-    return `<tr><td>${dataBR(r.diaInspecao)}</td><td>${esc(r.semana)}</td><td>${esc(r.local)}</td><td><strong>${esc(r.subcomponente)}</strong></td><td>${esc(r.codSap)}</td><td>${esc(empresa)}</td><td>${esc(r.lote)}</td><td class="right">${fmt(r.qtdEstoque)}</td><td class="right">${fmt(r.qtdAmostra)}</td><td class="right"><strong>${fmt(r.qtdInspecionado)}</strong></td><td class="right"><strong>${fmt(r.qtdNc)}</strong></td><td>${badge(r.status)}</td><td>${linkRelatorio(r.linkIauditor)}</td>${actionCell('inspecao', r.id)}</tr>`;
+    return `<tr><td>${dataBR(r.diaInspecao)}</td><td>${esc(r.semana)}</td><td>${esc(r.local)}</td><td><strong>${esc(r.subcomponente)}</strong></td><td>${esc(r.codSap)}</td><td>${esc(empresa)}</td><td>${esc(r.lote)}</td><td class="right">${fmt(r.qtdEstoque)}</td><td class="right">${fmt(r.qtdAmostra)}</td><td class="right"><strong>${fmt(r.qtdInspecionado)}</strong></td><td class="right"><strong>${fmt(r.qtdNc)}</strong></td><td>${badge(r.status)}</td><td>${esc(r.responsavel)}</td><td>${linkRelatorio(r.linkIauditor)}</td>${actionCell('inspecao', r.id)}</tr>`;
   }).join('')}</tbody></table></div>`;
 }
 
@@ -1674,7 +1675,7 @@ function estoqueForm(id) {
   </div>`;
 }
 function inspecaoForm(id) {
-  const r = state.db.inspecoes.find((e) => e.id === id) || { diaInspecao: todayIso(), semana: isoWeek(todayIso()), local: '', subcomponente: '', codSap: '', empresaId: '', empresaNome: '', lote: '', qtdEstoque: '', qtdAmostra: '', qtdInspecionado: '', qtdNc: 0, status: 'Aprovado', observacao: '' };
+  const r = state.db.inspecoes.find((e) => e.id === id) || { diaInspecao: todayIso(), semana: isoWeek(todayIso()), local: '', subcomponente: '', codSap: '', empresaId: '', empresaNome: '', lote: '', qtdEstoque: '', qtdAmostra: '', qtdInspecionado: '', qtdNc: 0, status: 'Aprovado', observacao: '', responsavel: '' };
   const empresa = empresaNomeById(state.db, r.empresaId) || r.empresaNome;
   return `${datalistEmpresas()}${datalistMateriais()}<div class="form-grid">
     ${field('Dia da inspeção', 'diaInspecao', r.diaInspecao, 'date')}
@@ -1689,6 +1690,7 @@ function inspecaoForm(id) {
     ${field('QTD Inspecionado', 'qtdInspecionado', r.qtdInspecionado, 'number', 'min="0" step="1"')}
     ${field('QTD NC', 'qtdNc', r.qtdNc, 'number', 'min="0" step="1"')}
     ${selectField('Status', 'status', STATUS_INSPECAO, r.status)}
+    ${field('Responsável pela inspeção', 'responsavel', r.responsavel, 'text', 'placeholder="Fiscal que realizou a inspeção"')}
     ${textareaField('Observação', 'observacao', r.observacao)}
     <div class="campo full"><label>Link do relatório (iAuditor) <span style="font-weight:500;color:var(--cinza-texto)">— opcional</span></label><input type="url" name="linkIauditor" value="${esc(r.linkIauditor)}" placeholder="https://..."></div>
   </div>`;
@@ -1888,7 +1890,8 @@ function saveInspecao(data, id) {
     qtdNc: num(data.qtdNc),
     status: text(data.status, 'Pendente'),
     observacao: text(data.observacao, ''),
-    linkIauditor: text(data.linkIauditor, '')
+    linkIauditor: text(data.linkIauditor, ''),
+    responsavel: text(data.responsavel, '')
   });
   if (!id) state.db.inspecoes.push(target);
   return target;
@@ -1971,7 +1974,7 @@ function downloadCsv(type) {
   }
   if (type === 'inspecoes') {
     const csv = toCsv(state.db.inspecoes, [
-      { label: 'Data', get: (r) => r.diaInspecao }, { label: 'Semana', get: (r) => r.semana }, { label: 'Local', get: (r) => r.local }, { label: 'Subcomponente', get: (r) => r.subcomponente }, { label: 'SAP', get: (r) => r.codSap }, { label: 'Empresa', get: (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome }, { label: 'Lote', get: (r) => r.lote }, { label: 'Qtd estoque', get: (r) => r.qtdEstoque }, { label: 'Qtd amostra', get: (r) => r.qtdAmostra }, { label: 'Qtd inspecionado', get: (r) => r.qtdInspecionado }, { label: 'Qtd NC', get: (r) => r.qtdNc }, { label: 'Status', get: (r) => r.status }, { label: 'Observação', get: (r) => r.observacao }, { label: 'Link iAuditor', get: (r) => r.linkIauditor }
+      { label: 'Data', get: (r) => r.diaInspecao }, { label: 'Semana', get: (r) => r.semana }, { label: 'Local', get: (r) => r.local }, { label: 'Subcomponente', get: (r) => r.subcomponente }, { label: 'SAP', get: (r) => r.codSap }, { label: 'Empresa', get: (r) => empresaNomeById(state.db, r.empresaId) || r.empresaNome }, { label: 'Lote', get: (r) => r.lote }, { label: 'Qtd estoque', get: (r) => r.qtdEstoque }, { label: 'Qtd amostra', get: (r) => r.qtdAmostra }, { label: 'Qtd inspecionado', get: (r) => r.qtdInspecionado }, { label: 'Qtd NC', get: (r) => r.qtdNc }, { label: 'Status', get: (r) => r.status }, { label: 'Responsável', get: (r) => r.responsavel }, { label: 'Observação', get: (r) => r.observacao }, { label: 'Link iAuditor', get: (r) => r.linkIauditor }
     ]);
     download(`inspecoes-subcomponentes-${todayIso()}.csv`, csv, 'text/csv;charset=utf-8');
   }

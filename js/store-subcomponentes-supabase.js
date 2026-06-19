@@ -167,6 +167,7 @@ const StoreSubcomponentesSupabase = (() => {
       status: r.status || 'Pendente',
       observacao: r.observacao || '',
       linkIauditor: r.link_iauditor || '',
+      responsavel: r.responsavel || '',
       criadoEm: r.criado_em || '',
       atualizadoEm: r.atualizado_em || '',
       criadoPor: r.criado_por || '',
@@ -191,7 +192,8 @@ const StoreSubcomponentesSupabase = (() => {
       qtd_nc: n(r.qtdNc),
       status: clean(r.status) || 'Pendente',
       observacao: clean(r.observacao),
-      link_iauditor: clean(r.linkIauditor)
+      link_iauditor: clean(r.linkIauditor),
+      responsavel: clean(r.responsavel)
     };
   }
 
@@ -310,6 +312,15 @@ const StoreSubcomponentesSupabase = (() => {
     });
   }
 
+  /* Lista apenas as inspeções de subcomponentes já mapeadas, sem depender
+     da normalização completa da área (usada por telas consultivas, como a
+     Rastreabilidade do Concreto). Funciona para qualquer perfil (RLS de
+     leitura para usuário ativo). */
+  async function listarInspecoes() {
+    const inspecoes = await selectAll(TABLES.inspecoes, 'dia_inspecao', false);
+    return inspecoes.map(fromInspecao);
+  }
+
   async function upsertMany(table, rows) {
     if (!rows.length) return [];
     const { data, error } = await db()
@@ -401,7 +412,7 @@ const StoreSubcomponentesSupabase = (() => {
     throw new Error('Limpeza total desativada neste sistema. Exclua registros individualmente pelo site.');
   }
 
-  return { carregarDb, salvarDb, salvarRegistro, remover, carregarAuditoria, carregarUsuarios, salvarUsuario, limparDb };
+  return { carregarDb, listarInspecoes, salvarDb, salvarRegistro, remover, carregarAuditoria, carregarUsuarios, salvarUsuario, limparDb };
 })();
 
 window.StoreSubcomponentesSupabase = StoreSubcomponentesSupabase;

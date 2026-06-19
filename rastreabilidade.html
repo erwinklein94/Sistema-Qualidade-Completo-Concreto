@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rastreabilidade · Controle de Dormentes Rumo</title>
+  <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
+  <link rel="stylesheet" href="css/style.css?v=20260615-lote-pdfs-v1">
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina">
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Rastreabilidade dormente × ombreira</span>
+            <span class="card-sub">Cada lote de dormente, o lote de ombreira usado e a situação da inspeção da ombreira</span>
+          </div>
+          <p class="txt-cinza" style="font-size:14px;line-height:1.7">
+            Para cada lote de dormente produzido, esta tela mostra o <strong>fornecedor</strong>, o <strong>projeto</strong>, o <strong>lote da ombreira</strong> utilizado e cruza esse lote com os registros de <strong>Inspeções Subcomponentes</strong>: se a ombreira foi inspecionada, a data, o relatório, o responsável, se foi aprovada e se há não conformidade. O responsável pela inspeção do lote de dormente vem da <strong>Inspeção de Pista</strong> do mesmo lote. A ombreira buscada segue o projeto — <strong>Ferro Norte</strong> usa <strong>E-CLIP HFOB02</strong> e os demais projetos usam <strong>FAST-CLIP HFOB08</strong>. Tela consultiva: somente leitura.
+          </p>
+        </div>
+
+        <div class="barra-filtros">
+          <div class="busca-rapida campo">
+            <label>Buscar</label>
+            <input type="text" id="busca" placeholder="Lote do dormente, lote da ombreira, fornecedor, projeto, responsável...">
+          </div>
+          <div class="campo"><label>Fornecedor</label><select id="fFornecedor"></select></div>
+          <div class="campo"><label>Projeto</label><select id="fProjeto"></select></div>
+          <div class="campo"><label>Situação da ombreira</label><select id="fSituacao"></select></div>
+        </div>
+
+        <div class="grid-kpi" id="kpis"></div>
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Lotes de dormente</span>
+            <span class="txt-mini txt-cinza" id="contador">0 registros</span>
+          </div>
+          <div id="lista"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalVer">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="verTitulo">Rastreabilidade do lote</h2>
+        <button class="fechar-modal" onclick="fecharVer()">⨯</button>
+      </div>
+      <div class="modal-corpo" id="verCorpo"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260523-2"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script>Auth.exigirLogin();</script>
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/store-supabase.js?v=20260609-inspecao-pista"></script>
+  <script src="js/comum.js?v=20260619-rastreabilidade-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/store-subcomponentes-supabase.js?v=20260619-responsavel-inspecao-v1"></script>
+  <script src="js/rastreabilidade.js?v=20260619-rastreabilidade-v1"></script>
+</body>
+</html>
