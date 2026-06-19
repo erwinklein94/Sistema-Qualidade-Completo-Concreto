@@ -7456,3 +7456,79 @@ body[data-tema="escuro"] .ficha-vinculo {
   border-color: rgba(255, 255, 255, .14);
 }
 body[data-tema="escuro"] .ficha-vinculo ul { color: var(--cinza-texto-claro); }
+
+/* ===================== ATALHO GLOBAL: SUBIR PÁGINA ===================== */
+.subir-pagina-btn {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .88);
+  color: var(--azul-escuro);
+  box-shadow: 0 4px 14px rgba(0, 53, 103, .12);
+  font-family: var(--fonte);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .78;
+  transition: opacity .18s ease, transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  backdrop-filter: blur(8px);
+}
+
+.subir-pagina-btn:hover,
+.subir-pagina-btn:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+  border-color: var(--azul-claro);
+  box-shadow: 0 6px 18px rgba(0, 53, 103, .18);
+  outline: none;
+}
+
+.subir-pagina-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--azul-escuro);
+  color: var(--branco);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.subir-pagina-texto { white-space: nowrap; }
+
+body[data-tema="escuro"] .subir-pagina-btn {
+  background: rgba(8, 42, 77, .88);
+  color: var(--cinza-texto);
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .28);
+}
+
+body[data-tema="escuro"] .subir-pagina-icone {
+  background: var(--verde-claro);
+  color: var(--azul-escuro-2);
+}
+
+@media (max-width: 640px) {
+  .subir-pagina-btn {
+    left: 12px;
+    bottom: 12px;
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+}
+
+@media print {
+  .subir-pagina-btn { display: none !important; }
+}
