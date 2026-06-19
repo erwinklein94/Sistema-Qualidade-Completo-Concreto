@@ -168,7 +168,7 @@ const DataBooks = (() => {
     App.montarLayout(
       'ferramenta-databooks',
       'Data books',
-      'Controle de dados técnicos dos Data books de dormentes — acesso restrito a ADMIN.'
+      'Consulta e manutenção dos Data Books de dormentes salvos no Supabase — acesso restrito a ADMIN.'
     );
 
     if (!admin()) {
@@ -209,7 +209,7 @@ const DataBooks = (() => {
         <div>
           <span class="ferramenta-etiqueta">Ferramentas · Admin</span>
           <h2>Data books de dormentes</h2>
-          <p>A tabela principal foi otimizada: mostra as colunas-chave e carrega os detalhes técnicos completos apenas ao clicar em <strong>Ver</strong>.</p>
+          <p>A tela consulta a tabela <strong>public.data_books_dormentes</strong> no Supabase. O código não carrega a base inteira dentro do JavaScript.</p>
         </div>
         <div class="data-books-hero-info">
           <strong>Somente ADMIN</strong>
@@ -354,7 +354,7 @@ const DataBooks = (() => {
               ${ICN.alerta}
               <h3>Não foi possível carregar os Data books</h3>
               <p>${U.esc(err?.message || 'Erro desconhecido')}</p>
-              <p>Confirme se você rodou o SQL <strong>supabase/2026-05-31-data-books-dormentes-admin.sql</strong> no Supabase do Concreto.</p>
+              <p>Confirme se você rodou o SQL <strong>supabase/2026-05-31-data-books-dormentes-admin.sql</strong> no Supabase do Concreto. Os dados do Data Book ficam no banco, não dentro do JavaScript.</p>
             </div>
           </td>
         </tr>

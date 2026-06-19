@@ -1,7 +1,7 @@
 /* =====================================================================
-   DATA BOOKS DE DORMENTES — Tabela admin-only + carga inicial CAVAN
+   DATA BOOKS DE DORMENTES — Supabase / tabela admin-only + carga inicial CAVAN
 
-   Rode este arquivo no SQL Editor do Supabase do projeto Concreto.
+   Rode este arquivo no SQL Editor do Supabase do projeto Concreto. Esta é a carga oficial: os dados ficam no banco e não dentro do JavaScript/HTML do site.
 
    Origem dos dados iniciais:
    "Cópia de Extração de Dados dos Data Books - Dormentes CAVAN.xlsx"
