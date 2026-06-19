@@ -2463,7 +2463,7 @@ const TRAINING_DATA = [
           {
               "category": "Ombreira Fast Clip",
               "front": "Onde devem constar os resultados dos ensaios de arrancamento da ombreira?",
-              "back": "Os resultados devem estar no databook junto com as informações pertinentes ao controle de qualidade do processo de fabricação no momento da entrega do lote."
+              "back": "Os resultados devem estar na documentação do lote junto com as informações pertinentes ao controle de qualidade do processo de fabricação no momento da entrega do lote."
           },
           {
               "category": "Ombreira Fast Clip",

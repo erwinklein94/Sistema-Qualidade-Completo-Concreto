@@ -36,7 +36,7 @@ create table if not exists public.especificacoes_dormentes (
   compressao_minima text,            -- MPa
   tracao_minima text,                -- MPa
 
-  -- Momentos do ensaio estático (mesma nomenclatura do Data Book)
+  -- Momentos do ensaio estático
   momento_positivo_apoio_trilho text,    -- kN·m
   momento_negativo_apoio_trilho text,    -- kN·m
   momento_positivo_centro text,          -- kN·m

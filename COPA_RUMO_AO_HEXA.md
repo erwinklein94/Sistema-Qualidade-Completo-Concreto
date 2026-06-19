@@ -30,7 +30,7 @@ chave com descrição (opcional — sem a chave, o padrão é ativada e o botão
   `StoreSupabase` e `StoreSubcomponentesSupabase`. A festa só dispara quando a
   Promise da gravação resolve com sucesso (erro = sem festa).
 - Telas que gravam direto no Supabase chamam `FestaHexa.celebrar()` manualmente:
-  `js/data-books.js` (salvar Data book) e `js/migracao-inicial.js` (conclusão).
+  `js/migracao-inicial.js` (conclusão).
 - O script é incluído logo após `js/comum.js` em todas as páginas logadas.
 - CSS é injetado pelo próprio módulo (nada foi alterado em `css/style.css`).
 - Respeita `prefers-reduced-motion`.
@@ -47,5 +47,5 @@ FestaHexa.alternar();    // ADMIN: inverte o estado global
 ## Arquivos alterados
 - novo: `js/festa-hexa.js` e `supabase/2026-06-10-festa-hexa-config.sql`
 - `dados.html` (card do botão) e `js/dados.js` (lógica do botão global)
-- `js/data-books.js` e `js/migracao-inicial.js` (1 linha cada)
+- `js/migracao-inicial.js` (1 linha)
 - todas as páginas com `comum.js` ganharam a tag `<script src="js/festa-hexa.js?...">`

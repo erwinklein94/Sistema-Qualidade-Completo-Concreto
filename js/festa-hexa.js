@@ -8,7 +8,7 @@
 
    - Gancho automático: embrulha todas as funções salvar* dos stores
      (StoreSupabase e StoreSubcomponentesSupabase). Telas que gravam
-     direto no Supabase (Data books, migração) chamam FestaHexa.celebrar().
+     direto no Supabase chamam FestaHexa.celebrar().
    - Liga/desliga GLOBAL: o admin alterna na página Dados do Sistema e a
      decisão vale para TODOS os perfis (admin, fiscalização e consulta).
      A configuração fica no Supabase (configuracoes_sistema, chave
