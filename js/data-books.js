@@ -1,152 +1,90 @@
 /* =====================================================================
-   DATA-BOOKS.JS — Data books de dormentes salvos no Supabase
-   Otimização 20260531-performance-v1:
-   - tabela principal resumida;
-   - detalhes completos carregados sob demanda;
-   - paginação no Supabase;
-   - exportação completa apenas quando o usuário pede.
+   DATA-BOOKS.JS — Inspeção documental de Data Books no Supabase
+   Versão 20260619-documental-v1
+   - Zera o modelo antigo de registros por lote e passa a usar inspeção
+     documental conforme a planilha "Relatório inspeção - Databook".
+   - Os itens ficam no Supabase: public.data_book_inspecoes e
+     public.data_book_itens. O JavaScript consulta/edita; não carrega base
+     pesada dentro do código.
    ===================================================================== */
 
 const DataBooks = (() => {
-  const TABELA = 'data_books_dormentes';
-  const PAGE_SIZE = 50;
-  const MAX_EXPORT_ROWS = 10000;
+  const TABELA_INSPECOES = 'data_book_inspecoes';
+  const TABELA_ITENS = 'data_book_itens';
+  const MAX_EXPORT_ROWS = 5000;
 
-  const GRUPOS = [
-    {
-      titulo: 'Informações Gerais do Lote',
-      classe: 'gerais',
-      campos: [
-        ['cliente', 'Cliente', 'text'],
-        ['tipo_dormente', 'Tipo de Dormente', 'text'],
-        ['lote', 'Lote', 'text'],
-        ['data_producao', 'Data de Produção', 'date'],
-        ['lotes_chumbadores', 'Lotes Chumbadores', 'text']
-      ]
-    },
-    {
-      titulo: 'Corte de Aço (por Bobina)',
-      classe: 'aco',
-      campos: [
-        ['nota_fiscal', 'Nota fiscal', 'text'],
-        ['numero_bobina', 'N° da Bobina', 'text'],
-        ['modulo_elasticidade', 'Módulo de Elasticidade', 'text']
-      ]
-    },
-    {
-      titulo: 'Concreto (Parâmetros de Resistência)',
-      classe: 'concreto',
-      campos: [
-        ['compressao_axial_05_dias', 'Compressão axial (medida 0,5 dias)', 'text'],
-        ['compressao_axial_7_dias', 'Compressão axial (medida 7 dias)', 'text'],
-        ['compressao_axial_14_dias', 'Compressão axial (medida 14 dias)', 'text'],
-        ['compressao_axial_28_dias', 'Compressão axial (medida 28 dias)', 'text'],
-        ['tracao_flexao_14_dias', 'Tração na flexão (14 das)', 'text'],
-        ['tracao_flexao_28_dias', 'Tração na flexão (28 dias)', 'text'],
-        ['transferencia_protensao', 'Transferência da protensão', 'text']
-      ]
-    },
-    {
-      titulo: 'Acompanhamento de Temperatura',
-      classe: 'temperatura',
-      campos: [
-        ['temperatura_inicio', 'Leituras de temperatura em °C (Início para cada período de horas avaliado)', 'text'],
-        ['temperatura_meio', 'Leituras de temperatura em °C (Meio para cada período de horas avaliado)', 'text'],
-        ['temperatura_fim', 'Leituras de temperatura em °C (Fim para cada período de horas avaliado)', 'text']
-      ]
-    },
-    {
-      titulo: 'Ensaio Estático',
-      classe: 'ensaio',
-      campos: [
-        ['momento_positivo_apoio_trilho_kn', 'Momento positivo no apoio do trilho (kN)', 'text'],
-        ['momento_negativo_apoio_trilho_kn', 'Momento negativo no apoio do trilho(KN)', 'text'],
-        ['momento_negativo_centro_dormente_kn', 'Momento negativo no centro do dormente (kN)', 'text'],
-        ['momento_positivo_centro_dormente_kn', 'Momento positivo no centro do dormente (kN)', 'text'],
-        ['torque_nm', 'Torque (N.m)', 'text'],
-        ['arrancamento_kn', 'Arrancamento (kN)', 'text'],
-        ['carga_aderencia_kn', 'Carga de aderência (kN)', 'text'],
-        ['deslocamento_fio_aco_mm', 'Deslocamento do fio de aço (mm)', 'text']
-      ]
-    },
-    {
-      titulo: 'Rastreabilidade',
-      classe: 'rastreabilidade',
-      campos: [
-        ['fonte', 'Fonte', 'text'],
-        ['fonte_referencia', 'Arquivo fonte', 'text'],
-        ['observacoes', 'Observações', 'textarea']
-      ]
-    }
+  const STATUS_OPCOES = ['OK', 'NOK', 'NA', 'PENDENTE'];
+
+  const INSPECAO_CAMPOS = [
+    ['data_book_numero', 'Data Book', 'text'],
+    ['cliente', 'Cliente', 'text'],
+    ['fornecedor', 'Fornecedor', 'text'],
+    ['mes_referencia', 'Mês de Referência', 'text'],
+    ['periodo_producao', 'Período de Produção', 'text'],
+    ['quantidade_dormentes', 'Quantidade de Dormentes', 'number'],
+    ['produto', 'Produto', 'textarea'],
+    ['modelo', 'Modelo', 'text'],
+    ['arquivo_fonte', 'Arquivo Fonte', 'text'],
+    ['status_geral', 'Status Geral', 'select'],
+    ['observacoes', 'Observações', 'textarea']
   ];
 
-  const CAMPOS = GRUPOS.flatMap(g => g.campos.map(([key, label, type]) => ({ key, label, type, grupo: g.titulo })));
+  const ITEM_CAMPOS = [
+    ['secao', 'Seção', 'text'],
+    ['item_numero', 'Item', 'text'],
+    ['campo', 'Campo avaliado', 'textarea'],
+    ['ferramenta', 'Ferramenta', 'text'],
+    ['tolerancia', 'Tolerância', 'text'],
+    ['valor_obtido', 'Valores obtidos', 'textarea'],
+    ['status', 'OK/NOK/NA', 'select'],
+    ['paginas_origem', 'Página(s) origem', 'text'],
+    ['evidencia', 'Evidência', 'textarea'],
+    ['observacoes', 'Observações', 'textarea']
+  ];
 
   const SUMMARY_COLUMNS = [
-    'cliente',
-    'tipo_dormente',
-    'lote',
-    'data_producao',
-    'nota_fiscal',
-    'numero_bobina',
-    'modulo_elasticidade'
+    'secao',
+    'item_numero',
+    'campo',
+    'tolerancia',
+    'valor_obtido',
+    'status',
+    'paginas_origem'
   ];
 
   const EXPORT_COLUMNS = [
+    'data_book_numero',
     'cliente',
-    'tipo_dormente',
-    'lote',
-    'data_producao',
-    'lotes_chumbadores',
-    'nota_fiscal',
-    'numero_bobina',
-    'modulo_elasticidade',
-    'compressao_axial_05_dias',
-    'compressao_axial_7_dias',
-    'compressao_axial_14_dias',
-    'compressao_axial_28_dias',
-    'tracao_flexao_14_dias',
-    'tracao_flexao_28_dias',
-    'transferencia_protensao',
-    'temperatura_inicio',
-    'temperatura_meio',
-    'temperatura_fim',
-    'momento_positivo_apoio_trilho_kn',
-    'momento_negativo_apoio_trilho_kn',
-    'momento_negativo_centro_dormente_kn',
-    'momento_positivo_centro_dormente_kn',
-    'torque_nm',
-    'arrancamento_kn',
-    'carga_aderencia_kn',
-    'deslocamento_fio_aco_mm',
-    'fonte',
-    'fonte_referencia',
+    'fornecedor',
+    'mes_referencia',
+    'periodo_producao',
+    'quantidade_dormentes',
+    'produto',
+    'modelo',
+    'arquivo_fonte',
+    'status_geral',
+    'secao',
+    'item_numero',
+    'campo',
+    'ferramenta',
+    'tolerancia',
+    'valor_obtido',
+    'status',
+    'paginas_origem',
+    'evidencia',
     'observacoes'
   ];
 
-  const SEARCH_COLUMNS = [
-    'cliente',
-    'tipo_dormente',
-    'lote',
-    'lotes_chumbadores',
-    'nota_fiscal',
-    'numero_bobina',
-    'modulo_elasticidade',
-    'fonte_referencia'
-  ];
-
   const state = {
-    dados: [],
-    filtrados: [],
-    total: 0,
-    page: 1,
-    pageSize: PAGE_SIZE,
-    opcoes: { clientes: [], tipos: [], anos: [] },
+    inspecoes: [],
+    inspecaoAtualId: '',
+    inspecaoAtual: null,
+    itens: [],
+    secoes: [],
     filtros: {
       busca: '',
-      cliente: '',
-      tipo: '',
-      ano: ''
+      secao: '',
+      status: ''
     },
     carregando: false,
     debounceBusca: null
@@ -168,7 +106,7 @@ const DataBooks = (() => {
     App.montarLayout(
       'ferramenta-databooks',
       'Data books',
-      'Consulta e manutenção dos Data Books de dormentes salvos no Supabase — acesso restrito a ADMIN.'
+      'Inspeção documental dos Data Books conforme planilha padrão — dados salvos no Supabase.'
     );
 
     if (!admin()) {
@@ -178,13 +116,13 @@ const DataBooks = (() => {
     }
 
     App.acoesTopo(`
-      <button class="btn btn-primario" type="button" onclick="DataBooks.abrirNovo()">${ICN.add}<span>Novo data book</span></button>
+      <button class="btn btn-primario" type="button" onclick="DataBooks.abrirNovaInspecao()">${ICN.add}<span>Novo data book</span></button>
+      <button class="btn btn-secundario" type="button" onclick="DataBooks.abrirNovoItem()">${ICN.add}<span>Novo item</span></button>
       <button class="btn btn-secundario" type="button" onclick="DataBooks.carregar()">Atualizar</button>
       <button class="btn btn-secundario" type="button" onclick="DataBooks.exportarCSV()">${ICN.download}<span>CSV</span></button>
     `);
 
     renderEstrutura();
-    await carregarOpcoes();
     await carregar();
   }
 
@@ -208,8 +146,8 @@ const DataBooks = (() => {
       <section class="data-books-hero card">
         <div>
           <span class="ferramenta-etiqueta">Ferramentas · Admin</span>
-          <h2>Data books de dormentes</h2>
-          <p>A tela consulta a tabela <strong>public.data_books_dormentes</strong> no Supabase. O código não carrega a base inteira dentro do JavaScript.</p>
+          <h2>Inspeção documental de Data Books</h2>
+          <p>Esta tela foi resetada para trabalhar com os campos da planilha padrão. Cada PDF gera uma inspeção e seus itens avaliados ficam no Supabase, não dentro do JavaScript.</p>
         </div>
         <div class="data-books-hero-info">
           <strong>Somente ADMIN</strong>
@@ -217,29 +155,42 @@ const DataBooks = (() => {
         </div>
       </section>
 
+      <section class="card">
+        <div class="card-titulo data-books-card-titulo-flex">
+          <div>
+            <span class="acento">Data book selecionado</span>
+            <span class="card-sub" id="dataBooksStatus">Carregando...</span>
+          </div>
+          <div class="data-books-paginacao">
+            <select id="selectInspecaoDataBook" class="data-books-page-select" onchange="DataBooks.selecionarInspecao(this.value)"></select>
+            <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.editarInspecaoAtual()">${ICN.edit}<span>Editar cabeçalho</span></button>
+          </div>
+        </div>
+        <div id="dataBookCabecalho" class="data-book-cabecalho"></div>
+      </section>
+
       <section class="grid-kpi data-books-kpis" id="dataBooksKpis"></section>
 
       <section class="card">
         <div class="card-titulo">
-          <span class="acento">Filtros</span>
-          <span class="card-sub" id="dataBooksStatus">Carregando...</span>
+          <span class="acento">Filtros dos itens avaliados</span>
+          <span class="card-sub">busca em item, evidência, tolerância e valores obtidos</span>
         </div>
         <div class="barra-filtros data-books-filtros">
           <div class="campo campo-grande">
             <label for="filtroBuscaDataBooks">Buscar</label>
-            <input id="filtroBuscaDataBooks" type="search" placeholder="Lote, cliente, bobina, nota fiscal, tipo..." oninput="DataBooks.setFiltro('busca', this.value)">
+            <input id="filtroBuscaDataBooks" type="search" placeholder="Ex.: cimento, agregado, resistência, página..." oninput="DataBooks.setFiltro('busca', this.value)">
           </div>
           <div class="campo">
-            <label for="filtroClienteDataBooks">Cliente</label>
-            <select id="filtroClienteDataBooks" onchange="DataBooks.setFiltro('cliente', this.value)"></select>
+            <label for="filtroSecaoDataBooks">Seção</label>
+            <select id="filtroSecaoDataBooks" onchange="DataBooks.setFiltro('secao', this.value)"></select>
           </div>
           <div class="campo">
-            <label for="filtroTipoDataBooks">Tipo de Dormente</label>
-            <select id="filtroTipoDataBooks" onchange="DataBooks.setFiltro('tipo', this.value)"></select>
-          </div>
-          <div class="campo">
-            <label for="filtroAnoDataBooks">Ano de Produção</label>
-            <select id="filtroAnoDataBooks" onchange="DataBooks.setFiltro('ano', this.value)"></select>
+            <label for="filtroStatusDataBooks">Status</label>
+            <select id="filtroStatusDataBooks" onchange="DataBooks.setFiltro('status', this.value)">
+              <option value="">Todos os status</option>
+              ${STATUS_OPCOES.map(s => `<option value="${s}">${s}</option>`).join('')}
+            </select>
           </div>
           <div class="campo campo-acoes">
             <label>&nbsp;</label>
@@ -251,10 +202,9 @@ const DataBooks = (() => {
       <section class="card data-books-card-tabela">
         <div class="card-titulo data-books-card-titulo-flex">
           <div>
-            <span class="acento">Registros</span>
-            <span class="card-sub">visualização resumida; detalhes completos no botão Ver</span>
+            <span class="acento">Itens do Data Book</span>
+            <span class="card-sub">campos extraídos conforme a planilha Excel anexada</span>
           </div>
-          <div class="data-books-paginacao" id="dataBooksPaginacaoTop"></div>
         </div>
         <div class="tabela-wrap data-books-tabela-wrap">
           <table class="tabela tabela-data-books" id="tabelaDataBooks">
@@ -262,56 +212,37 @@ const DataBooks = (() => {
             <tbody id="tbodyDataBooks"></tbody>
           </table>
         </div>
-        <div class="data-books-paginacao data-books-paginacao-bottom" id="dataBooksPaginacaoBottom"></div>
       </section>
     `;
-    preencherFiltros();
     renderCabecalhoTabela();
-  }
-
-  async function carregarOpcoes() {
-    if (!admin()) return;
-    try {
-      const { data, error } = await db()
-        .from(TABELA)
-        .select('cliente,tipo_dormente,data_producao')
-        .order('cliente', { ascending: true })
-        .limit(5000);
-      if (error) throw error;
-      state.opcoes.clientes = ordenarUnicos((data || []).map(r => r.cliente));
-      state.opcoes.tipos = ordenarUnicos((data || []).map(r => r.tipo_dormente));
-      state.opcoes.anos = ordenarUnicos((data || []).map(r => String(r.data_producao || '').slice(0, 4)).filter(Boolean)).reverse();
-      preencherFiltros();
-    } catch (err) {
-      console.warn('Não foi possível carregar opções dos filtros de Data books.', err);
-    }
   }
 
   async function carregar() {
     if (!admin()) return;
     state.carregando = true;
-    setStatus('Carregando Data books...');
+    setStatus('Carregando inspeções...');
     renderTabelaCarregando();
+
     try {
-      const from = (state.page - 1) * state.pageSize;
-      const to = from + state.pageSize - 1;
-      const selectCols = ['id', ...SUMMARY_COLUMNS].join(',');
-      let query = queryFiltrada(selectCols, { count: 'exact' })
-        .order('data_producao', { ascending: false, nullsFirst: false })
-        .order('lote', { ascending: true })
-        .range(from, to);
+      const { data: inspecoes, error: errInspecoes } = await db()
+        .from(TABELA_INSPECOES)
+        .select('*')
+        .order('criado_em', { ascending: false })
+        .limit(100);
 
-      const { data, error, count } = await query;
-      if (error) throw error;
-      state.dados = data || [];
-      state.filtrados = state.dados;
-      state.total = Number(count || 0);
+      if (errInspecoes) throw errInspecoes;
 
-      renderKpis();
-      renderTabela();
-      renderPaginacao();
+      state.inspecoes = inspecoes || [];
+      if (!state.inspecaoAtualId && state.inspecoes.length) {
+        state.inspecaoAtualId = state.inspecoes[0].id;
+      }
+      if (state.inspecaoAtualId && !state.inspecoes.some(i => i.id === state.inspecaoAtualId)) {
+        state.inspecaoAtualId = state.inspecoes[0]?.id || '';
+      }
+
+      preencherSelectInspecoes();
+      await carregarItens();
       registrarExportacao();
-      setStatus(`${state.total} registro(s) encontrado(s). Página ${state.page} de ${totalPaginas()}.`);
     } catch (err) {
       console.error('Erro ao carregar Data books', err);
       renderErro(err);
@@ -320,67 +251,142 @@ const DataBooks = (() => {
     }
   }
 
-  function queryFiltrada(selectCols = '*', options = undefined) {
-    let query = db().from(TABELA).select(selectCols, options);
-    const f = state.filtros;
-    if (f.cliente) query = query.eq('cliente', f.cliente);
-    if (f.tipo) query = query.eq('tipo_dormente', f.tipo);
-    if (f.ano) {
-      query = query.gte('data_producao', `${f.ano}-01-01`).lte('data_producao', `${f.ano}-12-31`);
+  async function carregarItens() {
+    state.inspecaoAtual = state.inspecoes.find(i => i.id === state.inspecaoAtualId) || null;
+    renderCabecalhoInspecao();
+
+    if (!state.inspecaoAtualId) {
+      state.itens = [];
+      state.secoes = [];
+      preencherFiltros();
+      renderKpis();
+      renderTabela();
+      setStatus('Nenhum Data Book cadastrado.');
+      return;
     }
-    const busca = normalizarTextoSupabase(f.busca);
+
+    setStatus('Carregando itens avaliados...');
+
+    let query = db()
+      .from(TABELA_ITENS)
+      .select('*')
+      .eq('data_book_id', state.inspecaoAtualId)
+      .order('ordem', { ascending: true })
+      .limit(MAX_EXPORT_ROWS);
+
+    if (state.filtros.secao) query = query.eq('secao', state.filtros.secao);
+    if (state.filtros.status) query = query.eq('status', state.filtros.status);
+
+    const busca = normalizarTextoSupabase(state.filtros.busca);
     if (busca) {
       const pattern = `%${busca}%`;
-      query = query.or(SEARCH_COLUMNS.map(c => `${c}.ilike.${pattern}`).join(','));
+      query = query.or([
+        `secao.ilike.${pattern}`,
+        `item_numero.ilike.${pattern}`,
+        `campo.ilike.${pattern}`,
+        `ferramenta.ilike.${pattern}`,
+        `tolerancia.ilike.${pattern}`,
+        `valor_obtido.ilike.${pattern}`,
+        `paginas_origem.ilike.${pattern}`,
+        `evidencia.ilike.${pattern}`,
+        `observacoes.ilike.${pattern}`
+      ].join(','));
     }
-    return query;
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    state.itens = data || [];
+
+    const { data: secoes, error: errSecoes } = await db()
+      .from(TABELA_ITENS)
+      .select('secao')
+      .eq('data_book_id', state.inspecaoAtualId)
+      .order('secao', { ascending: true })
+      .limit(1000);
+    if (!errSecoes) {
+      state.secoes = ordenarUnicos((secoes || []).map(r => r.secao));
+      preencherFiltros();
+    }
+
+    renderKpis();
+    renderTabela();
+    setStatus(`${state.itens.length} item(ns) encontrado(s) no Data Book selecionado.`);
   }
 
-  function normalizarTextoSupabase(v) {
-    return String(v || '')
-      .trim()
-      .replace(/[,%]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .slice(0, 80);
+  function preencherSelectInspecoes() {
+    const el = document.getElementById('selectInspecaoDataBook');
+    if (!el) return;
+    if (!state.inspecoes.length) {
+      el.innerHTML = '<option value="">Nenhum Data Book cadastrado</option>';
+      return;
+    }
+
+    el.innerHTML = state.inspecoes.map(i => {
+      const titulo = [
+        i.data_book_numero || 'Data Book sem número',
+        i.fornecedor || '',
+        i.mes_referencia || ''
+      ].filter(Boolean).join(' · ');
+      return `<option value="${U.esc(i.id)}" ${i.id === state.inspecaoAtualId ? 'selected' : ''}>${U.esc(titulo)}</option>`;
+    }).join('');
   }
 
-  function renderErro(err) {
-    const tbody = document.getElementById('tbodyDataBooks');
-    if (tbody) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="${SUMMARY_COLUMNS.length + 1}">
-            <div class="vazio">
-              ${ICN.alerta}
-              <h3>Não foi possível carregar os Data books</h3>
-              <p>${U.esc(err?.message || 'Erro desconhecido')}</p>
-              <p>Confirme se você rodou o SQL <strong>supabase/2026-05-31-data-books-dormentes-admin.sql</strong> no Supabase do Concreto. Os dados do Data Book ficam no banco, não dentro do JavaScript.</p>
-            </div>
-          </td>
-        </tr>
+  function selecionarInspecao(id) {
+    state.inspecaoAtualId = String(id || '');
+    limparFiltros(false);
+    carregarItens().catch(err => {
+      console.error('Erro ao selecionar inspeção', err);
+      App.toast('Não foi possível abrir o Data Book selecionado.', 'erro');
+    });
+  }
+
+  function renderCabecalhoInspecao() {
+    const alvo = document.getElementById('dataBookCabecalho');
+    if (!alvo) return;
+
+    const r = state.inspecaoAtual;
+    if (!r) {
+      alvo.innerHTML = `
+        <div class="vazio compacto">
+          ${ICN.vazioBox}
+          <h3>Nenhum Data Book no Supabase</h3>
+          <p>Rode o SQL de reset/carga ou cadastre um novo Data Book.</p>
+        </div>
       `;
+      return;
     }
-    setStatus('Erro ao carregar.');
-    renderPaginacao();
-    App.toast('Erro ao carregar Data books.', 'erro');
+
+    alvo.innerHTML = `
+      <div class="data-book-cabecalho-grid">
+        ${cabItem('Data Book', r.data_book_numero)}
+        ${cabItem('Fornecedor', r.fornecedor)}
+        ${cabItem('Cliente', r.cliente)}
+        ${cabItem('Mês', r.mes_referencia)}
+        ${cabItem('Período', r.periodo_producao)}
+        ${cabItem('Quantidade', r.quantidade_dormentes ? `${r.quantidade_dormentes} dormentes` : '—')}
+        ${cabItem('Modelo', r.modelo)}
+        ${cabItem('Status geral', statusBadge(r.status_geral))}
+        ${cabItem('Arquivo fonte', r.arquivo_fonte)}
+      </div>
+      ${r.produto ? `<p class="data-book-produto"><strong>Produto:</strong> ${U.esc(r.produto)}</p>` : ''}
+      ${r.observacoes ? `<p class="data-book-produto"><strong>Observações:</strong> ${U.esc(r.observacoes)}</p>` : ''}
+    `;
   }
 
-  function renderTabelaCarregando() {
-    const tbody = document.getElementById('tbodyDataBooks');
-    if (!tbody) return;
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="${SUMMARY_COLUMNS.length + 1}">
-          <div class="vazio compacto"><div class="loader"></div><h3>Carregando página...</h3></div>
-        </td>
-      </tr>
+  function cabItem(label, valor) {
+    return `
+      <div class="data-book-cab-item">
+        <span>${U.esc(label)}</span>
+        <strong>${typeof valor === 'string' && valor.includes('status-badge') ? valor : U.esc(valor || '—')}</strong>
+      </div>
     `;
   }
 
   function preencherFiltros() {
-    setOptions('filtroClienteDataBooks', state.opcoes.clientes, 'Todos os clientes', state.filtros.cliente);
-    setOptions('filtroTipoDataBooks', state.opcoes.tipos, 'Todos os tipos', state.filtros.tipo);
-    setOptions('filtroAnoDataBooks', state.opcoes.anos, 'Todos os anos', state.filtros.ano);
+    setOptions('filtroSecaoDataBooks', state.secoes, 'Todas as seções', state.filtros.secao);
+    const status = document.getElementById('filtroStatusDataBooks');
+    if (status) status.value = state.filtros.status || '';
   }
 
   function setOptions(id, arr, placeholder, selecionado) {
@@ -396,62 +402,46 @@ const DataBooks = (() => {
 
   function setFiltro(campo, valor) {
     state.filtros[campo] = String(valor || '').trim();
-    state.page = 1;
     if (campo === 'busca') {
       clearTimeout(state.debounceBusca);
-      state.debounceBusca = setTimeout(() => carregar(), 280);
+      state.debounceBusca = setTimeout(() => carregarItens(), 280);
       return;
     }
-    carregar();
+    carregarItens();
   }
 
-  function limparFiltros() {
-    state.filtros = { busca: '', cliente: '', tipo: '', ano: '' };
-    state.page = 1;
+  function limparFiltros(recarregar = true) {
+    state.filtros = { busca: '', secao: '', status: '' };
     const busca = document.getElementById('filtroBuscaDataBooks');
     if (busca) busca.value = '';
     preencherFiltros();
-    carregar();
+    if (recarregar) carregarItens();
   }
 
-  function paginaAnterior() {
-    if (state.page <= 1) return;
-    state.page -= 1;
-    carregar();
-  }
-
-  function proximaPagina() {
-    if (state.page >= totalPaginas()) return;
-    state.page += 1;
-    carregar();
-  }
-
-  function irPagina(p) {
-    const pagina = Math.max(1, Math.min(totalPaginas(), Number(p) || 1));
-    if (pagina === state.page) return;
-    state.page = pagina;
-    carregar();
-  }
-
-  function totalPaginas() {
-    return Math.max(1, Math.ceil(state.total / state.pageSize));
+  function normalizarTextoSupabase(v) {
+    return String(v || '')
+      .trim()
+      .replace(/[,%]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .slice(0, 100);
   }
 
   function renderKpis() {
     const alvo = document.getElementById('dataBooksKpis');
     if (!alvo) return;
-    const lista = state.dados;
-    const clientes = new Set(lista.map(r => r.cliente).filter(Boolean)).size;
-    const tipos = new Set(lista.map(r => r.tipo_dormente).filter(Boolean)).size;
-    const lotes = new Set(lista.map(r => r.lote).filter(Boolean)).size;
-    const bobinas = new Set(lista.map(r => r.numero_bobina).filter(Boolean)).size;
+    const lista = state.itens;
+    const ok = lista.filter(r => r.status === 'OK').length;
+    const nok = lista.filter(r => r.status === 'NOK').length;
+    const na = lista.filter(r => r.status === 'NA').length;
+    const pendente = lista.filter(r => r.status === 'PENDENTE').length;
+    const avaliados = ok + nok;
 
     alvo.innerHTML = `
-      <article class="kpi"><span>Total encontrado</span><strong>${state.total}</strong><small>resultado(s) nos filtros</small></article>
-      <article class="kpi"><span>Na página</span><strong>${lista.length}</strong><small>até ${state.pageSize} por página</small></article>
-      <article class="kpi"><span>Clientes</span><strong>${clientes}</strong><small>nesta página</small></article>
-      <article class="kpi"><span>Tipos</span><strong>${tipos}</strong><small>nesta página</small></article>
-      <article class="kpi"><span>Bobinas</span><strong>${bobinas}</strong><small>nesta página</small></article>
+      <article class="kpi"><span>Itens encontrados</span><strong>${lista.length}</strong><small>conforme filtros</small></article>
+      <article class="kpi"><span>Avaliados</span><strong>${avaliados}</strong><small>OK + NOK</small></article>
+      <article class="kpi"><span>OK</span><strong>${ok}</strong><small>atendem à tolerância</small></article>
+      <article class="kpi"><span>NOK</span><strong>${nok}</strong><small>fora da tolerância</small></article>
+      <article class="kpi"><span>NA / Pendente</span><strong>${na + pendente}</strong><small>não avaliado ou pendente</small></article>
     `;
   }
 
@@ -460,8 +450,20 @@ const DataBooks = (() => {
     if (!thead) return;
     thead.innerHTML = `
       <tr>
-        ${SUMMARY_COLUMNS.map(k => `<th>${U.esc(labelDe(k))}</th>`).join('')}
+        ${SUMMARY_COLUMNS.map(k => `<th>${U.esc(labelDeItem(k))}</th>`).join('')}
         <th>Ações</th>
+      </tr>
+    `;
+  }
+
+  function renderTabelaCarregando() {
+    const tbody = document.getElementById('tbodyDataBooks');
+    if (!tbody) return;
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="${SUMMARY_COLUMNS.length + 1}">
+          <div class="vazio compacto"><div class="loader"></div><h3>Carregando...</h3></div>
+        </td>
       </tr>
     `;
   }
@@ -470,14 +472,14 @@ const DataBooks = (() => {
     const tbody = document.getElementById('tbodyDataBooks');
     if (!tbody) return;
 
-    if (!state.dados.length) {
+    if (!state.itens.length) {
       tbody.innerHTML = `
         <tr>
           <td colspan="${SUMMARY_COLUMNS.length + 1}">
             <div class="vazio">
               ${ICN.vazioBox}
-              <h3>Nenhum Data book encontrado</h3>
-              <p>Ajuste os filtros ou cadastre um novo registro.</p>
+              <h3>Nenhum item encontrado</h3>
+              <p>Rode o SQL de carga, selecione outro Data Book ou ajuste os filtros.</p>
             </div>
           </td>
         </tr>
@@ -485,46 +487,38 @@ const DataBooks = (() => {
       return;
     }
 
-    tbody.innerHTML = state.dados.map(r => `
-      <tr>
+    tbody.innerHTML = state.itens.map(r => `
+      <tr class="${r.status === 'NOK' ? 'linha-alerta' : ''}">
         ${SUMMARY_COLUMNS.map(k => `<td>${valorTabela(r, k)}</td>`).join('')}
         <td class="acoes-linha">
-          <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.ver('${r.id}')">${ICN.olho}<span>Ver</span></button>
-          <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.editar('${r.id}')">${ICN.edit}<span>Editar</span></button>
-          <button class="btn btn-perigo btn-sm" type="button" onclick="DataBooks.excluir('${r.id}')">${ICN.del}<span>Excluir</span></button>
+          <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.verItem('${r.id}')">${ICN.olho}<span>Ver</span></button>
+          <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.editarItem('${r.id}')">${ICN.edit}<span>Editar</span></button>
+          <button class="btn btn-perigo btn-sm" type="button" onclick="DataBooks.excluirItem('${r.id}')">${ICN.del}<span>Excluir</span></button>
         </td>
       </tr>
     `).join('');
   }
 
-  function renderPaginacao() {
-    const total = totalPaginas();
-    const inicio = state.total ? ((state.page - 1) * state.pageSize) + 1 : 0;
-    const fim = Math.min(state.total, state.page * state.pageSize);
-    const html = `
-      <span class="data-books-page-info">${inicio}-${fim} de ${state.total}</span>
-      <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.paginaAnterior()" ${state.page <= 1 ? 'disabled' : ''}>Anterior</button>
-      <select class="data-books-page-select" onchange="DataBooks.irPagina(this.value)" aria-label="Página">
-        ${Array.from({ length: total }, (_, i) => i + 1).map(p => `<option value="${p}" ${p === state.page ? 'selected' : ''}>Página ${p}</option>`).join('')}
-      </select>
-      <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.proximaPagina()" ${state.page >= total ? 'disabled' : ''}>Próxima</button>
-    `;
-    ['dataBooksPaginacaoTop', 'dataBooksPaginacaoBottom'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = html;
-    });
-  }
-
   function valorTabela(r, key) {
-    if (key === 'data_producao') return `<span class="nowrap">${U.dataBR(r[key])}</span>`;
-    const valor = r[key];
-    const cls = ['lote', 'nota_fiscal', 'numero_bobina'].includes(key) ? 'nowrap valor-forte' : '';
-    return `<span class="${cls}">${U.esc(valor || '—')}</span>`;
+    if (key === 'status') return statusBadge(r[key]);
+    if (key === 'campo') return `<span class="data-book-campo">${U.esc(r[key] || '—')}</span>`;
+    if (key === 'valor_obtido') return `<span class="data-book-valor">${U.esc(r[key] || '—')}</span>`;
+    if (key === 'paginas_origem') return `<span class="nowrap">${U.esc(r[key] || '—')}</span>`;
+    return U.esc(r[key] || '—');
   }
 
-  function labelDe(key) {
-    const campo = CAMPOS.find(c => c.key === key);
-    return campo?.label || key;
+  function statusBadge(status) {
+    const s = String(status || 'PENDENTE').toUpperCase();
+    const cls = s === 'OK' ? 'ok' : s === 'NOK' ? 'nok' : s === 'NA' ? 'na' : 'pendente';
+    return `<span class="status-badge status-badge-${cls}">${U.esc(s)}</span>`;
+  }
+
+  function labelDeItem(key) {
+    return ITEM_CAMPOS.find(c => c[0] === key)?.[1] || key;
+  }
+
+  function labelDeInspecao(key) {
+    return INSPECAO_CAMPOS.find(c => c[0] === key)?.[1] || key;
   }
 
   function setStatus(txt) {
@@ -532,36 +526,54 @@ const DataBooks = (() => {
     if (el) el.textContent = txt || '';
   }
 
-  function obter(id) {
-    return state.dados.find(r => r.id === id) || null;
+  function renderErro(err) {
+    const tbody = document.getElementById('tbodyDataBooks');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="${SUMMARY_COLUMNS.length + 1}">
+            <div class="vazio">
+              ${ICN.alerta}
+              <h3>Não foi possível carregar a área de Data Books</h3>
+              <p>${U.esc(err?.message || 'Erro desconhecido')}</p>
+              <p>Confirme se você rodou o SQL <strong>supabase/2026-06-19-data-books-documental-reset-e-carga.sql</strong> no Supabase.</p>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+    setStatus('Erro ao carregar.');
+    App.toast('Erro ao carregar Data books.', 'erro');
   }
 
-  async function buscarRegistro(id) {
-    const { data, error } = await db().from(TABELA).select('*').eq('id', id).single();
+  function obterItem(id) {
+    return state.itens.find(r => r.id === id) || null;
+  }
+
+  async function buscarItem(id) {
+    const { data, error } = await db().from(TABELA_ITENS).select('*').eq('id', id).single();
     if (error) throw error;
     return data;
   }
 
-  function abrirNovo() {
-    abrirFormulario();
+  function abrirNovaInspecao() {
+    abrirFormularioInspecao();
   }
 
-  async function editar(id) {
-    try {
-      const r = await buscarRegistro(id);
-      abrirFormulario(r);
-    } catch (err) {
-      console.error('Erro ao abrir edição', err);
-      App.toast('Registro não encontrado ou indisponível.', 'erro');
+  function editarInspecaoAtual() {
+    if (!state.inspecaoAtual) {
+      App.toast('Nenhum Data Book selecionado para editar.', 'aviso');
+      return;
     }
+    abrirFormularioInspecao(state.inspecaoAtual);
   }
 
-  function abrirFormulario(registro = null) {
+  function abrirFormularioInspecao(registro = null) {
     if (!admin()) return App.toast('Apenas ADMIN pode alterar Data books.', 'erro');
 
     const modal = document.getElementById('modalDataBook');
     if (!modal) return;
-    const titulo = registro?.id ? `Editar Data book — lote ${U.esc(registro.lote || '')}` : 'Novo Data book';
+    const titulo = registro?.id ? `Editar cabeçalho — ${U.esc(registro.data_book_numero || '')}` : 'Novo Data Book';
 
     modal.innerHTML = `
       <div class="modal modal-data-book" role="dialog" aria-modal="true" aria-labelledby="modalDataBookTitulo">
@@ -569,19 +581,17 @@ const DataBooks = (() => {
           <h2 id="modalDataBookTitulo">${titulo}</h2>
           <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.fecharFormulario()">${ICN.fechar}<span>Fechar</span></button>
         </div>
-        <form class="modal-corpo data-books-form" id="formDataBook" onsubmit="DataBooks.salvar(event)">
+        <form class="modal-corpo data-books-form" id="formDataBookInspecao" onsubmit="DataBooks.salvarInspecao(event)">
           <input type="hidden" name="id" value="${U.esc(registro?.id || '')}">
-          ${GRUPOS.map(grupo => `
-            <fieldset class="data-books-fieldset data-books-fieldset--${grupo.classe}">
-              <legend>${U.esc(grupo.titulo)}</legend>
-              <div class="form-grid">
-                ${grupo.campos.map(([key, label, type]) => campoForm(key, label, type, registro)).join('')}
-              </div>
-            </fieldset>
-          `).join('')}
+          <fieldset class="data-books-fieldset">
+            <legend>Identificação do Data Book</legend>
+            <div class="form-grid">
+              ${INSPECAO_CAMPOS.map(([key, label, type]) => campoForm(key, label, type, registro)).join('')}
+            </div>
+          </fieldset>
           <div class="modal-acoes">
             <button class="btn btn-secundario" type="button" onclick="DataBooks.fecharFormulario()">Cancelar</button>
-            <button class="btn btn-primario" type="submit">${ICN.check}<span>Salvar Data book</span></button>
+            <button class="btn btn-primario" type="submit">${ICN.check}<span>Salvar Data Book</span></button>
           </div>
         </form>
       </div>
@@ -590,10 +600,131 @@ const DataBooks = (() => {
     modal.setAttribute('aria-hidden', 'false');
   }
 
+  async function salvarInspecao(ev) {
+    ev.preventDefault();
+    if (!admin()) return App.toast('Apenas ADMIN pode salvar Data books.', 'erro');
+
+    const form = ev.currentTarget;
+    const fd = new FormData(form);
+    const id = String(fd.get('id') || '').trim();
+    const payload = {};
+    INSPECAO_CAMPOS.forEach(([key]) => {
+      payload[key] = limparValor(fd.get(key));
+    });
+    if (payload.quantidade_dormentes) payload.quantidade_dormentes = Number(payload.quantidade_dormentes) || null;
+
+    if (!payload.data_book_numero || !payload.fornecedor) {
+      App.toast('Preencha Data Book e Fornecedor.', 'erro');
+      return;
+    }
+
+    try {
+      let query;
+      if (id) query = db().from(TABELA_INSPECOES).update(payload).eq('id', id);
+      else query = db().from(TABELA_INSPECOES).insert(payload);
+      const { data, error } = await query.select().single();
+      if (error) throw error;
+
+      fecharFormulario();
+      state.inspecaoAtualId = data.id;
+      App.toast('Data Book salvo no Supabase.', 'sucesso');
+      window.FestaHexa?.celebrar();
+      await carregar();
+    } catch (err) {
+      console.error('Erro ao salvar inspeção de Data Book', err);
+      App.toast(err?.message || 'Não foi possível salvar o Data Book.', 'erro');
+    }
+  }
+
+  function abrirNovoItem() {
+    if (!state.inspecaoAtualId) {
+      App.toast('Cadastre ou selecione um Data Book antes de criar itens.', 'aviso');
+      return;
+    }
+    abrirFormularioItem({ status: 'PENDENTE' });
+  }
+
+  async function editarItem(id) {
+    try {
+      const r = await buscarItem(id);
+      abrirFormularioItem(r);
+    } catch (err) {
+      console.error('Erro ao abrir item', err);
+      App.toast('Item não encontrado ou indisponível.', 'erro');
+    }
+  }
+
+  function abrirFormularioItem(registro = null) {
+    if (!admin()) return App.toast('Apenas ADMIN pode alterar Data books.', 'erro');
+    if (!state.inspecaoAtualId) return App.toast('Selecione um Data Book primeiro.', 'aviso');
+
+    const modal = document.getElementById('modalDataBook');
+    if (!modal) return;
+    const titulo = registro?.id ? `Editar item — ${U.esc(registro.item_numero || '')}` : 'Novo item do Data Book';
+
+    modal.innerHTML = `
+      <div class="modal modal-data-book" role="dialog" aria-modal="true" aria-labelledby="modalDataBookTitulo">
+        <div class="modal-cab">
+          <h2 id="modalDataBookTitulo">${titulo}</h2>
+          <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.fecharFormulario()">${ICN.fechar}<span>Fechar</span></button>
+        </div>
+        <form class="modal-corpo data-books-form" id="formDataBookItem" onsubmit="DataBooks.salvarItem(event)">
+          <input type="hidden" name="id" value="${U.esc(registro?.id || '')}">
+          <fieldset class="data-books-fieldset">
+            <legend>Item avaliado</legend>
+            <div class="form-grid">
+              ${ITEM_CAMPOS.map(([key, label, type]) => campoForm(key, label, type, registro)).join('')}
+            </div>
+          </fieldset>
+          <div class="modal-acoes">
+            <button class="btn btn-secundario" type="button" onclick="DataBooks.fecharFormulario()">Cancelar</button>
+            <button class="btn btn-primario" type="submit">${ICN.check}<span>Salvar item</span></button>
+          </div>
+        </form>
+      </div>
+    `;
+    modal.classList.add('aberto');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  async function salvarItem(ev) {
+    ev.preventDefault();
+    if (!admin()) return App.toast('Apenas ADMIN pode salvar itens.', 'erro');
+
+    const form = ev.currentTarget;
+    const fd = new FormData(form);
+    const id = String(fd.get('id') || '').trim();
+    const payload = { data_book_id: state.inspecaoAtualId };
+    ITEM_CAMPOS.forEach(([key]) => {
+      payload[key] = limparValor(fd.get(key));
+    });
+
+    if (!payload.secao || !payload.campo) {
+      App.toast('Preencha Seção e Campo avaliado.', 'erro');
+      return;
+    }
+
+    try {
+      let query;
+      if (id) query = db().from(TABELA_ITENS).update(payload).eq('id', id);
+      else query = db().from(TABELA_ITENS).insert(payload);
+      const { error } = await query.select().single();
+      if (error) throw error;
+
+      fecharFormulario();
+      App.toast('Item salvo no Supabase.', 'sucesso');
+      await carregarItens();
+    } catch (err) {
+      console.error('Erro ao salvar item do Data Book', err);
+      App.toast(err?.message || 'Não foi possível salvar o item.', 'erro');
+    }
+  }
+
   function campoForm(key, label, type, registro) {
     const valor = registro?.[key] || '';
-    const required = ['cliente', 'tipo_dormente', 'lote'].includes(key) ? 'required' : '';
+    const required = ['data_book_numero', 'fornecedor', 'secao', 'campo'].includes(key) ? 'required' : '';
     const classe = type === 'textarea' ? 'campo campo-full' : 'campo';
+
     if (type === 'textarea') {
       return `
         <div class="${classe}">
@@ -602,6 +733,19 @@ const DataBooks = (() => {
         </div>
       `;
     }
+
+    if (type === 'select') {
+      const atual = String(valor || (key === 'status' ? 'PENDENTE' : 'OK')).toUpperCase();
+      return `
+        <div class="${classe}">
+          <label for="db_${key}">${U.esc(label)}</label>
+          <select id="db_${key}" name="${key}" ${required}>
+            ${STATUS_OPCOES.map(s => `<option value="${s}" ${s === atual ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      `;
+    }
+
     return `
       <div class="${classe}">
         <label for="db_${key}">${U.esc(label)}</label>
@@ -618,108 +762,77 @@ const DataBooks = (() => {
     modal.innerHTML = '';
   }
 
-  async function salvar(ev) {
-    ev.preventDefault();
-    if (!admin()) return App.toast('Apenas ADMIN pode salvar Data books.', 'erro');
-
-    const form = ev.currentTarget;
-    const fd = new FormData(form);
-    const id = String(fd.get('id') || '').trim();
-    const payload = {};
-
-    CAMPOS.forEach(c => {
-      payload[c.key] = limparValor(fd.get(c.key));
-    });
-
-    if (!payload.cliente || !payload.tipo_dormente || !payload.lote) {
-      App.toast('Preencha Cliente, Tipo de Dormente e Lote.', 'erro');
-      return;
-    }
-
-    try {
-      let query;
-      if (id) query = db().from(TABELA).update(payload).eq('id', id);
-      else query = db().from(TABELA).insert(payload);
-      const { data, error } = await query.select().single();
-      if (error) throw error;
-
-      fecharFormulario();
-      App.toast('Data book salvo no Supabase.', 'sucesso');
-      window.FestaHexa?.celebrar();
-      await carregarOpcoes();
-      await carregar();
-      if (data?.id) {
-        const linha = document.querySelector(`button[onclick*="${data.id}"]`);
-        linha?.closest('tr')?.classList.add('linha-destaque');
-      }
-    } catch (err) {
-      console.error('Erro ao salvar Data book', err);
-      App.toast(err?.message || 'Não foi possível salvar o Data book.', 'erro');
-    }
-  }
-
   function limparValor(v) {
     const s = String(v == null ? '' : v).trim();
     return s || null;
   }
 
-  async function excluir(id) {
-    if (!admin()) return App.toast('Apenas ADMIN pode excluir Data books.', 'erro');
-    const r = obter(id) || { lote: '' };
-    if (!App.confirmar(`Excluir o Data book do lote ${r.lote || 'sem lote'}? Essa ação será auditada.`)) return;
+  async function excluirItem(id) {
+    if (!admin()) return App.toast('Apenas ADMIN pode excluir itens.', 'erro');
+    const r = obterItem(id) || { item_numero: '' };
+    if (!App.confirmar(`Excluir o item ${r.item_numero || 'sem número'} do Data Book? Essa ação será auditada.`)) return;
 
     try {
-      const { error } = await db().from(TABELA).delete().eq('id', id);
+      const { error } = await db().from(TABELA_ITENS).delete().eq('id', id);
       if (error) throw error;
-      App.toast('Data book excluído.', 'sucesso');
-      if (state.page > 1 && state.dados.length === 1) state.page -= 1;
-      await carregarOpcoes();
-      await carregar();
+      App.toast('Item excluído.', 'sucesso');
+      await carregarItens();
     } catch (err) {
-      console.error('Erro ao excluir Data book', err);
-      App.toast(err?.message || 'Não foi possível excluir o Data book.', 'erro');
+      console.error('Erro ao excluir item', err);
+      App.toast(err?.message || 'Não foi possível excluir o item.', 'erro');
     }
   }
 
-  async function ver(id) {
+  async function verItem(id) {
     try {
-      const r = await buscarRegistro(id);
-      abrirDetalhe(r);
+      const r = await buscarItem(id);
+      abrirDetalheItem(r);
     } catch (err) {
       console.error('Erro ao abrir detalhe', err);
-      App.toast('Não foi possível abrir os detalhes deste Data book.', 'erro');
+      App.toast('Não foi possível abrir os detalhes deste item.', 'erro');
     }
   }
 
-  function abrirDetalhe(r) {
+  function abrirDetalheItem(r) {
     const modal = document.getElementById('modalDetalheDataBook');
     if (!modal) return;
+
+    const campos = [
+      ['Seção', r.secao],
+      ['Item', r.item_numero],
+      ['Campo avaliado', r.campo],
+      ['Ferramenta', r.ferramenta],
+      ['Tolerância', r.tolerancia],
+      ['Valores obtidos', r.valor_obtido],
+      ['Status', statusBadge(r.status)],
+      ['Página(s) origem', r.paginas_origem],
+      ['Evidência', r.evidencia],
+      ['Observações', r.observacoes]
+    ];
 
     modal.innerHTML = `
       <div class="modal modal-data-book modal-data-book-detalhe" role="dialog" aria-modal="true" aria-labelledby="modalDetalheDataBookTitulo">
         <div class="modal-cab">
-          <h2 id="modalDetalheDataBookTitulo">Data book — lote ${U.esc(r.lote || '—')}</h2>
+          <h2 id="modalDetalheDataBookTitulo">Item do Data Book — ${U.esc(r.item_numero || '—')}</h2>
           <button class="btn btn-secundario btn-sm" type="button" onclick="DataBooks.fecharDetalhe()">${ICN.fechar}<span>Fechar</span></button>
         </div>
         <div class="modal-corpo">
           <div class="data-books-detalhes">
-            ${GRUPOS.map(grupo => `
-              <section class="data-books-detalhe-grupo">
-                <h3>${U.esc(grupo.titulo)}</h3>
-                <dl>
-                  ${grupo.campos.map(([key, label]) => `
-                    <div>
-                      <dt>${U.esc(label)}</dt>
-                      <dd>${key === 'data_producao' ? U.dataBR(r[key]) : U.esc(r[key] || '—')}</dd>
-                    </div>
-                  `).join('')}
-                </dl>
-              </section>
-            `).join('')}
+            <section class="data-books-detalhe-grupo">
+              <h3>Detalhes da extração</h3>
+              <dl>
+                ${campos.map(([label, valor]) => `
+                  <div>
+                    <dt>${U.esc(label)}</dt>
+                    <dd>${typeof valor === 'string' && valor.includes('status-badge') ? valor : U.esc(valor || '—')}</dd>
+                  </div>
+                `).join('')}
+              </dl>
+            </section>
           </div>
           <div class="modal-acoes">
             <button class="btn btn-secundario" type="button" onclick="DataBooks.fecharDetalhe()">Fechar</button>
-            <button class="btn btn-primario" type="button" onclick="DataBooks.fecharDetalhe(); DataBooks.editar('${r.id}')">${ICN.edit}<span>Editar</span></button>
+            <button class="btn btn-primario" type="button" onclick="DataBooks.fecharDetalhe(); DataBooks.editarItem('${r.id}')">${ICN.edit}<span>Editar</span></button>
           </div>
         </div>
       </div>
@@ -738,61 +851,82 @@ const DataBooks = (() => {
 
   function registrarExportacao() {
     if (!window.Exportacoes?.registrar) return;
-    const columns = SUMMARY_COLUMNS.map(k => ({ key: k, label: labelDe(k) }));
+    const columns = EXPORT_COLUMNS.map(k => ({ key: k, label: labelExport(k) }));
+    const ins = state.inspecaoAtual || {};
     Exportacoes.registrar({
-      titulo: 'Data books de dormentes — página atual',
-      nomeArquivo: 'data-books-dormentes-pagina-atual',
+      titulo: 'Inspeção documental de Data Book',
+      nomeArquivo: 'inspecao-documental-data-book',
       xlsxSomenteDados: true,
       filtros: filtrosExportacao(),
       secoes: [{
-        titulo: `Página ${state.page}`,
+        titulo: ins.data_book_numero || 'Data Book',
         columns,
-        rows: state.dados.map(r => {
-          const row = {};
-          columns.forEach(c => row[c.key] = c.key === 'data_producao' ? U.dataBR(r[c.key]) : (r[c.key] || ''));
-          return row;
-        })
+        rows: state.itens.map(item => linhaExport(ins, item))
       }],
-      observacao: 'Fonte: tabela public.data_books_dormentes no Supabase. Exportação Excel/PDF usa a página atual para manter a navegação leve. Use o botão CSV para exportar todos os registros filtrados.'
+      observacao: 'Fonte: tabelas public.data_book_inspecoes e public.data_book_itens no Supabase.'
     });
   }
 
   function filtrosExportacao() {
     return [
+      { campo: 'Data Book', valor: state.inspecaoAtual?.data_book_numero || 'Nenhum' },
       { campo: 'Busca', valor: state.filtros.busca || 'Todos' },
-      { campo: 'Cliente', valor: state.filtros.cliente || 'Todos' },
-      { campo: 'Tipo de Dormente', valor: state.filtros.tipo || 'Todos' },
-      { campo: 'Ano', valor: state.filtros.ano || 'Todos' },
-      { campo: 'Página', valor: `${state.page} de ${totalPaginas()}` }
+      { campo: 'Seção', valor: state.filtros.secao || 'Todas' },
+      { campo: 'Status', valor: state.filtros.status || 'Todos' }
     ];
+  }
+
+  function linhaExport(ins, item) {
+    return {
+      data_book_numero: ins.data_book_numero || '',
+      cliente: ins.cliente || '',
+      fornecedor: ins.fornecedor || '',
+      mes_referencia: ins.mes_referencia || '',
+      periodo_producao: ins.periodo_producao || '',
+      quantidade_dormentes: ins.quantidade_dormentes || '',
+      produto: ins.produto || '',
+      modelo: ins.modelo || '',
+      arquivo_fonte: ins.arquivo_fonte || '',
+      status_geral: ins.status_geral || '',
+      secao: item.secao || '',
+      item_numero: item.item_numero || '',
+      campo: item.campo || '',
+      ferramenta: item.ferramenta || '',
+      tolerancia: item.tolerancia || '',
+      valor_obtido: item.valor_obtido || '',
+      status: item.status || '',
+      paginas_origem: item.paginas_origem || '',
+      evidencia: item.evidencia || '',
+      observacoes: item.observacoes || ''
+    };
+  }
+
+  function labelExport(key) {
+    const fromItem = ITEM_CAMPOS.find(c => c[0] === key)?.[1];
+    const fromIns = INSPECAO_CAMPOS.find(c => c[0] === key)?.[1];
+    return fromItem || fromIns || key;
   }
 
   async function exportarCSV() {
     try {
-      setStatus('Gerando CSV completo dos filtros...');
-      let query = queryFiltrada(EXPORT_COLUMNS.join(','))
-        .order('data_producao', { ascending: false, nullsFirst: false })
-        .order('lote', { ascending: true })
-        .limit(MAX_EXPORT_ROWS);
-      const { data, error } = await query;
-      if (error) throw error;
-      const rows = data || [];
-      if (!rows.length) {
-        App.toast('Não há dados filtrados para exportar.', 'aviso');
+      if (!state.inspecaoAtualId) {
+        App.toast('Nenhum Data Book selecionado para exportar.', 'aviso');
         return;
       }
-      const headers = EXPORT_COLUMNS.map(labelDe);
-      const linhas = rows.map(r => EXPORT_COLUMNS.map(k => k === 'data_producao' ? U.dataBR(r[k]) : (r[k] || '')));
+
+      setStatus('Gerando CSV dos itens filtrados...');
+      const ins = state.inspecaoAtual || {};
+      const headers = EXPORT_COLUMNS.map(labelExport);
+      const linhas = state.itens.map(item => EXPORT_COLUMNS.map(k => linhaExport(ins, item)[k] || ''));
       const csv = [headers, ...linhas].map(row => row.map(csvCell).join(';')).join('\n');
       const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-      baixar(blob, `data_books_dormentes_${stamp()}.csv`);
-      App.toast(`CSV gerado com ${rows.length} registro(s).`, 'sucesso');
-      if (rows.length >= MAX_EXPORT_ROWS) App.toast('Exportação limitada a 10.000 registros. Refine os filtros para reduzir o volume.', 'aviso');
+      baixar(blob, `data_book_documental_${stamp()}.csv`);
+      App.toast(`CSV gerado com ${state.itens.length} item(ns).`, 'sucesso');
     } catch (err) {
       console.error('Erro ao exportar CSV', err);
       App.toast(err?.message || 'Não foi possível gerar o CSV.', 'erro');
     } finally {
-      setStatus(`${state.total} registro(s) encontrado(s). Página ${state.page} de ${totalPaginas()}.`);
+      setStatus(`${state.itens.length} item(ns) encontrado(s) no Data Book selecionado.`);
     }
   }
 
@@ -818,17 +952,18 @@ const DataBooks = (() => {
   return {
     init,
     carregar,
+    selecionarInspecao,
     setFiltro,
     limparFiltros,
-    paginaAnterior,
-    proximaPagina,
-    irPagina,
-    abrirNovo,
-    editar,
-    ver,
+    abrirNovaInspecao,
+    editarInspecaoAtual,
+    salvarInspecao,
+    abrirNovoItem,
+    editarItem,
+    verItem,
     fecharDetalhe,
-    excluir,
-    salvar,
+    excluirItem,
+    salvarItem,
     fecharFormulario,
     exportarCSV
   };

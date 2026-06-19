@@ -7743,3 +7743,125 @@ body[data-tema="escuro"] .data-books-detalhe-grupo {
   .data-books-detalhe-grupo dl > div { grid-template-columns: 1fr; }
   .tabela-data-books { min-width: 980px; }
 }
+
+
+/* 20260619-data-books-documental-v1 */
+.data-book-cabecalho {
+  margin-top: 12px;
+}
+
+.data-book-cabecalho-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.data-book-cab-item {
+  border: 1px solid var(--borda, #dce7f2);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, .35);
+  min-width: 0;
+}
+
+.data-book-cab-item span {
+  display: block;
+  color: var(--texto-suave, #5a6b7b);
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+
+.data-book-cab-item strong {
+  display: block;
+  color: var(--texto, #123);
+  overflow-wrap: anywhere;
+}
+
+.data-book-produto {
+  margin: 12px 0 0;
+  color: var(--texto-suave, #5a6b7b);
+  line-height: 1.45;
+}
+
+.data-book-campo {
+  display: block;
+  min-width: 300px;
+  max-width: 520px;
+  line-height: 1.35;
+}
+
+.data-book-valor {
+  display: block;
+  min-width: 220px;
+  max-width: 420px;
+  overflow-wrap: anywhere;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  border: 1px solid transparent;
+}
+
+.status-badge-ok {
+  background: rgba(47, 143, 70, .14);
+  color: #1f7a3a;
+  border-color: rgba(47, 143, 70, .28);
+}
+
+.status-badge-nok {
+  background: rgba(220, 53, 69, .12);
+  color: #b4232f;
+  border-color: rgba(220, 53, 69, .24);
+}
+
+.status-badge-na {
+  background: rgba(108, 117, 125, .14);
+  color: #56616c;
+  border-color: rgba(108, 117, 125, .25);
+}
+
+.status-badge-pendente {
+  background: rgba(255, 193, 7, .16);
+  color: #8a6200;
+  border-color: rgba(255, 193, 7, .28);
+}
+
+.tabela-data-books tr.linha-alerta td {
+  background: rgba(220, 53, 69, .045);
+}
+
+body[data-tema="escuro"] .data-book-cab-item {
+  background: rgba(255, 255, 255, .04);
+}
+
+body[data-tema="escuro"] .data-book-cab-item strong {
+  color: var(--texto, #eaf2fb);
+}
+
+@media (max-width: 980px) {
+  .data-book-cabecalho-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .data-book-cabecalho-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .data-book-campo,
+  .data-book-valor {
+    min-width: 220px;
+  }
+}
