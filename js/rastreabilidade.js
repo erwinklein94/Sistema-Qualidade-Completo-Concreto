@@ -22,6 +22,7 @@ let RT_LINHAS = [];
 let RT_CARREGANDO = true;
 let RT_ERRO = '';
 let RT_AVISO_OMBREIRA = '';
+let RT_EDIT_ID = null;
 
 /* ---- helpers locais (sem dependências externas) ---- */
 const norm = (v) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
@@ -33,6 +34,28 @@ function dataBR(iso) { if (!iso) return '—'; const m = String(iso).slice(0, 10
 function linkRel(url) { const u = String(url || '').trim(); if (!u) return '—'; const href = /^https?:\/\//i.test(u) ? u : `https://${u}`; return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">Abrir</a>`; }
 function badge(texto, cls) { return `<span class="badge ${cls || ''}">${esc(texto)}</span>`; }
 function valor(id) { return (document.getElementById(id)?.value || ''); }
+function gv(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+// Mapeia o status armazenado do lote para um dos 6 valores canônicos da Produção.
+function statusCanon(s) {
+  const n = norm(s);
+  if (!n) return '';
+  const exato = (CFG.listas.status || []).find((v) => norm(v) === n);
+  if (exato) return exato;
+  if (n.includes('LIBERAD')) return 'Liberado para transporte';
+  if (n.includes('28')) return 'Em processo de cura (28 dias)';
+  if (n.includes('CURA')) return 'Em processo de cura (14 dias)';
+  if (n.includes('AGUARDANDO')) return 'Aguardando ensaio de liberação';
+  if (n.includes('REPROVAD')) return 'Reprovado';
+  if (n.includes('ANALISE')) return 'Em análise';
+  return s;
+}
+function badgeStatusDormente(s) {
+  const c = statusCanon(s);
+  if (!c) return '—';
+  const cls = (CFG.statusBadge || {})[c] || 'badge-entregue';
+  return `<span class="badge ${cls}">${esc(c)}</span>`;
+}
 
 function ehFerroNorte(projeto) { return norm(projeto).includes('FERRO'); }
 function ombreiraEsperada(projeto) {
@@ -130,6 +153,7 @@ function construirLinhas() {
       fornecedor: p.fornecedor || '',
       projeto,
       loteDormente,
+      statusDormente: p.status || '',
       tipoOmbreiraProd: p.tipo_ombreira || '',
       loteOmbreira,
       esperada,
@@ -202,6 +226,7 @@ function render() {
   }
 
   const linhas = linhasFiltradas();
+  const podeEditar = (Auth.pode('criar') || Auth.pode('editar'));
   if (contador) contador.textContent = `${linhas.length} de ${RT_LINHAS.length} lote(s)`;
 
   // KPIs
@@ -228,6 +253,7 @@ function render() {
       <td>${esc(r.fornecedor || '—')}</td>
       <td>${esc(r.projeto || '—')}</td>
       <td><strong>${esc(r.loteDormente || '—')}</strong></td>
+      <td>${badgeStatusDormente(r.statusDormente)}</td>
       <td>${esc(r.respDormente || '—')}</td>
       <td><strong>${esc(r.loteOmbreira || '—')}</strong></td>
       <td>${esc(r.esperada.tipo)} <span class="txt-mini txt-cinza">${esc(r.esperada.codigo)}</span></td>
@@ -237,7 +263,7 @@ function render() {
       <td>${badgeAprovada(r)}</td>
       <td>${badgeNc(r)}</td>
       <td>${r.insp ? linkRel(r.insp.linkIauditor) : '—'}</td>
-      <td><button class="icone-btn" title="Ver rastreabilidade do lote" onclick="abrirVer('${esc(r.id)}')">${ICN.olho}</button></td>
+      <td><button class="icone-btn" title="Ver rastreabilidade do lote" onclick="abrirVer('${esc(r.id)}')">${ICN.olho}</button>${podeEditar ? `<button class="icone-btn" title="Editar lote de dormente" onclick="abrirEditar('${esc(r.id)}')">${ICN.edit}</button>` : ''}</td>
     </tr>`;
   }).join('');
 
@@ -245,7 +271,7 @@ function render() {
     <div class="tabela-wrap">
       <table class="tabela">
         <thead><tr>
-          <th>Fornecedor</th><th>Projeto</th><th>Lote dormente</th><th>Resp. dormente</th>
+          <th>Fornecedor</th><th>Projeto</th><th>Lote dormente</th><th>Status</th><th>Resp. dormente</th>
           <th>Lote ombreira</th><th>Ombreira</th><th>Inspeção ombreira</th><th>Data insp.</th>
           <th>Resp. ombreira</th><th>Aprovada</th><th>NC</th><th>Relatório</th><th></th>
         </tr></thead>
@@ -288,6 +314,7 @@ function abrirVer(id) {
       ${itemVer('Fornecedor', r.fornecedor)}
       ${itemVer('Projeto', r.projeto)}
       ${itemVer('Lote do dormente', r.loteDormente)}
+      ${itemVer('Status do lote', statusCanon(r.statusDormente))}
       ${itemVer('Tipo de ombreira (produção)', r.tipoOmbreiraProd)}
       ${itemVer('Responsável pela inspeção do dormente', r.respDormente)}
       ${itemVer('Data da inspeção de pista', r.pista ? dataBR(r.pista.data_inspecao) : '—')}
@@ -315,6 +342,64 @@ function abrirVer(id) {
 }
 function fecharVer() { document.getElementById('modalVer').classList.remove('aberto'); }
 
+/* ---- edição do lote de dormente (grava em producao_lotes) ---- */
+function opcoes(lista, selecionado) {
+  return (lista || []).map((o) => `<option value="${esc(o)}" ${o === selecionado ? 'selected' : ''}>${esc(o)}</option>`).join('');
+}
+function abrirEditar(id) {
+  if (!(Auth.pode('criar') || Auth.pode('editar'))) { App.toast(Auth.mensagemSemPermissao('editar registros'), 'aviso'); return; }
+  const r = RT_LINHAS.find((x) => x.id === id);
+  if (!r) return;
+  RT_EDIT_ID = id;
+  document.getElementById('editarTitulo').textContent = `Editar lote ${r.loteDormente || ''}`.trim();
+  document.getElementById('editarCorpo').innerHTML = `
+    <div class="form-grid">
+      <div class="form-secao">Lote de dormente</div>
+      <div class="campo"><label>Fornecedor</label><select id="edFornecedor"><option value="">Selecione...</option>${opcoes(CFG.listas.fornecedores, r.fornecedor)}</select></div>
+      <div class="campo"><label>Projeto</label><select id="edProjeto"><option value="">Selecione...</option>${opcoes(CFG.listas.projetos, r.projeto)}</select></div>
+      <div class="campo"><label>Lote do dormente</label><input id="edLote" type="text" value="${esc(r.loteDormente)}"></div>
+      <div class="campo"><label>Status</label><select id="edStatus"><option value="">Selecione...</option>${opcoes(CFG.listas.status, statusCanon(r.statusDormente))}</select></div>
+      <div class="campo full"><label class="txt-mini txt-cinza">O status também é calculado automaticamente na tela de Produção a partir dos ensaios de liberação e da cura. Uma alteração manual aqui pode ser recalculada quando o lote for editado na Produção.</label></div>
+
+      <div class="form-secao">Ombreira</div>
+      <div class="campo"><label>Tipo de ombreira</label><select id="edTipoOmbreira"><option value="">Selecione...</option>${opcoes(CFG.listas.ombreiras, r.tipoOmbreiraProd)}</select></div>
+      <div class="campo"><label>Lote da ombreira</label><input id="edLoteOmbreira" type="text" value="${esc(r.loteOmbreira)}"></div>
+      <div class="campo full"><label class="txt-mini txt-cinza">A inspeção da ombreira (data, relatório, responsável, aprovação e NC) é editada na tela Inspeções Subcomponentes.</label></div>
+    </div>
+    <div class="form-acoes">
+      <button type="button" class="btn btn-secundario" onclick="fecharEditar()">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="salvarEditar()">Salvar</button>
+    </div>`;
+  document.getElementById('modalEditar').classList.add('aberto');
+}
+async function salvarEditar() {
+  if (!(Auth.pode('criar') || Auth.pode('editar'))) { App.toast(Auth.mensagemSemPermissao('salvar registros'), 'aviso'); return; }
+  const id = RT_EDIT_ID;
+  if (!id) return;
+  const payload = {
+    id,
+    fornecedor: gv('edFornecedor') || null,
+    projeto: gv('edProjeto') || null,
+    lote: gv('edLote') || null,
+    status: gv('edStatus') || null,
+    tipo_ombreira: gv('edTipoOmbreira') || null,
+    lote_ombreira: gv('edLoteOmbreira') || null,
+  };
+  try {
+    await StoreSupabase.salvarProducao(payload);
+    fecharEditar();
+    App.toast('Lote de dormente atualizado.');
+    await carregar();
+  } catch (err) {
+    console.error('Erro ao salvar lote de dormente', err);
+    App.toast((err && err.message) ? err.message : 'Não foi possível salvar o lote.', 'erro');
+  }
+}
+function fecharEditar() { RT_EDIT_ID = null; document.getElementById('modalEditar').classList.remove('aberto'); }
+
 window.carregar = carregar;
 window.abrirVer = abrirVer;
 window.fecharVer = fecharVer;
+window.abrirEditar = abrirEditar;
+window.salvarEditar = salvarEditar;
+window.fecharEditar = fecharEditar;

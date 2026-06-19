@@ -56,6 +56,16 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modalEditar">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="editarTitulo">Editar lote de dormente</h2>
+        <button class="fechar-modal" onclick="fecharEditar()">⨯</button>
+      </div>
+      <div class="modal-corpo" id="editarCorpo"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260523-2"></script>
@@ -67,6 +77,6 @@
   <script src="js/comum.js?v=20260619-rastreabilidade-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/store-subcomponentes-supabase.js?v=20260619-responsavel-inspecao-v1"></script>
-  <script src="js/rastreabilidade.js?v=20260619-rastreabilidade-v1"></script>
+  <script src="js/rastreabilidade.js?v=20260619-rastreabilidade-edit-v1"></script>
 </body>
 </html>
