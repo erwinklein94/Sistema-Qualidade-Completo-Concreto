@@ -248,7 +248,12 @@ function statusAutomaticoDoLote(reg, ensaios = []) {
   const aprovado = inteiroOuZero(reg.aprovado);
   const reprovados = inteiroOuZero(reg.reprovados);
   const aAnalisar = inteiroOuZero(reg.aAnalisar);
-  const ultimoEnsaio = ultimoEnsaioLiberacao(ensaios);
+  // Cura térmica: o ensaio de 14 dias é apenas acompanhamento (informativo) e não
+  // decide o status do lote — só o ensaio de 28 dias (data >= cura28) conta.
+  const ensaiosDecisao = reg.curaTermica
+    ? (ensaios || []).filter(e => e.dataEnsaio && cura28 && e.dataEnsaio >= cura28)
+    : ensaios;
+  const ultimoEnsaio = ultimoEnsaioLiberacao(ensaiosDecisao);
 
   if (ultimoEnsaio?.resultado === 'Aprovado') return STATUS_LOTE.LIBERADO;
   if (ultimoEnsaio?.resultado === 'Pendente') return STATUS_LOTE.ANALISE;
@@ -295,6 +300,7 @@ function registroDoFormulario() {
   });
   reg.lotesOmbreira = coletarLotesOmbreira();
   reg.loteOmbreira = U.juntarLotesOmbreira(reg.lotesOmbreira);
+  reg.curaTermica = !!document.getElementById('curaTermica')?.checked;
   return reg;
 }
 
@@ -425,7 +431,7 @@ function render() {
     linhas += `<tr class="${preenchimento.status === 'critico' ? 'linha-alerta' : ''}">
       <td>${U.dataBR(r.dataFabricacao)}</td>
       <td><strong>${semanaRotulo(r.dataFabricacao)}</strong></td>
-      <td><strong>${U.esc(r.lote)}</strong></td>
+      <td><strong>${U.esc(r.lote)}</strong>${r.curaTermica ? ' <span class="tag-termica" title="Cura térmica — libera só aos 28 dias">térmica</span>' : ''}</td>
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${U.badgeBitola(r)}</td>
       <td>${U.esc(r.tipo)}</td>
@@ -594,6 +600,7 @@ function editar(id) {
   if (!r) return;
   document.getElementById('id').value = r.id;
   CAMPOS.forEach(c => { const el = document.getElementById(c); if (el) el.value = r[c] != null ? r[c] : ''; });
+  const ctEl = document.getElementById('curaTermica'); if (ctEl) ctEl.checked = !!r.curaTermica;
   preencherLotesOmbreira((r.lotesOmbreira && r.lotesOmbreira.length) ? r.lotesOmbreira : r.loteOmbreira);
   const statusCalculado = statusAutomaticoDoLote(r, ensaiosDoLoteProducao(r));
   if (statusCalculado) document.getElementById('status').value = statusCalculado;
@@ -682,6 +689,7 @@ function ver(id) {
     <div class="detalhe-grid">
       ${item('Fabricação', U.dataBR(r.dataFabricacao))}${item('Cura 14d', U.dataBR(r.cura14))}
       ${item('Cura 28d', U.dataBR(r.cura28))}${item('Tempo de Cura (h)', r.tempoCura)}
+      ${item('Cura Térmica', r.curaTermica ? 'Sim' : 'Não')}
     </div>
     <div class="detalhe-secao">USP / Ombreiras</div>
     <div class="detalhe-grid">
@@ -765,6 +773,7 @@ function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
     dataFabricacao: dataBanco(r.data_fabricacao),
     cura14: dataBanco(r.cura_14),
     cura28: dataBanco(r.cura_28),
+    curaTermica: !!r.cura_termica,
     tempoCura: r.tempo_cura || '',
     comUsp: boolParaSimNao(r.com_usp),
     uspLote: r.usp_lote || '',
@@ -837,6 +846,7 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
     data_fabricacao: dataOuNull(reg.dataFabricacao),
     cura_14: dataOuNull(reg.cura14),
     cura_28: dataOuNull(reg.cura28),
+    cura_termica: !!reg.curaTermica,
     com_usp: simNaoParaBool(reg.comUsp),
     usp_lote: textoOuNull(reg.uspLote),
     tipo_ombreira: textoOuNull(reg.ombreira),

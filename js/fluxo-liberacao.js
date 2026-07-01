@@ -375,7 +375,7 @@ function cardFluxo(s) {
   return `<article class="fluxo-card ${s.statusChave}">
     <div class="fluxo-card-topo">
       <div>
-        <h3>${U.esc(s.serie)}</h3>
+        <h3>${U.esc(s.serie)}${s.curaTermica ? ' <span class="tag-termica" title="Série de cura térmica — libera só no ensaio de 28 dias">cura térmica</span>' : ''}</h3>
         <p>${U.esc(s.fornecedor)} · ${U.esc(s.grupo)}</p>
       </div>
       <span class="status-fluxo ${s.statusChave}">${U.esc(s.status)}</span>

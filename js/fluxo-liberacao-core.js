@@ -155,17 +155,21 @@ const FluxoLiberacao = (() => {
     });
     serie.ensaios14 = serie.ensaios.filter(e => e.fase === 14);
     serie.ensaios28 = serie.ensaios.filter(e => e.fase === 28);
+    serie.curaTermica = serie.lotes.some(l => !!l.curaTermica);
     aplicarDecisao(serie, hoje);
     return serie;
   }
 
   function aplicarDecisao(serie, hoje) {
+    const termica = !!serie.curaTermica;
     const aprovado14 = serie.ensaios14.find(e => e.resultado === 'Aprovado');
     const reprovado14 = serie.ensaios14.find(e => e.resultado === 'Reprovado');
-    const pendente = serie.ensaios.find(e => e.resultado === 'Pendente');
-    const aprovado28SemReprova14 = !reprovado14 && serie.ensaios28.find(e => e.resultado === 'Aprovado');
+    // Cura térmica: o ensaio de 14 dias é apenas ACOMPANHAMENTO (informativo).
+    // Não libera, não reprova e não trava — a decisão vem sempre do ensaio de 28 dias.
+    const pendente = (termica ? serie.ensaios28 : serie.ensaios).find(e => e.resultado === 'Pendente');
+    const aprovado28SemReprova14 = !termica && !reprovado14 && serie.ensaios28.find(e => e.resultado === 'Aprovado');
 
-    if (aprovado14) return definirLiberado(serie, aprovado14, 'Aprovado no ensaio de liberação com 14 dias de cura.');
+    if (!termica && aprovado14) return definirLiberado(serie, aprovado14, 'Aprovado no ensaio de liberação com 14 dias de cura.');
     if (aprovado28SemReprova14) return definirLiberado(serie, aprovado28SemReprova14, 'Aprovado em ensaio de liberação com 28 dias de cura.');
     if (pendente) {
       serie.status = STATUS.PENDENTE;
@@ -175,7 +179,7 @@ const FluxoLiberacao = (() => {
       return;
     }
 
-    if (!reprovado14) {
+    if (!termica && !reprovado14) {
       if (!serie.prontaParaEnsaio && !serie.ensaios.length) {
         serie.status = STATUS.FORMANDO;
         serie.statusChave = 'formando';
@@ -197,11 +201,32 @@ const FluxoLiberacao = (() => {
       return;
     }
 
+    // Daqui pra baixo a liberação depende do ensaio de 28 dias:
+    //  - série não-térmica que reprovou no ensaio de 14 dias (fluxo original), ou
+    //  - qualquer série de cura térmica (28 dias é a única porta de liberação).
+    if (termica && !serie.prontaParaEnsaio && !serie.ensaios.length) {
+      serie.status = STATUS.FORMANDO;
+      serie.statusChave = 'formando';
+      serie.proximaAcao = 'Continuar acumulando produção até 2.000 dormentes ou 10 lotes, ou liberar sob demanda com ensaio informado.';
+      serie.detalheFluxo = 'Série de cura térmica ainda não atingiu o gatilho padrão.';
+      return;
+    }
+
+    if (termica && serie.cura14 && hoje < serie.cura14) {
+      serie.status = STATUS.CURA_14;
+      serie.statusChave = 'cura14';
+      serie.proximaAcao = `Aguardar até ${dataBR(serie.cura14)} para o ensaio de acompanhamento de 14 dias (não libera) do último lote da série.`;
+      serie.detalheFluxo = 'Série de cura térmica: primeiro o acompanhamento de 14 dias; a liberação ocorre no ensaio de 28 dias.';
+      return;
+    }
+
     if (serie.cura28 && hoje < serie.cura28) {
       serie.status = STATUS.CURA_28;
       serie.statusChave = 'cura28';
       serie.proximaAcao = `Aguardar até ${dataBR(serie.cura28)} para o ensaio de 28 dias do último lote da série.`;
-      serie.detalheFluxo = 'O ensaio de 14 dias foi reprovado; a série segue para cura de 28 dias.';
+      serie.detalheFluxo = termica
+        ? 'Série de cura térmica: após o acompanhamento de 14 dias, segue em cura para o ensaio de liberação de 28 dias.'
+        : 'O ensaio de 14 dias foi reprovado; a série segue para cura de 28 dias.';
       return;
     }
 
@@ -210,12 +235,16 @@ const FluxoLiberacao = (() => {
       serie.status = STATUS.AGUARDANDO_28;
       serie.statusChave = 'aguardando28';
       serie.proximaAcao = 'Executar e registrar o primeiro ensaio de liberação de 28 dias.';
-      serie.detalheFluxo = 'O ensaio de 14 dias foi reprovado e o prazo de 28 dias já chegou.';
+      serie.detalheFluxo = termica
+        ? 'Série de cura térmica com 28 dias completos; registrar o ensaio de liberação de 28 dias.'
+        : 'O ensaio de 14 dias foi reprovado e o prazo de 28 dias já chegou.';
       return;
     }
 
     const primeiro28 = ens28ComResultado[0];
-    if (primeiro28.resultado === 'Aprovado') return definirLiberado(serie, primeiro28, 'Aprovado no primeiro ensaio de 28 dias após reprova de 14 dias.');
+    if (primeiro28.resultado === 'Aprovado') return definirLiberado(serie, primeiro28, termica
+      ? 'Aprovado no ensaio de liberação de 28 dias (série de cura térmica; o ensaio de 14 dias é apenas acompanhamento).'
+      : 'Aprovado no primeiro ensaio de 28 dias após reprova de 14 dias.');
 
     const contra = ens28ComResultado.slice(1);
     const contraAprovados = contra.filter(e => e.resultado === 'Aprovado');
@@ -308,6 +337,7 @@ const FluxoLiberacao = (() => {
       dataFabricacao: dataISO(r.dataFabricacao || r.data_fabricacao),
       serie: r.serie || '',
       status: r.status || '',
+      curaTermica: !!(r.curaTermica ?? r.cura_termica),
       origem: r,
     })).filter(r => r.lote || r.dataFabricacao || r.total || r.projeto);
   }

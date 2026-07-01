@@ -366,6 +366,20 @@ table.tabela .acoes-cel { display: flex; gap: 6px; }
 .badge-bitola-mista { background: #eaf7df; color: #357a14; }
 .badge-bitola-sem { background: #eef0f2; color: #4a5b6b; }
 
+.tag-termica {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  background: #fff1e0;
+  color: #b45309;
+  border: 1px solid #fcd9b6;
+  vertical-align: middle;
+}
+
 /* ===================== FILTROS ===================== */
 .barra-filtros {
   display: flex;

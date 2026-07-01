@@ -222,6 +222,7 @@ function popularSelectLotes(selecionado = '') {
 
 function preencherDadosDoLote(id) {
   const l = obterProducao(id);
+  atualizarAvisoAcompanhamento(l);
   if (!l) return;
   setValor('fornecedor', l.fornecedor);
   setValor('projeto', l.projeto);
@@ -235,12 +236,22 @@ function preencherDadosDoLote(id) {
   preencherSugestoesFormulario();
 }
 
+function atualizarAvisoAcompanhamento(l) {
+  const box = document.getElementById('avisoAcompanhamento');
+  if (!box) return;
+  if (!l || !l.curaTermica) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = '';
+  box.innerHTML = `<div style="border:1px solid #fcd9b6;background:#fff7ed;color:#8a4b0a;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45">`
+    + `<strong>Lote de cura térmica.</strong> O ensaio de 14 dias é de <strong>acompanhamento</strong> — registre o relatório iAuditor normalmente, mas ele <strong>não libera</strong> a série. A liberação ocorre apenas no ensaio de <strong>28 dias</strong>.</div>`;
+}
+
 function abrirNovo() {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
   document.getElementById('form').reset();
   document.getElementById('id').value = '';
   popularSelectLotes();
   document.getElementById('dataEnsaio').value = hojeISO();
+  atualizarAvisoAcompanhamento(null);
   document.getElementById('modalTitulo').textContent = 'Novo ensaio de liberação manual';
   preencherSugestoesFormulario();
   document.getElementById('modal').classList.add('aberto');
@@ -254,6 +265,7 @@ function editar(id) {
   document.getElementById('id').value = r.id;
   popularSelectLotes(r.producaoLoteId || '');
   CAMPOS.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
+  atualizarAvisoAcompanhamento(obterProducao(r.producaoLoteId || ''));
   document.getElementById('modalTitulo').textContent = `Editar ensaio do lote ${r.lote || ''}`;
   preencherSugestoesFormulario();
   document.getElementById('modal').classList.add('aberto');
@@ -847,6 +859,7 @@ function mapProducaoDoBancoSimples(r) {
     serie: r.serie || '',
     ensaiados: valorBanco(r.dorm_ensaiados),
     status: r.status || '',
+    curaTermica: !!r.cura_termica,
   };
 }
 
