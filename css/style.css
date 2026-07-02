@@ -6633,6 +6633,30 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
 /* garante o card sempre acima da foto */
 .login-card { position: relative; z-index: 1; }
 
+/* Trem fujão: locomotiva SVG que foge do cursor na tela de login */
+.login-trem {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.login-trem svg {
+  display: block;
+  width: 130px;
+  height: auto;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
+  animation: trem-bob 2.6s ease-in-out infinite;
+}
+@keyframes trem-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-trem svg { animation: none; }
+}
+
 /* =====================================================================
    CORREÇÃO MOBILE GLOBAL — topo/menu padronizados e logout visível
    2026-06-09
