@@ -41,6 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   carregarCustoDormente();
   atualizarBotaoFestaHexa();
   window.FestaHexa?.sincronizar().then(atualizarBotaoFestaHexa);
+  atualizarBotaoTremFujao();
+  sincronizarTremFujao();
 });
 
 /* ---------- Comemoração da Copa (Rumo ao Hexa) — configuração global ---------- */
@@ -78,6 +80,52 @@ function atualizarBotaoFestaHexa() {
   if (status) status.textContent = ligada
     ? 'Status: ativada para todos os usuários (admin, fiscalização e consulta).'
     : 'Status: desativada para todos os usuários (admin, fiscalização e consulta).';
+}
+
+/* ---------- Trem fujão da tela de login — configuração global ---------- */
+const TREM_FUJAO_CHAVE = 'trem_fujao_login';
+let tremFujaoLigado = true; // padrão: ativado (mesmo comportamento do login)
+
+async function sincronizarTremFujao() {
+  try {
+    const cfg = await StoreSupabase.obterConfiguracaoSistema(TREM_FUJAO_CHAVE);
+    tremFujaoLigado = String(cfg?.valor ?? '1').trim() !== '0';
+  } catch (e) { /* sem conexão/tabela: mantém o padrão */ }
+  atualizarBotaoTremFujao();
+}
+
+async function alternarTremFujao() {
+  const btn = document.getElementById('btnTremFujao');
+  const ligar = !tremFujaoLigado;
+  if (btn) btn.disabled = true;
+  try {
+    await StoreSupabase.salvarConfiguracaoSistema({ chave: TREM_FUJAO_CHAVE, valor: ligar ? '1' : '0' });
+    tremFujaoLigado = ligar;
+    atualizarBotaoTremFujao();
+    App.toast(ligar
+      ? 'Trem fujão ativado na tela de login para todos os visitantes.'
+      : 'Trem fujão desativado na tela de login para todos os visitantes.', ligar ? 'sucesso' : 'aviso');
+  } catch (err) {
+    console.error('Erro ao salvar configuração do trem fujão', err);
+    const msg = /configuracoes_sistema|Could not find the table|schema cache/i.test(err?.message || '')
+      ? 'A tabela configuracoes_sistema ainda não existe no Supabase. Rode os arquivos supabase/2026-06-09-configuracoes-sistema.sql e supabase/2026-07-02-trem-fujao-login.sql no SQL Editor.'
+      : (err?.message || 'Não foi possível salvar a configuração no Supabase.');
+    App.toast(msg, 'erro');
+    sincronizarTremFujao(); // desfaz o estado local
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function atualizarBotaoTremFujao() {
+  const btn = document.getElementById('btnTremFujao');
+  const status = document.getElementById('tremFujaoStatus');
+  if (!btn) return;
+  btn.textContent = tremFujaoLigado ? '🚂 Desativar trem fujão' : '🚂 Ativar trem fujão';
+  btn.className = tremFujaoLigado ? 'btn btn-perigo' : 'btn btn-primario';
+  if (status) status.textContent = tremFujaoLigado
+    ? 'Status: ativado na tela de login para todos os visitantes.'
+    : 'Status: desativado na tela de login para todos os visitantes.';
 }
 
 function atualizarKpis() {

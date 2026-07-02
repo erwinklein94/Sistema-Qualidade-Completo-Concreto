@@ -70,6 +70,20 @@
         </div>
 
         <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Trem fujão na tela de login</span>
+            <span class="card-sub">Locomotiva animada que foge do cursor antes do login</span>
+          </div>
+          <p class="txt-cinza" style="margin-bottom:18px;font-size:14px;line-height:1.7">
+            Na tela de login, uma locomotiva vetorizada nas cores da Rumo passeia pela tela e <strong style="color:var(--azul-escuro)">foge do cursor</strong> (ou do toque, no celular) quando ele se aproxima. A decisão abaixo é <strong style="color:var(--azul-escuro)">global</strong>: fica salva no Supabase, somente o perfil <strong style="color:var(--azul-escuro)">admin</strong> pode alterá-la e vale para todos os visitantes da tela de login. A mudança é aplicada quando a página de login é carregada.
+          </p>
+          <div class="flex gap12" style="flex-wrap:wrap;align-items:center">
+            <button class="btn btn-primario" id="btnTremFujao" onclick="alternarTremFujao()">🚂 Trem fujão</button>
+            <span class="txt-mini txt-cinza" id="tremFujaoStatus"></span>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-titulo"><span class="acento">Importações bloqueadas</span></div>
           <div style="font-size:14px;line-height:1.7;color:var(--cinza-texto)">
             <p style="margin-bottom:10px">A importação de Excel e o carregamento de dados de demonstração foram removidos para preservar o banco como fonte única da verdade.</p>
@@ -102,7 +116,7 @@
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260702-menu-trem-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/dados.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/dados.js?v=20260702-trem-fujao-v2"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

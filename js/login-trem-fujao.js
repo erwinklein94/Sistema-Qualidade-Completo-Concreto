@@ -4,12 +4,36 @@
    - pointer-events: none → nunca atrapalha o formulário.
    - Fica atrás do card de login (z-index 0) e acima do fundo.
    - Respeita prefers-reduced-motion (fica parado, sem animação).
+   - Liga/desliga GLOBAL: o admin decide na página Dados do Sistema
+     (Supabase, configuracoes_sistema, chave trem_fujao_login). Valor
+     '0' = desativado; ausência da chave ou erro de leitura = ativado.
    ===================================================================== */
 (function () {
   'use strict';
 
   var pagina = document.querySelector('.login-page');
   if (!pagina) return;
+
+  var CHAVE_CONFIG = 'trem_fujao_login';
+
+  // Lê a decisão global do admin. A tela de login não tem sessão, então a
+  // leitura usa o acesso anônimo liberado em supabase/2026-07-02-trem-fujao-login.sql.
+  function habilitado() {
+    var sb = window.SUPABASE_CLIENTE;
+    if (!sb) return Promise.resolve(true);
+    return sb
+      .from('configuracoes_sistema')
+      .select('valor')
+      .eq('chave', CHAVE_CONFIG)
+      .maybeSingle()
+      .then(function (res) {
+        if (res.error || !res.data) return true;
+        return String(res.data.valor == null ? '1' : res.data.valor).trim() !== '0';
+      })
+      .catch(function () { return true; });
+  }
+
+  function iniciar() {
 
   var LARGURA = 130;   // largura visual do trem (px)
   var ALTURA = 66;
@@ -110,4 +134,7 @@
   window.addEventListener('resize', limites);
   aplicar();
   requestAnimationFrame(passo);
+  }
+
+  habilitado().then(function (ok) { if (ok) iniciar(); });
 })();
