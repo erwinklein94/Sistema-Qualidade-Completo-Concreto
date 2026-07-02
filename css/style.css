@@ -6563,20 +6563,17 @@ body[data-tema="escuro"] .defeito-preview { background: rgba(3,22,43,.55); borde
   flex-direction: column;
   gap: 2px;
   z-index: 60;
-  max-height: none;
-  overflow: visible;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
 }
 .menu-dd-painel.aberto { display: flex; }
 
-/* Menu aberto sem rolagem interna: a página passa a rolar quando necessário. */
-body.menu-dropdown-aberto {
-  min-height: calc(100vh + var(--menu-dropdown-extra-space, 0px));
-}
-body.menu-dropdown-aberto .conteudo {
-  padding-bottom: var(--menu-dropdown-extra-space, 0px);
-}
+/* Menu aberto: o topo continua fixo (sticky), então o painel aparece
+   em qualquer ponto da rolagem da página. Se o painel for maior que a
+   área visível, ele ganha rolagem interna. */
 body.menu-dropdown-aberto .topo {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 120;
   overflow: visible !important;
 }

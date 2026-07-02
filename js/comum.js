@@ -143,7 +143,6 @@ const App = {
       document.body.classList.add('menu-dropdown-aberto');
       const botao = painel.previousElementSibling;
       if (botao) botao.setAttribute('aria-expanded', 'true');
-      requestAnimationFrame(() => this.ajustarEspacoDropdown(painel));
     }
   },
 
@@ -163,18 +162,8 @@ const App = {
     painel.style.width = 'auto';
     painel.style.minWidth = '0';
     painel.style.maxWidth = 'none';
-    painel.style.maxHeight = 'none';
-    painel.style.overflow = 'visible';
-  },
-
-  ajustarEspacoDropdown(painel) {
-    document.documentElement.style.setProperty('--menu-dropdown-extra-space', '0px');
-    if (!painel || !painel.classList.contains('aberto')) return;
-
-    const margem = 24;
-    const rect = painel.getBoundingClientRect();
-    const extra = Math.max(0, Math.ceil(rect.bottom - window.innerHeight + margem));
-    document.documentElement.style.setProperty('--menu-dropdown-extra-space', `${extra}px`);
+    painel.style.maxHeight = `calc(100vh - ${top + margem}px)`;
+    painel.style.overflowY = 'auto';
   },
 
   fecharDropdowns() {
@@ -185,7 +174,6 @@ const App = {
       if (botao) botao.setAttribute('aria-expanded', 'false');
     });
     document.body.classList.remove('menu-dropdown-aberto');
-    document.documentElement.style.removeProperty('--menu-dropdown-extra-space');
   },
 
   atualizarMenuPorPermissoes() {
