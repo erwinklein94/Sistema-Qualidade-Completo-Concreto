@@ -5,11 +5,15 @@
    20260609-custo-nao-qualidade: KPI de Custo da Não Qualidade (refugos
    da semana × custo unitário configurado em Dados do Sistema) e tabelas
    espelho de Dormentes Reprovados e Ensaios de Liberação da semana.
+   20260703-acomp-v1: tabela espelho de Ensaios de Acompanhamento
+   (14 dias · cura térmica) da semana — apenas documental, não entra na
+   consolidação e não libera série.
    ===================================================================== */
 const Semanal = {
   prod: [],
   rep: [],
   ens: [],
+  acomp: [],
   registros: [],
   custoDormente: 0,
   carregando: true,
@@ -60,16 +64,21 @@ async function carregarSemanal() {
 
   try {
     await Auth.exigirLogin();
-    const [producao, reprovados, ensaios, custoDormente] = await Promise.all([
+    const [producao, reprovados, ensaios, acompanhamentos, custoDormente] = await Promise.all([
       StoreSupabase.listarProducao({ limite: 10000 }),
       StoreSupabase.listarReprovados({ limite: 10000 }),
       StoreSupabase.listarEnsaiosLiberacao({ limite: 10000 }),
+      StoreSupabase.listarEnsaiosAcompanhamento({ limite: 10000 }).catch(err => {
+        console.warn('Ensaios de acompanhamento não carregados (rode supabase/2026-07-03-ensaios-acompanhamento.sql se a tabela ainda não existe)', err);
+        return [];
+      }),
       carregarCustoDormenteSemanal(),
     ]);
 
     Semanal.prod = (producao || []).map(mapProducao);
     Semanal.rep = (reprovados || []).map(mapReprovado);
     Semanal.ens = (ensaios || []).map(mapEnsaio);
+    Semanal.acomp = (acompanhamentos || []).map(mapAcompanhamento);
     Semanal.custoDormente = custoDormente;
     Semanal.registros = consolidarSemanas(Semanal.prod, Semanal.rep, Semanal.ens);
     Semanal.carregando = false;
@@ -138,6 +147,7 @@ function render() {
     alvoLista.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Carregando indicador</h3><p>Consolidando Produção, Reprovados e Ensaios de Liberação...</p></div>`;
     definirEspelhoSemanal('listaReprovados', 'contadorReprovados', `<div class="vazio compacto">${ICN.vazioBox}<h3>Carregando reprovas da semana</h3><p>Buscando registros no Supabase...</p></div>`);
     definirEspelhoSemanal('listaEnsaios', 'contadorEnsaios', `<div class="vazio compacto">${ICN.vazioBox}<h3>Carregando ensaios da semana</h3><p>Buscando registros no Supabase...</p></div>`);
+    definirEspelhoSemanal('listaAcompanhamentos', 'contadorAcompanhamentos', `<div class="vazio compacto">${ICN.vazioBox}<h3>Carregando acompanhamentos da semana</h3><p>Buscando registros no Supabase...</p></div>`);
     return;
   }
 
@@ -147,6 +157,7 @@ function render() {
     alvoLista.innerHTML = `<div class="vazio">${ICN.alerta}<h3>Erro ao carregar</h3><p>${U.esc(Semanal.erro)}</p><button class="btn btn-secundario" onclick="carregarSemanal()">Tentar novamente</button></div>`;
     definirEspelhoSemanal('listaReprovados', 'contadorReprovados', '');
     definirEspelhoSemanal('listaEnsaios', 'contadorEnsaios', '');
+    definirEspelhoSemanal('listaAcompanhamentos', 'contadorAcompanhamentos', '');
     return;
   }
 
@@ -168,7 +179,8 @@ function render() {
 
   const listaReps = filtrarReprovadosSemana(f);
   const listaEns = filtrarEnsaiosSemana(f);
-  registrarExportacaoSemanal(lista, listaReps, listaEns);
+  const listaAcomp = filtrarAcompanhamentosSemana(f);
+  registrarExportacaoSemanal(lista, listaReps, listaEns, listaAcomp);
   const ag = lista.reduce((s, r) => {
     s.prod += U.int(r.produzidos);
     s.ref += U.int(r.dormRecusados);
@@ -195,6 +207,7 @@ function render() {
 
   renderReprovadosSemana(listaReps);
   renderEnsaiosSemana(listaEns);
+  renderAcompanhamentosSemana(listaAcomp);
 
   if (!lista.length) {
     alvoLista.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Sem indicador no filtro atual</h3>
@@ -364,6 +377,79 @@ function rotuloSemanaEnsaioSemanal(r) {
   return info.semana ? `${info.semana}/${info.ano}` : '—';
 }
 
+/* ---------------------------------------------------------------------
+   Espelho da semana — Ensaios de Acompanhamento (14 dias · cura térmica)
+   Registro documental: não entra na consolidação nem libera série.
+   --------------------------------------------------------------------- */
+function filtrarAcompanhamentosSemana(f) {
+  return Semanal.acomp.filter(r => {
+    if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
+    if (f.projeto && !mesmoTexto(r.projeto, f.projeto)) return false;
+    if (f.bitola && U.bitolaDe(r) !== f.bitola) return false;
+    if (!dentroPeriodoIntervalo('', '', r.dataEnsaio, f.ini, f.fim)) return false;
+    return true;
+  }).sort((a, b) =>
+    compararData(b.dataEnsaio, a.dataEnsaio) ||
+    String(a.lote || '').localeCompare(String(b.lote || ''), 'pt-BR', { numeric: true })
+  );
+}
+
+function renderAcompanhamentosSemana(lista) {
+  const alvo = document.getElementById('listaAcompanhamentos');
+  const contador = document.getElementById('contadorAcompanhamentos');
+  if (!alvo) return;
+
+  const aprovados = lista.filter(r => r.resultado === 'Aprovado').length;
+  const reprovados = lista.filter(r => r.resultado === 'Reprovado').length;
+  const pendentes = lista.length - aprovados - reprovados;
+  if (contador) {
+    contador.textContent = `${lista.length} acompanhamento(s) · ${aprovados} aprovado(s) · ${reprovados} reprovado(s) · ${pendentes} pendente(s) · não liberam série`;
+  }
+
+  if (!lista.length) {
+    alvo.innerHTML = `<div class="vazio compacto">${ICN.vazioBox}<h3>Sem acompanhamentos no recorte</h3><p>Nenhum ensaio de acompanhamento (14 dias, lotes de cura térmica) registrado na semana e filtros selecionados.</p></div>`;
+    return;
+  }
+
+  alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
+    <thead><tr>
+      <th>Data</th><th>Semana</th><th>Fornecedor</th><th>Projeto</th><th>Bitola</th><th>Lote</th>
+      <th>Produção / prazo</th><th>Série</th><th>Resultado</th><th class="right">Qtd.</th><th>Responsável</th><th>Relatório</th>
+    </tr></thead><tbody>${lista.map(linhaAcompanhamentoSemana).join('')}</tbody></table></div>`;
+}
+
+function linhaAcompanhamentoSemana(r) {
+  return `<tr>
+    <td>${U.dataBR(r.dataEnsaio)}</td>
+    <td><strong>${rotuloSemanaEnsaioSemanal(r)}</strong></td>
+    <td>${U.esc(r.fornecedor || '—')}</td>
+    <td>${U.badgeProjeto(r.projeto)}</td>
+    <td>${U.badgeBitola(r)}</td>
+    <td><strong>${U.esc(r.lote || '—')}</strong><div class="txt-mini txt-cinza">${r.producaoLoteId ? 'Vinculado à produção' : 'Manual'}</div></td>
+    <td>${celulaPrazoAcompanhamentoSemanal(r)}</td>
+    <td>${U.esc(r.serie || '—')}</td>
+    <td>${badgeResultadoSemanal(r.resultado)}</td>
+    <td class="right">${U.esc(r.quantidadeEnsaiada || '—')}</td>
+    <td>${U.esc(r.responsavel || '—')}</td>
+    <td>${linkRelatorioSemanal(r)}</td>
+  </tr>`;
+}
+
+function celulaPrazoAcompanhamentoSemanal(r) {
+  if (!r.dataProducao) return '<span class="txt-mini txt-cinza">Sem data de produção</span>';
+  const dias = diasEntreDatasSemanal(r.dataProducao, r.dataEnsaio);
+  const rotulo = dias == null ? '' : `<div class="txt-mini ${dias === 14 ? 'txt-cinza' : ''}" style="${dias === 14 ? '' : 'color:#b45309'}">${dias} dia(s) após a produção</div>`;
+  return `${U.dataBR(r.dataProducao)}${rotulo}`;
+}
+
+function diasEntreDatasSemanal(iniIso, fimIso) {
+  if (!iniIso || !fimIso) return null;
+  const ini = new Date(iniIso + 'T00:00:00');
+  const fim = new Date(fimIso + 'T00:00:00');
+  if (isNaN(ini) || isNaN(fim)) return null;
+  return Math.round((fim - ini) / 86400000);
+}
+
 function badgeResultadoSemanal(resultado) {
   const cls = resultado === 'Aprovado' ? 'badge-ok' : resultado === 'Reprovado' ? 'badge-reprovado' : 'badge-amarelo';
   return `<span class="badge ${cls}">${U.esc(resultado || '—')}</span>`;
@@ -463,6 +549,7 @@ function datasSemanaSemanal() {
   Semanal.prod.forEach(r => { if (r.dataFabricacao) datas.push(r.dataFabricacao); });
   Semanal.rep.forEach(r => { [r.dataProducao, r.periodoIni, r.periodoFim].forEach(d => { if (d) datas.push(d); }); });
   Semanal.ens.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
+  Semanal.acomp.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
   return datas;
 }
 
@@ -536,6 +623,26 @@ function mapEnsaio(r) {
   };
 }
 
+function mapAcompanhamento(r) {
+  return {
+    id: r.id,
+    producaoLoteId: r.producao_lote_id || '',
+    fornecedor: r.fornecedor || '',
+    projeto: r.projeto || '',
+    bitola: r.bitola || '',
+    lote: r.lote_ensaiado || '',
+    serie: r.serie || '',
+    resultado: r.resultado || '',
+    quantidadeEnsaiada: valorBanco(r.quantidade_ensaiada),
+    responsavel: r.responsavel || '',
+    linkRelatorio: r.link_relatorio_iauditor || '',
+    semana: r.semana || '',
+    ano: r.ano || '',
+    dataEnsaio: dataBanco(r.data_ensaio),
+    dataProducao: dataBanco(r.data_producao),
+  };
+}
+
 function valorBanco(v) { return v == null ? '' : String(v); }
 function dataBanco(v) { return v ? String(v).slice(0, 10) : ''; }
 function dataFimRegistro(r) { return r.periodoFim || r.data || r.periodoIni || ''; }
@@ -549,7 +656,7 @@ function mensagemErroBanco(err, padrao) {
   return msg;
 }
 
-function registrarExportacaoSemanal(lista, reps = [], ens = []) {
+function registrarExportacaoSemanal(lista, reps = [], ens = [], acomp = []) {
   if (!window.Exportacoes) return;
   const custo = Semanal.custoDormente;
   Exportacoes.registrar({
@@ -629,6 +736,34 @@ function registrarExportacaoSemanal(lista, reps = [], ens = []) {
         semanaExport: r.semana && r.ano ? `${r.semana}/${r.ano}` : (U.semanaOperacionalInfo(r.dataEnsaio).semana ? `${U.semanaOperacionalInfo(r.dataEnsaio).semana}/${U.semanaOperacionalInfo(r.dataEnsaio).ano}` : '—'),
         bitolaExport: U.bitolaDe(r)
       }))
+    }, {
+      titulo: 'Ensaios de acompanhamento na semana (14 dias · cura térmica)',
+      columns: [
+        { key: 'dataExport', label: 'Data do ensaio' },
+        { key: 'dataProducaoExport', label: 'Data de produção' },
+        { key: 'diasExport', label: 'Dias após produção' },
+        { key: 'semanaExport', label: 'Semana' },
+        { key: 'fornecedor', label: 'Fornecedor' },
+        { key: 'projeto', label: 'Projeto' },
+        { key: 'bitolaExport', label: 'Bitola' },
+        { key: 'lote', label: 'Lote ensaiado' },
+        { key: 'serie', label: 'Série (referência)' },
+        { key: 'resultado', label: 'Resultado' },
+        { key: 'quantidadeEnsaiada', label: 'Quantidade ensaiada' },
+        { key: 'responsavel', label: 'Responsável' },
+        { key: 'linkRelatorio', label: 'Relatório' }
+      ],
+      rows: acomp.map(r => {
+        const dias = diasEntreDatasSemanal(r.dataProducao, r.dataEnsaio);
+        return {
+          ...r,
+          dataExport: U.dataBR(r.dataEnsaio),
+          dataProducaoExport: U.dataBR(r.dataProducao),
+          diasExport: dias == null ? '' : dias,
+          semanaExport: r.semana && r.ano ? `${r.semana}/${r.ano}` : (U.semanaOperacionalInfo(r.dataEnsaio).semana ? `${U.semanaOperacionalInfo(r.dataEnsaio).semana}/${U.semanaOperacionalInfo(r.dataEnsaio).ano}` : '—'),
+          bitolaExport: U.bitolaDe(r)
+        };
+      })
     }]
   });
 }

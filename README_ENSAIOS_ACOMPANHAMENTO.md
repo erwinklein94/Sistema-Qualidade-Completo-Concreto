@@ -28,6 +28,17 @@ importado na aba de **Ensaios de Liberação**, o leitor avisa que se trata
 de um acompanhamento, bloqueia o registro rápido como liberação e oferece
 um botão para ir à aba **Ensaios de Acompanhamento**.
 
+## Indicador Semanal
+A página **Indicador Semanal** ganhou, abaixo da tabela "Ensaios de
+liberação na semana", a tabela **"Ensaios de acompanhamento na semana
+(14 dias · cura térmica)"**, que respeita os mesmos filtros da página
+(fornecedor, projeto, bitola, semana/período). A tabela é apenas espelho
+documental: os acompanhamentos **não entram na consolidação** do
+indicador nem nos KPIs, e também aparecem como seção própria nas
+exportações da página. Se a tabela `ensaios_acompanhamento` ainda não
+existir no Supabase, a página continua funcionando normalmente e a seção
+aparece vazia.
+
 ## Arquivos
 - `ensaios-acompanhamento.html` — nova página.
 - `js/ensaios-acompanhamento.js` — lógica da página (leitor iAuditor,
@@ -38,6 +49,8 @@ um botão para ir à aba **Ensaios de Acompanhamento**.
   Dormentes de Concreto.
 - `js/ensaios-liberacao.js` — detecção do relatório de acompanhamento e
   redirecionamento.
+- `semanal.html` / `js/semanal.js` — tabela espelho "Ensaios de
+  acompanhamento na semana" no Indicador Semanal.
 - `supabase/2026-07-03-ensaios-acompanhamento.sql` — **rode este script
   no SQL Editor do Supabase antes de usar a aba** (cria a tabela
   `ensaios_acompanhamento` com índices, auditoria e RLS no mesmo modelo
