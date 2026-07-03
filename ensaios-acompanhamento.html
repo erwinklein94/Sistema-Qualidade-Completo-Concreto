@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ensaios de Liberação · Controle de Dormentes Rumo</title>
+  <title>Ensaios de Acompanhamento · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260702-menu-trem-v1">
 </head>
@@ -14,33 +14,33 @@
 
         <div class="card">
           <div class="card-titulo">
-            <span class="acento">Registro dos ensaios executados</span>
-            <span class="card-sub">Use esta tela para comprovar a liberação efetiva da série</span>
+            <span class="acento">Registro dos ensaios de acompanhamento (14 dias)</span>
+            <span class="card-sub">Lotes de cura térmica: ensaio informativo aos 14 dias após a produção — não libera série</span>
           </div>
           <p class="txt-cinza" style="font-size:14px;line-height:1.7">
-            Aqui ficam somente os ensaios de liberação de dormente: relatórios iAuditor que possuem ensaios estruturais de momento/carga ou lançamentos manuais equivalentes. Inspeções, concretagem, bitola e outros controles podem ser lidos pelo importador, mas não são registrados como liberação nesta tela.
+            Aqui ficam somente os ensaios de <strong>acompanhamento</strong> dos lotes marcados como <strong>Cura Térmica</strong> na Produção: relatórios iAuditor executados 14 dias após a produção do lote. Este registro é apenas documental — <strong>não existe liberação de série nesta tela</strong>. A liberação continua acontecendo exclusivamente pela aba Ensaios de Liberação.
           </p>
         </div>
 
         <div class="card iauditor-card" id="iauditorCard">
           <div class="card-titulo">
             <span class="acento">Leitor de relatório iAuditor</span>
-            <span class="card-sub">Importe o PDF, confira a leitura e registre o ensaio no lote correto</span>
+            <span class="card-sub">Importe o PDF do ensaio de acompanhamento, confira a leitura e registre no lote correto</span>
           </div>
           <div class="iauditor-grid">
             <div class="iauditor-drop" id="iauditorDropzone" role="button" tabindex="0" aria-label="Importar PDF do iAuditor">
               <div class="iauditor-drop-icone"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
               <div>
                 <strong>Solte o PDF do iAuditor aqui</strong>
-                <p>O leitor identifica lote do dormente, projeto, tipo de relatório, resultado e os ensaios estruturais quando existirem.</p>
+                <p>O leitor identifica lote, projeto, data de produção, a marcação "Ensaio após os 14 dias de produção" e os ensaios executados.</p>
                 <button class="btn btn-secundario" type="button" id="iauditorEscolherPdf">Escolher PDF</button>
               </div>
               <input id="iauditorPdfInput" type="file" accept="application/pdf,.pdf" hidden>
             </div>
             <div class="iauditor-orientacao">
               <h3>Como esta área funciona</h3>
-              <p>Relatórios com momentos, cargas, ancoragem/fissuração estrutural podem virar registro de liberação. Os demais ficam como leitura de apoio e não liberam série.</p>
-              <p>Para lançar sem PDF, use <strong>Novo ensaio manual</strong> no topo da tela.</p>
+              <p>Relatórios de acompanhamento (14 dias após a produção, lotes de cura térmica) são registrados aqui apenas como comprovação documental. Nenhum registro desta tela libera série.</p>
+              <p>Se o relatório for de liberação, use a aba <strong>Ensaios de Liberação</strong>. Para lançar sem PDF, use <strong>Novo acompanhamento manual</strong> no topo da tela.</p>
             </div>
           </div>
           <div id="iauditorResultado" class="iauditor-resultado"></div>
@@ -62,7 +62,7 @@
 
         <div class="card">
           <div class="card-titulo">
-            <span class="acento">Ensaios registrados</span>
+            <span class="acento">Acompanhamentos registrados</span>
             <span class="txt-mini txt-cinza" id="contador">0 registros</span>
           </div>
           <div id="lista"></div>
@@ -75,7 +75,7 @@
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <div class="modal-cab">
-        <h2 id="modalTitulo">Novo ensaio de liberação</h2>
+        <h2 id="modalTitulo">Novo ensaio de acompanhamento</h2>
         <button class="fechar-modal" onclick="fecharModal()">⨯</button>
       </div>
       <div class="modal-corpo">
@@ -83,25 +83,26 @@
           <input type="hidden" id="id">
           <div class="form-grid">
             <div class="form-secao">Identificação do ensaio</div>
-            <div class="campo"><label>Data do ensaio <span class="obrig">*</span></label><input id="dataEnsaio" type="date" required></div>
+            <div class="campo"><label>Data do ensaio <span class="obrig">*</span></label><input id="dataEnsaio" type="date" required><small>Ensaio realizado 14 dias após a produção do lote.</small></div>
+            <div class="campo"><label>Data de produção do dormente</label><input id="dataProducao" type="date"><small>Usada para conferir o prazo de 14 dias.</small></div>
             <div class="campo full"><label>Lote produzido cadastrado</label><select id="producaoLoteId"></select><small>Ao selecionar, o sistema preenche fornecedor, projeto, bitola, lote e série com base na Produção.</small></div>
-            <div id="avisoAcompanhamento" class="campo full" style="display:none"></div>
+            <div id="avisoCuraTermica" class="campo full" style="display:none"></div>
             <div class="campo"><label>Fornecedor <span class="obrig">*</span></label><select id="fornecedor" required></select></div>
             <div class="campo"><label>Projeto <span class="obrig">*</span></label><select id="projeto" required></select></div>
             <div class="campo"><label>Bitola <span class="obrig">*</span></label><select id="bitola" required></select></div>
             <div class="campo"><label>Lote ensaiado <span class="obrig">*</span></label><input id="lote" type="text" list="listaLotes" required placeholder="Digite ou escolha um lote"></div>
-            <div class="campo"><label>Quantidade ensaiada</label><input id="quantidadeEnsaiada" type="number" min="0" placeholder="ex.: 4"></div>
+            <div class="campo"><label>Quantidade ensaiada</label><input id="quantidadeEnsaiada" type="number" min="0" placeholder="ex.: 1"></div>
 
-            <div class="form-secao">Resultado e série liberada</div>
+            <div class="form-secao">Resultado do acompanhamento (não libera série)</div>
             <div class="campo"><label>Resultado <span class="obrig">*</span></label><select id="resultado" required></select></div>
-            <div class="campo"><label>Série do projeto liberada <span class="obrig">*</span></label><input id="serieLiberada" type="text" list="listaSeries" placeholder="ex.: Série 01 - MP" required></div>
+            <div class="campo"><label>Série do lote <span class="dica">(referência)</span></label><input id="serie" type="text" list="listaSeries" placeholder="ex.: Série 01 - FN"></div>
             <div class="campo"><label>Responsável</label><input id="responsavel" type="text" placeholder="Nome de quem acompanhou/registrou"></div>
             <div class="campo full"><label>Relatório SharePoint/iAuditor <span class="dica">(link)</span></label><input id="linkRelatorio" type="url" placeholder="https://..."></div>
-            <div class="campo full"><label>Observações</label><textarea id="observacoes" placeholder="Inclua qualquer ponto relevante do ensaio ou da liberação"></textarea></div>
+            <div class="campo full"><label>Observações</label><textarea id="observacoes" placeholder="Inclua qualquer ponto relevante do ensaio de acompanhamento"></textarea></div>
           </div>
           <div class="form-acoes">
             <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
-            <button type="button" class="btn btn-primario" onclick="salvar()">Salvar ensaio</button>
+            <button type="button" class="btn btn-primario" onclick="salvar()">Salvar acompanhamento</button>
           </div>
         </form>
         <datalist id="listaLotes"></datalist>
@@ -113,7 +114,7 @@
   <div class="modal-overlay" id="modalVer">
     <div class="modal">
       <div class="modal-cab">
-        <h2 id="verTitulo">Detalhe do ensaio</h2>
+        <h2 id="verTitulo">Detalhe do acompanhamento</h2>
         <button class="fechar-modal" onclick="fecharVer()">⨯</button>
       </div>
       <div class="modal-corpo" id="verCorpo"></div>
@@ -131,11 +132,10 @@
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260703-acomp-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
   <script src="js/iauditor-parser.js?v=20260526-1"></script>
-  <script src="js/ensaios-liberacao.js?v=20260703-acomp-v1"></script>
+  <script src="js/ensaios-acompanhamento.js?v=20260703-acomp-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

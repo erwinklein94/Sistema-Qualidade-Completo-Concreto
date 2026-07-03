@@ -19,6 +19,7 @@ const App = {
       { k: 'producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'producao.html', group: 'concreto' },
       { k: 'reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'reprovados.html', group: 'concreto' },
       { k: 'ensaiosLiberacao', t: 'Ensaios de Liberação', ic: ICN.check, href: 'ensaios-liberacao.html', group: 'concreto' },
+      { k: 'ensaiosAcompanhamento', t: 'Ensaios de Acompanhamento', ic: ICN.ensaios, href: 'ensaios-acompanhamento.html', group: 'concreto' },
       { k: 'ensaioBitola', t: 'Ensaio de Bitola', ic: ICN.ensaios, href: 'ensaio-bitola.html', group: 'concreto' },
       { k: 'ensaioArrancamentoUsp', t: 'Ensaio de Arrancamento USP', ic: ICN.ensaios, href: 'ensaio-arrancamento-usp.html', group: 'concreto' },
       { k: 'inspecaoConcretagem', t: 'Inspeção de Concretagem', ic: ICN.ensaios, href: 'inspecao-concretagem.html', group: 'concreto' },
