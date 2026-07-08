@@ -3923,15 +3923,21 @@ table.tabela tbody td,
 .editor-lotes-serie {
   display: grid;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
   border: 1px dashed var(--amarelo);
   border-radius: 12px;
   padding: 10px;
   background: linear-gradient(180deg, #fffdf2, #ffffff);
 }
+.editor-lotes-serie > * { min-width: 0; }
 .editor-lotes-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  max-height: 190px;
+  overflow: auto;
+  padding-right: 3px;
 }
 .lote-serie-chip.edicao { position: relative; padding-bottom: 6px; }
 .lote-serie-chip.removido {
@@ -3963,12 +3969,15 @@ table.tabela tbody td,
 }
 .editor-lotes-adicionar {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+  min-width: 0;
 }
 .editor-lotes-adicionar select {
-  flex: 1;
+  flex: 1 1 150px;
   min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--cinza-borda);
   border-radius: 10px;
   padding: 6px 8px;
