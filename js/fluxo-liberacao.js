@@ -7,7 +7,9 @@ let FLUXO_DADOS = { series: [] };
 let FLUXO_CARREGANDO = false;
 let FLUXO_ERRO = '';
 let FICHA_LOTE_ATUAL = null;
+let EDICAO_SERIE = null; // { chave, removidos:Set, adicionados:Set, salvando }
 const FICHA_VINCULOS_CACHE = new Map();
+const ICONE_EDITAR_LOTES = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
 
 const STATUS_FILTRO_FLUXO = [
   { valor: '', texto: 'Todos' },
@@ -391,12 +393,203 @@ function cardFluxo(s) {
       ${barraFluxo('Lotes', s.loteQtd, FluxoLiberacao.LIMITE_LOTES, s.pctLotes, s.statusChave)}
     </div>
     <div class="fluxo-lotes">
-      <strong>Lotes da série</strong>
-      <div>${s.lotes.map(l => `<span class="lote-serie-chip clicavel ${ultimo && l.id === ultimo.id ? 'ultimo' : ''}" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Abrir ficha completa do lote" role="button" tabindex="0"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em></span>`).join('')}</div>
+      ${blocoLotesSerie(s)}
     </div>
     <div class="fluxo-ensaios"><strong>Ensaios registrados</strong><div>${ensaios}</div></div>
     <div class="fluxo-decisao"><strong>Próxima ação</strong><span>${U.esc(s.proximaAcao)}</span><small>${U.esc(s.detalheFluxo || '')}${contagemCuraTexto(s)}</small>${decisaoEnsaioTexto(s)}</div>
   </article>`;
+}
+
+/* =====================================================================
+   EDIÇÃO DE LOTES DA SÉRIE — direto no card do painel
+   Grava o campo "serie" nos lotes de produção (producao_lotes), então a
+   mudança vale para o site inteiro (painel, produção, ensaios, mapa).
+   ===================================================================== */
+function encParam(v) {
+  return encodeURIComponent(String(v == null ? '' : v)).replace(/'/g, '%27');
+}
+
+function blocoLotesSerie(s) {
+  const emEdicao = EDICAO_SERIE && EDICAO_SERIE.chave === s.chave;
+  const podeEditar = window.Auth?.pode?.('editar');
+  const topo = `<div class="fluxo-lotes-topo">
+    <strong>Lotes da série</strong>
+    ${podeEditar && !emEdicao ? `<button type="button" class="btn-editar-lotes" onclick="iniciarEdicaoLotesSerie('${encParam(s.chave)}')" title="Editar quais lotes pertencem a esta série">${ICONE_EDITAR_LOTES}Editar lotes</button>` : ''}
+  </div>`;
+
+  if (!emEdicao) {
+    const ultimo = s.ultimoLote;
+    return `${topo}<div>${s.lotes.map(l => `<span class="lote-serie-chip clicavel ${ultimo && l.id === ultimo.id ? 'ultimo' : ''}" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Abrir ficha completa do lote" role="button" tabindex="0"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em></span>`).join('')}</div>`;
+  }
+  return topo + editorLotesSerieHtml(s);
+}
+
+function editorLotesSerieHtml(s) {
+  const ed = EDICAO_SERIE;
+  const chipsAtuais = s.lotes.map(l => {
+    const id = String(l.id);
+    const removido = ed.removidos.has(id);
+    return `<span class="lote-serie-chip edicao ${removido ? 'removido' : ''}">
+      <strong>${U.esc(l.lote || '—')}</strong>
+      <em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em>
+      <button type="button" class="chip-acao-lote ${removido ? 'desfazer' : ''}" onclick="alternarLoteEdicaoSerie('${encParam(id)}')">${removido ? 'Desfazer' : 'Remover'}</button>
+    </span>`;
+  }).join('');
+
+  const chipsAdicionados = [...ed.adicionados].map(id => {
+    const c = loteCandidatoPorId(id);
+    if (!c) return '';
+    return `<span class="lote-serie-chip edicao adicionado">
+      <strong>${U.esc(c.lote.lote || '—')}</strong>
+      <em>${U.dataBR(c.lote.dataFabricacao)} · veio de ${U.esc(c.serieOrigem)}</em>
+      <button type="button" class="chip-acao-lote desfazer" onclick="alternarLoteEdicaoSerie('${encParam(id)}')">Desfazer</button>
+    </span>`;
+  }).join('');
+
+  const candidatos = lotesCandidatosSerie(s).filter(c => !ed.adicionados.has(String(c.lote.id)));
+  const opcoes = candidatos.map(c => `<option value="${encParam(String(c.lote.id))}">Lote ${U.esc(c.lote.lote || '—')} · ${U.dataBR(c.lote.dataFabricacao)} · ${U.esc(c.serieOrigem)}</option>`).join('');
+
+  return `<div class="editor-lotes-serie">
+    <div class="editor-lotes-chips">${chipsAtuais}${chipsAdicionados}</div>
+    <div class="editor-lotes-adicionar">
+      <select id="selAdicionarLoteSerie" ${candidatos.length ? '' : 'disabled'}>
+        <option value="">${candidatos.length ? 'Trazer lote de outra série...' : 'Nenhum lote disponível neste projeto/fábrica'}</option>
+        ${opcoes}
+      </select>
+      <button type="button" class="btn btn-secundario btn-mini" onclick="adicionarLoteSelecionadoSerie()" ${candidatos.length ? '' : 'disabled'}>${ICN.add || '+'}Adicionar</button>
+    </div>
+    <p class="editor-lotes-aviso">Lotes mantidos/adicionados ficam fixados nesta série; lotes removidos voltam ao cálculo automático. A alteração vale para o site inteiro.</p>
+    <div class="editor-lotes-acoes">
+      <button type="button" class="btn btn-primario btn-mini" onclick="salvarEdicaoLotesSerie()" ${ed.salvando ? 'disabled' : ''}>${ed.salvando ? 'Salvando...' : `${ICN.check}Salvar alterações`}</button>
+      <button type="button" class="btn btn-secundario btn-mini" onclick="cancelarEdicaoLotesSerie()" ${ed.salvando ? 'disabled' : ''}>Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function serieDaChave(chave) {
+  return (FLUXO_DADOS.series || []).find(x => x.chave === chave) || null;
+}
+
+function lotesCandidatosSerie(s) {
+  const out = [];
+  (FLUXO_DADOS.series || []).forEach(x => {
+    if (x.key !== s.key || x.chave === s.chave) return;
+    x.lotes.forEach(l => out.push({ lote: l, serieOrigem: x.serie }));
+  });
+  return out.sort((a, b) => String(a.lote.dataFabricacao || '').localeCompare(String(b.lote.dataFabricacao || ''))
+    || String(a.lote.lote || '').localeCompare(String(b.lote.lote || ''), 'pt-BR', { numeric: true }));
+}
+
+function loteCandidatoPorId(id) {
+  const alvo = String(id);
+  for (const x of (FLUXO_DADOS.series || [])) {
+    const l = x.lotes.find(l => String(l.id) === alvo);
+    if (l) return { lote: l, serieOrigem: x.serie };
+  }
+  return null;
+}
+
+function iniciarEdicaoLotesSerie(chaveEnc) {
+  if (!window.Auth?.pode?.('editar')) {
+    App.toast(Auth.mensagemSemPermissao('editar os lotes da série'), 'aviso');
+    return;
+  }
+  EDICAO_SERIE = { chave: decodeURIComponent(chaveEnc), removidos: new Set(), adicionados: new Set(), salvando: false };
+  renderFluxo();
+}
+
+function cancelarEdicaoLotesSerie() {
+  EDICAO_SERIE = null;
+  renderFluxo();
+}
+
+function alternarLoteEdicaoSerie(idEnc) {
+  const ed = EDICAO_SERIE;
+  if (!ed || ed.salvando) return;
+  const id = decodeURIComponent(idEnc);
+  if (ed.adicionados.has(id)) ed.adicionados.delete(id);
+  else if (ed.removidos.has(id)) ed.removidos.delete(id);
+  else ed.removidos.add(id);
+  renderFluxo();
+}
+
+function adicionarLoteSelecionadoSerie() {
+  const ed = EDICAO_SERIE;
+  if (!ed || ed.salvando) return;
+  const sel = document.getElementById('selAdicionarLoteSerie');
+  const id = decodeURIComponent(sel?.value || '');
+  if (!id) return;
+  ed.adicionados.add(id);
+  renderFluxo();
+}
+
+async function salvarEdicaoLotesSerie() {
+  const ed = EDICAO_SERIE;
+  if (!ed || ed.salvando) return;
+  const s = serieDaChave(ed.chave);
+  if (!s) {
+    App.toast('Série não encontrada no painel atual. Atualize e tente de novo.', 'aviso');
+    EDICAO_SERIE = null;
+    renderFluxo();
+    return;
+  }
+  if (!ed.removidos.size && !ed.adicionados.size) {
+    App.toast('Nenhuma alteração nos lotes desta série.', 'aviso');
+    EDICAO_SERIE = null;
+    renderFluxo();
+    return;
+  }
+
+  // Monta a lista de gravações no banco:
+  //  - removidos: serie = '' (volta ao cálculo automático)
+  //  - mantidos + adicionados: serie = nome da série (fixa a composição)
+  const alteracoes = [];
+  const resumo = [];
+  const semBanco = [];
+  const idBancoDe = l => l.origem?.id || null;
+  s.lotes.forEach(l => {
+    const id = String(l.id);
+    const idBanco = idBancoDe(l);
+    if (ed.removidos.has(id)) {
+      if (!idBanco) { semBanco.push(l.lote || id); return; }
+      alteracoes.push({ id: idBanco, serie: null });
+      resumo.push(`Lote ${l.lote || '—'} sai da série (volta ao automático)`);
+    } else if (FluxoLiberacao.normalizarSerie(l.serie, l.projeto, { permitirVazio: true }) !== s.serie) {
+      if (!idBanco) { semBanco.push(l.lote || id); return; }
+      alteracoes.push({ id: idBanco, serie: s.serie });
+    }
+  });
+  ed.adicionados.forEach(id => {
+    const c = loteCandidatoPorId(id);
+    if (!c) return;
+    const idBanco = idBancoDe(c.lote);
+    if (!idBanco) { semBanco.push(c.lote.lote || id); return; }
+    alteracoes.push({ id: idBanco, serie: s.serie });
+    resumo.push(`Lote ${c.lote.lote || '—'} entra na série (vinha de ${c.serieOrigem})`);
+  });
+  if (semBanco.length) {
+    App.toast(`Lote(s) ${semBanco.join(', ')} sem id no banco não podem ser alterados por aqui.`, 'aviso');
+  }
+  if (!alteracoes.length) return;
+
+  const msg = `Confirmar alterações em "${s.serie}"?\n\n${resumo.join('\n')}\n\nOs lotes mantidos serão fixados nesta série e a mudança vale para o site inteiro (produção, ensaios e painéis).`;
+  if (!confirm(msg)) return;
+
+  ed.salvando = true;
+  renderFluxo();
+  try {
+    for (const alt of alteracoes) {
+      await StoreSupabase.salvarProducao({ id: alt.id, serie: alt.serie });
+    }
+    EDICAO_SERIE = null;
+    App.toast(`Lotes da ${s.serie} atualizados (${alteracoes.length} registro(s) gravado(s)).`, 'sucesso');
+    await carregarFluxoLiberacao();
+  } catch (err) {
+    console.error('Erro ao salvar lotes da série', err);
+    ed.salvando = false;
+    App.toast(mensagemErroBanco(err, 'Não foi possível salvar os lotes da série.'), 'erro');
+    renderFluxo();
+  }
 }
 
 function contagemCuraTexto(s) {
@@ -760,3 +953,8 @@ window.render = renderFluxo;
 window.carregarFluxoLiberacao = carregarFluxoLiberacao;
 window.abrirFichaLote = abrirFichaLote;
 window.fecharFichaLote = fecharFichaLote;
+window.iniciarEdicaoLotesSerie = iniciarEdicaoLotesSerie;
+window.cancelarEdicaoLotesSerie = cancelarEdicaoLotesSerie;
+window.alternarLoteEdicaoSerie = alternarLoteEdicaoSerie;
+window.adicionarLoteSelecionadoSerie = adicionarLoteSelecionadoSerie;
+window.salvarEdicaoLotesSerie = salvarEdicaoLotesSerie;
