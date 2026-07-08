@@ -245,6 +245,66 @@ const Exportacoes = (() => {
     App?.toast?.(graficosIncluidos ? 'PDF gerado com os dados e gráficos filtrados.' : 'PDF gerado com os dados filtrados.', 'sucesso');
   }
 
+  // Ficha individual (ex.: um lote de produção) em PDF retrato,
+  // com seções de pares rótulo/valor — 2 pares por linha.
+  async function exportarFichaPDF(ficha) {
+    try {
+      const jsPDF = await garantirPDF();
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const margem = 12;
+      let y = 14;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.text(String(ficha.titulo || 'Ficha'), margem, y);
+      y += 6;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, margem, y);
+      y += 6;
+
+      (ficha.secoes || []).forEach(sec => {
+        const itens = (sec.itens || []).filter(Boolean);
+        if (!itens.length) return;
+        const body = [];
+        for (let i = 0; i < itens.length; i += 2) {
+          const a = itens[i];
+          const b = itens[i + 1];
+          body.push([
+            String(a.rot || ''), valorCelula(a.val) === '' ? '—' : valorCelula(a.val),
+            b ? String(b.rot || '') : '', b ? (valorCelula(b.val) === '' ? '—' : valorCelula(b.val)) : '',
+          ]);
+        }
+        if (y > 262) { doc.addPage(); y = 14; }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(0, 53, 103);
+        doc.text(String(sec.titulo || ''), margem, y);
+        doc.setTextColor(0, 0, 0);
+        y += 2.5;
+        doc.autoTable({
+          startY: y,
+          body,
+          margin: { left: margem, right: margem },
+          styles: { fontSize: 8.5, cellPadding: 1.8, overflow: 'linebreak' },
+          columnStyles: {
+            0: { fontStyle: 'bold', textColor: [0, 53, 103], cellWidth: 40 },
+            2: { fontStyle: 'bold', textColor: [0, 53, 103], cellWidth: 40 },
+          },
+          alternateRowStyles: { fillColor: [245, 248, 251] },
+          didDrawPage: () => desenharRodapePDF(doc, margem),
+        });
+        y = doc.lastAutoTable.finalY + 7;
+      });
+
+      doc.save(`${limparNomeArquivo(ficha.nomeArquivo || ficha.titulo)}.pdf`);
+      App?.toast?.('PDF da ficha gerado.', 'sucesso');
+    } catch (err) {
+      console.error('Erro ao gerar PDF da ficha', err);
+      App?.toast?.(err?.message || 'Não foi possível gerar o PDF da ficha.', 'erro');
+    }
+  }
+
   function desenharRodapePDF(doc, margem) {
     const largura = doc.internal.pageSize.getWidth();
     const altura = doc.internal.pageSize.getHeight();
@@ -358,7 +418,7 @@ const Exportacoes = (() => {
     return limpo || `Dados ${idx + 1}`;
   }
 
-  return { botoes, registrar, exportarAtual, filtrosDaTela };
+  return { botoes, registrar, exportarAtual, exportarFichaPDF, filtrosDaTela };
 })();
 
 window.Exportacoes = Exportacoes;
