@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparativo Cura Térmica · Controle de Dormentes Rumo</title>
+<link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
+  <link rel="stylesheet" href="css/style.css?v=20260708-editar-lotes-v1">
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina">
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Ferro Norte · Corpos de prova 14 × 28 dias</span>
+            <span class="card-sub">Compressão axial e tração dos lotes de cura térmica: acompanhamento de 14 dias comparado ao resultado de 28 dias</span>
+          </div>
+          <p class="txt-cinza" style="font-size:14px;line-height:1.7">
+            Esta visão reúne todos os lotes do projeto <strong>FERRO NORTE</strong> marcados como <strong>cura térmica</strong> na Produção
+            e compara as resistências dos corpos de prova (média de CP 1 e CP 2 quando os dois existem): o ensaio de acompanhamento aos
+            <strong>14 dias</strong> contra o resultado de liberação aos <strong>28 dias</strong>.
+          </p>
+        </div>
+
+        <div class="barra-filtros">
+          <div class="busca-rapida campo">
+            <label>Buscar lote</label>
+            <input type="text" id="busca" placeholder="Número do lote...">
+          </div>
+          <div class="campo"><label>Fábrica</label><select id="fFornecedor"></select></div>
+          <div class="campo"><label>Fabricação inicial</label><input type="date" id="fPeriodoIni"></div>
+          <div class="campo"><label>Fabricação final</label><input type="date" id="fPeriodoFim"></div>
+        </div>
+
+        <div class="grid-kpi" id="kpisComparativo"></div>
+
+        <div class="grid-graficos">
+          <div class="card span2">
+            <div class="card-titulo"><span class="acento">Acompanhamento 14 dias — Compressão axial × Tração</span>
+              <span class="card-sub">Valores por lote de cura térmica (média dos corpos de prova)</span></div>
+            <div class="chart-box alto"><canvas id="chart14"></canvas></div>
+          </div>
+          <div class="card span2">
+            <div class="card-titulo"><span class="acento">Liberação 28 dias — Compressão axial × Tração</span>
+              <span class="card-sub">Valores por lote de cura térmica (média dos corpos de prova)</span></div>
+            <div class="chart-box alto"><canvas id="chart28"></canvas></div>
+          </div>
+          <div class="card span2">
+            <div class="card-titulo"><span class="acento">Comparativo 14 × 28 dias — Compressão axial e Tração juntas</span>
+              <span class="card-sub">Linhas tracejadas = 14 dias · linhas cheias = 28 dias</span></div>
+            <div class="chart-box alto"><canvas id="chartComparativo"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-titulo"><span class="acento">Tabela de evolução por lote</span>
+            <span class="card-sub">Diferença (ganho) entre 14 e 28 dias por corpo de prova</span></div>
+          <div id="tabelaComparativo"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260523-2"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script>Auth.exigirLogin();</script>
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/store-supabase.js?v=20260703-acomp-v1"></script>
+  <script src="js/exportacoes.js?v=20260708-ficha-pdf-v1"></script>
+  <script src="js/comum.js?v=20260708-comparativo-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260708-comparativo-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>
