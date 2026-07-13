@@ -2,6 +2,7 @@
    COMPARATIVO-CURA-TERMICA.JS — Ferro Norte · CPs 14 × 28 dias
    Compara compressão axial e tração dos corpos de prova dos lotes de
    cura térmica: acompanhamento (14 dias) × liberação (28 dias).
+   Mostra os valores REAIS de cada corpo de prova (CP1 e CP2), sem média.
    Fonte: producao_lotes (comp_14/tracao_14/comp_28/tracao_28 + CP2).
    ===================================================================== */
 let CCT_CHARTS = {};
@@ -55,21 +56,22 @@ function numCp(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function mediaCp(cp1, cp2) {
-  const vals = [numCp(cp1), numCp(cp2)].filter(v => v != null);
-  if (!vals.length) return null;
-  return vals.reduce((s, v) => s + v, 0) / vals.length;
+// Par de corpos de prova: mantém os dois valores reais, sem média.
+function par(cp1, cp2) {
+  return { cp1: numCp(cp1), cp2: numCp(cp2) };
+}
+
+function temValor(p) {
+  return p.cp1 != null || p.cp2 != null;
 }
 
 function fmtCp(v, casas = 1) {
   return v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
 
-function detalheCp(cp1, cp2) {
-  const a = String(cp1 == null ? '' : cp1).trim();
-  const b = String(cp2 == null ? '' : cp2).trim();
-  if (!a && !b) return '';
-  return b ? `CP1 ${a || '—'} · CP2 ${b}` : `CP1 ${a}`;
+function ganhoPct(v14, v28) {
+  if (v14 == null || v28 == null || v14 === 0) return null;
+  return ((v28 - v14) / v14) * 100;
 }
 
 function lotesComparativo() {
@@ -91,16 +93,12 @@ function lotesComparativo() {
       lote: String(r.lote || '—'),
       data: String(r.data_fabricacao || '').slice(0, 10),
       fornecedor: r.fornecedor || '',
-      comp14: mediaCp(r.comp_14, r.comp_14_cp2),
-      tracao14: mediaCp(r.tracao_14, r.tracao_14_cp2),
-      comp28: mediaCp(r.comp_28, r.comp_28_cp2),
-      tracao28: mediaCp(r.tracao_28, r.tracao_28_cp2),
-      detComp14: detalheCp(r.comp_14, r.comp_14_cp2),
-      detTracao14: detalheCp(r.tracao_14, r.tracao_14_cp2),
-      detComp28: detalheCp(r.comp_28, r.comp_28_cp2),
-      detTracao28: detalheCp(r.tracao_28, r.tracao_28_cp2),
+      comp14: par(r.comp_14, r.comp_14_cp2),
+      tracao14: par(r.tracao_14, r.tracao_14_cp2),
+      comp28: par(r.comp_28, r.comp_28_cp2),
+      tracao28: par(r.tracao_28, r.tracao_28_cp2),
     }))
-    .filter(l => l.comp14 != null || l.tracao14 != null || l.comp28 != null || l.tracao28 != null)
+    .filter(l => temValor(l.comp14) || temValor(l.tracao14) || temValor(l.comp28) || temValor(l.tracao28))
     .sort((a, b) => a.data.localeCompare(b.data)
       || String(a.lote).localeCompare(String(b.lote), 'pt-BR', { numeric: true }));
 }
@@ -136,25 +134,30 @@ function mediaLista(valores) {
   return v.reduce((s, x) => s + x, 0) / v.length;
 }
 
-function ganhoPct(v14, v28) {
-  if (v14 == null || v28 == null || v14 === 0) return null;
-  return ((v28 - v14) / v14) * 100;
+// Junta os dois CPs de uma métrica em uma lista achatada (para as médias dos KPIs).
+function todosCps(lotes, metrica) {
+  const out = [];
+  lotes.forEach(l => {
+    if (l[metrica].cp1 != null) out.push(l[metrica].cp1);
+    if (l[metrica].cp2 != null) out.push(l[metrica].cp2);
+  });
+  return out;
 }
 
 function renderKpisComparativo(lotes) {
-  const mComp14 = mediaLista(lotes.map(l => l.comp14));
-  const mComp28 = mediaLista(lotes.map(l => l.comp28));
-  const mTracao14 = mediaLista(lotes.map(l => l.tracao14));
-  const mTracao28 = mediaLista(lotes.map(l => l.tracao28));
-  const completos = lotes.filter(l => l.comp14 != null && l.comp28 != null).length;
+  const mComp14 = mediaLista(todosCps(lotes, 'comp14'));
+  const mComp28 = mediaLista(todosCps(lotes, 'comp28'));
+  const mTracao14 = mediaLista(todosCps(lotes, 'tracao14'));
+  const mTracao28 = mediaLista(todosCps(lotes, 'tracao28'));
+  const completos = lotes.filter(l => temValor(l.comp14) && temValor(l.comp28)).length;
   const gComp = ganhoPct(mComp14, mComp28);
   const gTracao = ganhoPct(mTracao14, mTracao28);
 
   document.getElementById('kpisComparativo').innerHTML = `
     <div class="kpi escuro"><div class="rotulo">Lotes cura térmica FN</div><div class="valor">${lotes.length}</div><div class="extra">${completos} com CPs de 14 e 28 dias</div></div>
-    <div class="kpi"><div class="rotulo">Compressão média 14d</div><div class="valor">${fmtCp(mComp14)}</div><div class="extra">MPa · média dos CPs</div></div>
+    <div class="kpi"><div class="rotulo">Compressão média 14d</div><div class="valor">${fmtCp(mComp14)}</div><div class="extra">MPa · média de todos os CPs</div></div>
     <div class="kpi verde"><div class="rotulo">Compressão média 28d</div><div class="valor">${fmtCp(mComp28)}</div><div class="extra">${gComp == null ? 'sem base de comparação' : `ganho de ${fmtCp(gComp)}% sobre 14d`}</div></div>
-    <div class="kpi"><div class="rotulo">Tração média 14d</div><div class="valor">${fmtCp(mTracao14)}</div><div class="extra">MPa · média dos CPs</div></div>
+    <div class="kpi"><div class="rotulo">Tração média 14d</div><div class="valor">${fmtCp(mTracao14)}</div><div class="extra">MPa · média de todos os CPs</div></div>
     <div class="kpi verde"><div class="rotulo">Tração média 28d</div><div class="valor">${fmtCp(mTracao28)}</div><div class="extra">${gTracao == null ? 'sem base de comparação' : `ganho de ${fmtCp(gTracao)}% sobre 14d`}</div></div>
   `;
 }
@@ -172,16 +175,8 @@ function opcoesEixoDuplo(tituloY, tituloY1) {
     interaction: { mode: 'index', intersect: false },
     layout: { padding: { top: 14, right: 12, bottom: 6, left: 12 } },
     plugins: {
-      legend: { position: 'top', labels: { color: corTexto, usePointStyle: true, padding: 14, font: { size: 12 } } },
-      tooltip: {
-        backgroundColor: App.cssVar('--azul-escuro', '#003567'), padding: 10, cornerRadius: 8, titleFont: { weight: '700' },
-        callbacks: {
-          afterLabel: ctx => {
-            const det = ctx.dataset.detalhes?.[ctx.dataIndex];
-            return det ? `(${det})` : '';
-          }
-        }
-      },
+      legend: { position: 'top', labels: { color: corTexto, usePointStyle: true, padding: 12, font: { size: 11.5 } } },
+      tooltip: { backgroundColor: App.cssVar('--azul-escuro', '#003567'), padding: 10, cornerRadius: 8, titleFont: { weight: '700' } },
     },
     scales: {
       x: { ticks: { color: corTexto, maxRotation: 60, minRotation: 0, autoSkip: true }, grid: { display: false } },
@@ -191,19 +186,21 @@ function opcoesEixoDuplo(tituloY, tituloY1) {
   };
 }
 
-function dsLinha({ label, data, detalhes, cor, eixo, tracejada }) {
+// Uma linha por corpo de prova. Regra visual: CP1 = linha cheia (círculo),
+// CP2 = linha tracejada (triângulo). A cor separa métrica/idade.
+function dsCp({ label, data, cor, eixo, cp2 }) {
   return {
     type: 'line',
     label,
     data,
-    detalhes,
     borderColor: cor,
     backgroundColor: cor,
-    borderWidth: 2.5,
-    borderDash: tracejada ? [7, 5] : [],
+    borderWidth: 2.4,
+    borderDash: cp2 ? [7, 5] : [],
     tension: 0.25,
     spanGaps: true,
-    pointRadius: 3.5,
+    pointRadius: 3.4,
+    pointStyle: cp2 ? 'triangle' : 'circle',
     pointBackgroundColor: cor,
     yAxisID: eixo,
   };
@@ -217,6 +214,7 @@ function desenharGraficosComparativo(lotes) {
   const corComp28 = C.azulEscuro || '#003567';
   const corTracao14 = C.amarelo || '#FFD401';
   const corTracao28 = C.erro || '#c0392b';
+  const val = (metrica, cp) => lotes.map(l => l[metrica][cp]);
 
   if (!lotes.length) return;
 
@@ -224,8 +222,10 @@ function desenharGraficosComparativo(lotes) {
     data: {
       labels,
       datasets: [
-        dsLinha({ label: 'Compressão axial 14d', data: lotes.map(l => l.comp14), detalhes: lotes.map(l => l.detComp14), cor: corComp14, eixo: 'y' }),
-        dsLinha({ label: 'Tração 14d', data: lotes.map(l => l.tracao14), detalhes: lotes.map(l => l.detTracao14), cor: corTracao14, eixo: 'y1' }),
+        dsCp({ label: 'Compressão CP1 · 14d', data: val('comp14', 'cp1'), cor: corComp14, eixo: 'y' }),
+        dsCp({ label: 'Compressão CP2 · 14d', data: val('comp14', 'cp2'), cor: corComp14, eixo: 'y', cp2: true }),
+        dsCp({ label: 'Tração CP1 · 14d', data: val('tracao14', 'cp1'), cor: corTracao14, eixo: 'y1' }),
+        dsCp({ label: 'Tração CP2 · 14d', data: val('tracao14', 'cp2'), cor: corTracao14, eixo: 'y1', cp2: true }),
       ],
     },
     options: opcoesEixoDuplo('Compressão (MPa)', 'Tração (MPa)'),
@@ -235,8 +235,10 @@ function desenharGraficosComparativo(lotes) {
     data: {
       labels,
       datasets: [
-        dsLinha({ label: 'Compressão axial 28d', data: lotes.map(l => l.comp28), detalhes: lotes.map(l => l.detComp28), cor: corComp28, eixo: 'y' }),
-        dsLinha({ label: 'Tração 28d', data: lotes.map(l => l.tracao28), detalhes: lotes.map(l => l.detTracao28), cor: corTracao28, eixo: 'y1' }),
+        dsCp({ label: 'Compressão CP1 · 28d', data: val('comp28', 'cp1'), cor: corComp28, eixo: 'y' }),
+        dsCp({ label: 'Compressão CP2 · 28d', data: val('comp28', 'cp2'), cor: corComp28, eixo: 'y', cp2: true }),
+        dsCp({ label: 'Tração CP1 · 28d', data: val('tracao28', 'cp1'), cor: corTracao28, eixo: 'y1' }),
+        dsCp({ label: 'Tração CP2 · 28d', data: val('tracao28', 'cp2'), cor: corTracao28, eixo: 'y1', cp2: true }),
       ],
     },
     options: opcoesEixoDuplo('Compressão (MPa)', 'Tração (MPa)'),
@@ -246,14 +248,40 @@ function desenharGraficosComparativo(lotes) {
     data: {
       labels,
       datasets: [
-        dsLinha({ label: 'Compressão 14d', data: lotes.map(l => l.comp14), detalhes: lotes.map(l => l.detComp14), cor: corComp14, eixo: 'y', tracejada: true }),
-        dsLinha({ label: 'Compressão 28d', data: lotes.map(l => l.comp28), detalhes: lotes.map(l => l.detComp28), cor: corComp28, eixo: 'y' }),
-        dsLinha({ label: 'Tração 14d', data: lotes.map(l => l.tracao14), detalhes: lotes.map(l => l.detTracao14), cor: corTracao14, eixo: 'y1', tracejada: true }),
-        dsLinha({ label: 'Tração 28d', data: lotes.map(l => l.tracao28), detalhes: lotes.map(l => l.detTracao28), cor: corTracao28, eixo: 'y1' }),
+        dsCp({ label: 'Comp. CP1 · 14d', data: val('comp14', 'cp1'), cor: corComp14, eixo: 'y' }),
+        dsCp({ label: 'Comp. CP2 · 14d', data: val('comp14', 'cp2'), cor: corComp14, eixo: 'y', cp2: true }),
+        dsCp({ label: 'Comp. CP1 · 28d', data: val('comp28', 'cp1'), cor: corComp28, eixo: 'y' }),
+        dsCp({ label: 'Comp. CP2 · 28d', data: val('comp28', 'cp2'), cor: corComp28, eixo: 'y', cp2: true }),
+        dsCp({ label: 'Tração CP1 · 14d', data: val('tracao14', 'cp1'), cor: corTracao14, eixo: 'y1' }),
+        dsCp({ label: 'Tração CP2 · 14d', data: val('tracao14', 'cp2'), cor: corTracao14, eixo: 'y1', cp2: true }),
+        dsCp({ label: 'Tração CP1 · 28d', data: val('tracao28', 'cp1'), cor: corTracao28, eixo: 'y1' }),
+        dsCp({ label: 'Tração CP2 · 28d', data: val('tracao28', 'cp2'), cor: corTracao28, eixo: 'y1', cp2: true }),
       ],
     },
     options: opcoesEixoDuplo('Compressão (MPa)', 'Tração (MPa)'),
   });
+}
+
+// Célula com os dois CPs empilhados (mantém a coluna estreita).
+function celulaPar(p) {
+  if (!temValor(p)) return '—';
+  return `<span class="cp-dupla">
+    <span class="cp-v"><i>CP1</i>${fmtCp(p.cp1)}</span>
+    <span class="cp-v"><i>CP2</i>${fmtCp(p.cp2)}</span>
+  </span>`;
+}
+
+function badgeGanho(rot, v) {
+  if (v == null) return `<span class="cp-v"><i>${rot}</i>—</span>`;
+  const cls = v >= 0 ? 'badge-ok' : 'badge-reprovado';
+  return `<span class="cp-v"><i>${rot}</i><span class="badge ${cls}">${v >= 0 ? '+' : ''}${fmtCp(v)}%</span></span>`;
+}
+
+function celulaGanho(p14, p28) {
+  const g1 = ganhoPct(p14.cp1, p28.cp1);
+  const g2 = ganhoPct(p14.cp2, p28.cp2);
+  if (g1 == null && g2 == null) return '—';
+  return `<span class="cp-dupla">${badgeGanho('CP1', g1)}${badgeGanho('CP2', g2)}</span>`;
 }
 
 function renderTabelaComparativo(lotes) {
@@ -262,23 +290,18 @@ function renderTabelaComparativo(lotes) {
     alvo.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhum lote encontrado</h3><p>Não há lotes de cura térmica do Ferro Norte com CPs lançados para os filtros atuais. Confira a marcação "Cura Térmica" e as resistências na Produção.</p></div>`;
     return;
   }
-  const linha = l => {
-    const gc = ganhoPct(l.comp14, l.comp28);
-    const gt = ganhoPct(l.tracao14, l.tracao28);
-    const badge = v => v == null ? '—' : `<span class="badge ${v >= 0 ? 'badge-ok' : 'badge-reprovado'}">${v >= 0 ? '+' : ''}${fmtCp(v)}%</span>`;
-    return `<tr>
+  const linha = l => `<tr>
       <td><strong>${U.esc(l.lote)}</strong></td>
       <td>${U.dataBR(l.data)}</td>
       <td>${U.esc(l.fornecedor || '—')}</td>
-      <td class="right" title="${U.esc(l.detComp14)}">${fmtCp(l.comp14)}</td>
-      <td class="right" title="${U.esc(l.detComp28)}">${fmtCp(l.comp28)}</td>
-      <td class="right">${badge(gc)}</td>
-      <td class="right" title="${U.esc(l.detTracao14)}">${fmtCp(l.tracao14)}</td>
-      <td class="right" title="${U.esc(l.detTracao28)}">${fmtCp(l.tracao28)}</td>
-      <td class="right">${badge(gt)}</td>
+      <td class="right">${celulaPar(l.comp14)}</td>
+      <td class="right">${celulaPar(l.comp28)}</td>
+      <td class="right">${celulaGanho(l.comp14, l.comp28)}</td>
+      <td class="right">${celulaPar(l.tracao14)}</td>
+      <td class="right">${celulaPar(l.tracao28)}</td>
+      <td class="right">${celulaGanho(l.tracao14, l.tracao28)}</td>
     </tr>`;
-  };
-  alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
+  alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela tabela-cp">
     <thead><tr>
       <th>Lote</th><th>Fabricação</th><th>Fábrica</th>
       <th class="right">Comp. 14d</th><th class="right">Comp. 28d</th><th class="right">Ganho comp.</th>
@@ -288,6 +311,18 @@ function renderTabelaComparativo(lotes) {
   </table></div>`;
 }
 
+// Texto "CP1 x · CP2 y" para as exportações.
+function parTexto(p) {
+  return `CP1 ${p.cp1 == null ? '—' : fmtCp(p.cp1)} · CP2 ${p.cp2 == null ? '—' : fmtCp(p.cp2)}`;
+}
+
+function ganhoTexto(p14, p28) {
+  const g1 = ganhoPct(p14.cp1, p28.cp1);
+  const g2 = ganhoPct(p14.cp2, p28.cp2);
+  const t = (rot, v) => `${rot} ${v == null ? '—' : (v >= 0 ? '+' : '') + fmtCp(v) + '%'}`;
+  return `${t('CP1', g1)} · ${t('CP2', g2)}`;
+}
+
 function registrarExportacaoComparativo(lotes) {
   if (!window.Exportacoes) return;
   Exportacoes.registrar({
@@ -295,37 +330,34 @@ function registrarExportacaoComparativo(lotes) {
     nomeArquivo: 'comparativo-cura-termica-fn',
     filtros: Exportacoes.filtrosDaTela(),
     secoes: [{
-      titulo: 'Lotes de cura térmica FN — CPs 14 × 28 dias',
+      titulo: 'Lotes de cura térmica FN — CPs 14 × 28 dias (valores reais)',
       columns: [
         { key: 'lote', label: 'Lote' },
         { key: 'dataExport', label: 'Fabricação' },
         { key: 'fornecedor', label: 'Fábrica' },
         { key: 'comp14Export', label: 'Compressão 14d (MPa)' },
         { key: 'comp28Export', label: 'Compressão 28d (MPa)' },
-        { key: 'ganhoCompExport', label: 'Ganho compressão (%)' },
+        { key: 'ganhoCompExport', label: 'Ganho compressão' },
         { key: 'tracao14Export', label: 'Tração 14d (MPa)' },
         { key: 'tracao28Export', label: 'Tração 28d (MPa)' },
-        { key: 'ganhoTracaoExport', label: 'Ganho tração (%)' },
-        { key: 'detComp14', label: 'CPs comp. 14d' },
-        { key: 'detComp28', label: 'CPs comp. 28d' },
-        { key: 'detTracao14', label: 'CPs tração 14d' },
-        { key: 'detTracao28', label: 'CPs tração 28d' },
+        { key: 'ganhoTracaoExport', label: 'Ganho tração' },
       ],
       rows: lotes.map(l => ({
-        ...l,
+        lote: l.lote,
+        fornecedor: l.fornecedor,
         dataExport: U.dataBR(l.data),
-        comp14Export: fmtCp(l.comp14),
-        comp28Export: fmtCp(l.comp28),
-        ganhoCompExport: fmtCp(ganhoPct(l.comp14, l.comp28)),
-        tracao14Export: fmtCp(l.tracao14),
-        tracao28Export: fmtCp(l.tracao28),
-        ganhoTracaoExport: fmtCp(ganhoPct(l.tracao14, l.tracao28)),
+        comp14Export: parTexto(l.comp14),
+        comp28Export: parTexto(l.comp28),
+        ganhoCompExport: ganhoTexto(l.comp14, l.comp28),
+        tracao14Export: parTexto(l.tracao14),
+        tracao28Export: parTexto(l.tracao28),
+        ganhoTracaoExport: ganhoTexto(l.tracao14, l.tracao28),
       })),
     }],
     graficos: [
-      { titulo: 'Acompanhamento 14 dias — Compressão × Tração', canvasId: 'chart14' },
-      { titulo: 'Liberação 28 dias — Compressão × Tração', canvasId: 'chart28' },
-      { titulo: 'Comparativo 14 × 28 dias', canvasId: 'chartComparativo' },
+      { titulo: 'Acompanhamento 14 dias — Compressão × Tração (CP1 e CP2)', canvasId: 'chart14' },
+      { titulo: 'Liberação 28 dias — Compressão × Tração (CP1 e CP2)', canvasId: 'chart28' },
+      { titulo: 'Comparativo 14 × 28 dias (CP1 e CP2)', canvasId: 'chartComparativo' },
     ],
   });
 }

@@ -6,6 +6,18 @@
   <title>Comparativo Cura Térmica · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260708-editar-lotes-v1">
+  <style>
+    /* Célula com os dois corpos de prova empilhados (mantém a coluna estreita) */
+    .tabela-cp td.right { vertical-align: top; }
+    .cp-dupla { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+    .cp-dupla .cp-v { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .cp-dupla .cp-v i {
+      font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .3px;
+      color: var(--cinza-texto); background: var(--cinza-bg); border-radius: 5px; padding: 1px 5px;
+    }
+    .tabela-cp .badge { font-size: 10.5px; }
+    .tabela-cp thead th { white-space: nowrap; }
+  </style>
 </head>
 <body>
   <div class="app" id="app">
@@ -39,24 +51,24 @@
         <div class="grid-graficos">
           <div class="card span2">
             <div class="card-titulo"><span class="acento">Acompanhamento 14 dias — Compressão axial × Tração</span>
-              <span class="card-sub">Valores por lote de cura térmica (média dos corpos de prova)</span></div>
+              <span class="card-sub">Valores reais de cada CP por lote · CP1 = linha cheia · CP2 = tracejada</span></div>
             <div class="chart-box alto"><canvas id="chart14"></canvas></div>
           </div>
           <div class="card span2">
             <div class="card-titulo"><span class="acento">Liberação 28 dias — Compressão axial × Tração</span>
-              <span class="card-sub">Valores por lote de cura térmica (média dos corpos de prova)</span></div>
+              <span class="card-sub">Valores reais de cada CP por lote · CP1 = linha cheia · CP2 = tracejada</span></div>
             <div class="chart-box alto"><canvas id="chart28"></canvas></div>
           </div>
           <div class="card span2">
             <div class="card-titulo"><span class="acento">Comparativo 14 × 28 dias — Compressão axial e Tração juntas</span>
-              <span class="card-sub">Linhas tracejadas = 14 dias · linhas cheias = 28 dias</span></div>
+              <span class="card-sub">CP1 = linha cheia · CP2 = tracejada · as cores separam 14/28 dias e compressão/tração</span></div>
             <div class="chart-box alto"><canvas id="chartComparativo"></canvas></div>
           </div>
         </div>
 
         <div class="card">
           <div class="card-titulo"><span class="acento">Tabela de evolução por lote</span>
-            <span class="card-sub">Diferença (ganho) entre 14 e 28 dias por corpo de prova</span></div>
+            <span class="card-sub">Valores reais de CP1 e CP2 e o ganho (14 → 28 dias) de cada corpo de prova</span></div>
           <div id="tabelaComparativo"></div>
         </div>
 
@@ -77,7 +89,7 @@
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
-  <script src="js/comparativo-cura-termica.js?v=20260708-comparativo-v1"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260713-cp-reais-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
