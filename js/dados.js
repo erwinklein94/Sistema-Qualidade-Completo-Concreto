@@ -277,8 +277,12 @@ function celulaExcelSite(v) {
   if (v == null) return '';
   if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
   if (typeof v === 'number') return v;
-  if (typeof v === 'object') { try { return JSON.stringify(v); } catch (e) { return String(v); } }
-  return String(v);
+  let s;
+  if (typeof v === 'object') { try { s = JSON.stringify(v); } catch (e) { s = String(v); } }
+  else s = String(v);
+  // Limite do Excel: 32.767 caracteres por célula. Trunca com aviso.
+  const MAX = 32000;
+  return s.length > MAX ? `${s.slice(0, MAX)}... [texto cortado: ${s.length.toLocaleString('pt-BR')} caracteres no banco]` : s;
 }
 
 async function exportarExcelSiteCompleto() {
