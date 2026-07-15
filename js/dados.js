@@ -228,6 +228,143 @@ function registrarExportacaoDadosResumo(periodo, totalProd, prod, totalRef, reps
 }
 
 /* ---------------------------------------------------------------------
+   Excel do site completo — uma aba por página/tabela do sistema
+   Lê todas as tabelas do Supabase com paginação e monta um único .xlsx.
+   --------------------------------------------------------------------- */
+const TABELAS_SITE_COMPLETO = [
+  { aba: 'Produção', tabela: 'producao_lotes', pagina: 'Produção de Dormentes' },
+  { aba: 'Pedidos', tabela: 'pedidos_dormentes', pagina: 'Pedidos' },
+  { aba: 'Reprovados', tabela: 'reprovados', pagina: 'Dormentes Reprovados' },
+  { aba: 'Ensaios Liberação', tabela: 'ensaios_liberacao', pagina: 'Ensaios de Liberação' },
+  { aba: 'Ensaios Acompanhamento', tabela: 'ensaios_acompanhamento', pagina: 'Ensaios de Acompanhamento' },
+  { aba: 'Ensaio Bitola', tabela: 'ensaios_bitola', pagina: 'Ensaio de Bitola' },
+  { aba: 'Arrancamento USP', tabela: 'ensaios_arrancamento_usp', pagina: 'Ensaio de Arrancamento USP' },
+  { aba: 'Insp Concretagem', tabela: 'inspecoes_concretagem', pagina: 'Inspeção de Concretagem' },
+  { aba: 'Insp Pista', tabela: 'inspecoes_pista', pagina: 'Inspeção de Pista' },
+  { aba: 'RNC Dormentes', tabela: 'rnc_dormentes', pagina: 'RNC (Dormentes)' },
+  { aba: 'Espec Dormentes', tabela: 'especificacoes_dormentes', pagina: 'Especificações e Limites' },
+  { aba: 'Glossário Defeitos', tabela: 'glossario_defeitos', pagina: 'Dormentes Reprovados · Glossário' },
+  { aba: 'Data Books Inspeções', tabela: 'data_book_inspecoes', pagina: 'Data Books · Inspeções' },
+  { aba: 'Data Books Itens', tabela: 'data_book_itens', pagina: 'Data Books · Itens' },
+  { aba: 'Empresas Sub', tabela: 'empresas_subcomponentes', pagina: 'Subcomponentes · Empresas' },
+  { aba: 'Materiais Sub', tabela: 'materiais_subcomponentes', pagina: 'Subcomponentes · Materiais' },
+  { aba: 'Estoque Sub', tabela: 'estoque_subcomponentes', pagina: 'Subcomponentes · Estoque' },
+  { aba: 'Inspeções Sub', tabela: 'inspecoes_subcomponentes', pagina: 'Subcomponentes · Inspeções' },
+  { aba: 'RNC Sub', tabela: 'rnc_subcomponentes', pagina: 'Subcomponentes · RNC' },
+  { aba: 'Espec Sub', tabela: 'especificacoes_subcomponentes', pagina: 'Medidas e Tolerâncias' },
+  { aba: 'Glossário Sub', tabela: 'glossario_subcomponentes', pagina: 'Subcomponentes · Glossário' },
+  { aba: 'Equipamentos', tabela: 'equipamentos_medicao', pagina: 'Controle de Equipamentos' },
+  { aba: 'Usuários', tabela: 'usuarios_app', pagina: 'Usuários e Perfis' },
+  { aba: 'Configurações', tabela: 'configuracoes_sistema', pagina: 'Dados do Sistema · Configurações' },
+  { aba: 'Listas de Configuração', tabela: 'listas_configuracao', pagina: 'Listas dos formulários (fábricas, projetos...)' },
+  { aba: 'Avisos Dashboard', tabela: 'avisos_dashboard', pagina: 'Dashboard · Quadro de Avisos' },
+  { aba: 'Auditoria', tabela: 'auditoria_alteracoes', pagina: 'Auditoria Geral', maxLinhas: 20000 },
+];
+
+async function lerTabelaCompleta(cliente, tabela, maxLinhas = 100000) {
+  const pagina = 1000; // paginação segura independente do max-rows do projeto
+  const linhas = [];
+  for (let de = 0; de < maxLinhas; de += pagina) {
+    const { data, error } = await cliente.from(tabela).select('*').range(de, de + pagina - 1);
+    if (error) throw error;
+    linhas.push(...(data || []));
+    if (!data || data.length < pagina) break;
+  }
+  return linhas;
+}
+
+function celulaExcelSite(v) {
+  if (v == null) return '';
+  if (typeof v === 'boolean') return v ? 'Sim' : 'Não';
+  if (typeof v === 'number') return v;
+  if (typeof v === 'object') { try { return JSON.stringify(v); } catch (e) { return String(v); } }
+  return String(v);
+}
+
+async function exportarExcelSiteCompleto() {
+  if (!Auth.pode('gerenciarSistema')) {
+    App.toast(Auth.mensagemSemPermissao('exportar o site completo'), 'aviso');
+    return;
+  }
+  const btn = document.getElementById('btnExcelSiteCompleto');
+  const status = document.getElementById('excelSiteCompletoStatus');
+  const dizer = t => { if (status) status.textContent = t; };
+  if (btn) btn.disabled = true;
+
+  try {
+    const cliente = window.Auth?.cliente?.();
+    if (!cliente) throw new Error('Supabase não configurado.');
+    dizer('Carregando biblioteca Excel...');
+    const XLSX = await Exportacoes.garantirXLSX();
+    const wb = XLSX.utils.book_new();
+    const resumo = [];
+    const falhas = [];
+    let totalLinhas = 0;
+
+    for (let i = 0; i < TABELAS_SITE_COMPLETO.length; i++) {
+      const t = TABELAS_SITE_COMPLETO[i];
+      dizer(`Lendo ${t.pagina} (${i + 1}/${TABELAS_SITE_COMPLETO.length})...`);
+      try {
+        const linhas = await lerTabelaCompleta(cliente, t.tabela, t.maxLinhas);
+        totalLinhas += linhas.length;
+        resumo.push([t.aba, t.pagina, t.tabela, linhas.length, 'OK']);
+
+        let ws;
+        if (!linhas.length) {
+          ws = XLSX.utils.aoa_to_sheet([['Sem registros nesta tabela.']]);
+        } else {
+          // Colunas = união das chaves de todos os registros, na ordem do primeiro
+          const colunas = [];
+          linhas.forEach(r => Object.keys(r).forEach(k => { if (!colunas.includes(k)) colunas.push(k); }));
+          const aoa = [colunas, ...linhas.map(r => colunas.map(c => celulaExcelSite(r[c])))];
+          ws = XLSX.utils.aoa_to_sheet(aoa);
+          ws['!cols'] = colunas.map((c, idx) => ({
+            wch: Math.min(45, Math.max(10, String(c).length + 2, ...aoa.slice(1, 120).map(l => String(l[idx] ?? '').length + 2)))
+          }));
+          ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+        }
+        XLSX.utils.book_append_sheet(wb, ws, t.aba.slice(0, 31));
+      } catch (err) {
+        console.error(`Erro ao ler ${t.tabela}`, err);
+        falhas.push(t.aba);
+        resumo.push([t.aba, t.pagina, t.tabela, 0, `ERRO: ${String(err?.message || err).slice(0, 120)}`]);
+      }
+    }
+
+    dizer('Montando arquivo Excel...');
+    const capa = [
+      ['Excel do site completo — Controle de Qualidade Total Rumo'],
+      ['Gerado em', new Date().toLocaleString('pt-BR')],
+      ['Gerado por', window.USUARIO_ATUAL?.session?.user?.email || ''],
+      ['Total de linhas exportadas', totalLinhas],
+      [],
+      ['Aba', 'Página do site', 'Tabela no Supabase', 'Linhas', 'Situação'],
+      ...resumo,
+    ];
+    const wsResumo = XLSX.utils.aoa_to_sheet(capa);
+    wsResumo['!cols'] = [{ wch: 24 }, { wch: 34 }, { wch: 30 }, { wch: 10 }, { wch: 50 }];
+    // Coloca o Resumo como primeira aba
+    wb.SheetNames.unshift('Resumo');
+    wb.Sheets['Resumo'] = wsResumo;
+
+    const agora = new Date();
+    const stamp = `${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, '0')}${String(agora.getDate()).padStart(2, '0')}-${String(agora.getHours()).padStart(2, '0')}${String(agora.getMinutes()).padStart(2, '0')}`;
+    XLSX.writeFile(wb, `site-completo-rumo-${stamp}.xlsx`);
+
+    dizer(`Arquivo gerado: ${resumo.length} aba(s), ${totalLinhas.toLocaleString('pt-BR')} linha(s).${falhas.length ? ` Abas com erro: ${falhas.join(', ')}.` : ''}`);
+    App.toast(falhas.length
+      ? `Excel gerado com avisos: ${falhas.length} tabela(s) não puderam ser lidas (veja a aba Resumo).`
+      : 'Excel do site completo gerado com sucesso.', falhas.length ? 'aviso' : 'sucesso');
+  } catch (err) {
+    console.error('Erro ao gerar Excel do site completo', err);
+    dizer('');
+    App.toast(err?.message || 'Não foi possível gerar o Excel do site completo.', 'erro');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ---------------------------------------------------------------------
    Custo da Não Qualidade — custo unitário do dormente (admin)
    --------------------------------------------------------------------- */
 async function carregarCustoDormente() {

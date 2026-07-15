@@ -38,6 +38,20 @@
         </div>
 
         <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Excel do site completo</span>
+            <span class="card-sub">Backup em planilha de todas as informações gravadas no Supabase</span>
+          </div>
+          <p class="txt-cinza" style="margin-bottom:18px;font-size:14px;line-height:1.7">
+            Gera um único arquivo Excel com <strong style="color:var(--azul-escuro)">todos os dados do site</strong>: cada aba da planilha corresponde a uma página/tabela do sistema (Produção, Pedidos, Reprovados, Ensaios, Inspeções, RNC, Subcomponentes, Equipamentos, Usuários, Auditoria etc.), com todas as colunas do banco. Dependendo do volume de registros, a geração pode levar alguns segundos.
+          </p>
+          <div class="flex gap12" style="flex-wrap:wrap;align-items:center">
+            <button class="btn btn-primario" id="btnExcelSiteCompleto" onclick="exportarExcelSiteCompleto()">📗 Excel do site completo</button>
+            <span class="txt-mini txt-cinza" id="excelSiteCompletoStatus"></span>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-titulo"><span class="acento">Custo da não qualidade</span></div>
           <p class="txt-cinza" style="margin-bottom:18px;font-size:14px;line-height:1.7">
             Informe o custo unitário do dormente de concreto. O <strong style="color:var(--azul-escuro)">Indicador Semanal</strong> multiplica os dormentes reprovados da semana por este valor para calcular o custo da não qualidade. Somente o perfil <strong style="color:var(--azul-escuro)">admin</strong> pode alterar este parâmetro.
@@ -113,10 +127,10 @@
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/store-supabase.js?v=20260703-acomp-v1"></script>
-  <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
+  <script src="js/exportacoes.js?v=20260715-excel-site-v1"></script>
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/dados.js?v=20260702-trem-fujao-v2"></script>
+  <script src="js/dados.js?v=20260715-excel-site-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

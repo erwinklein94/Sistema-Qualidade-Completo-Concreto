@@ -418,7 +418,7 @@ const Exportacoes = (() => {
     return limpo || `Dados ${idx + 1}`;
   }
 
-  return { botoes, registrar, exportarAtual, exportarFichaPDF, filtrosDaTela };
+  return { botoes, registrar, exportarAtual, exportarFichaPDF, filtrosDaTela, garantirXLSX };
 })();
 
 window.Exportacoes = Exportacoes;
