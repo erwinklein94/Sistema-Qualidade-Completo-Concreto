@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.110.5";
+import { corsHeaders as supabaseCorsHeaders } from "npm:@supabase/supabase-js@2.110.5/cors";
 
 const SAFETYCULTURE_BASE_URL = "https://api.safetyculture.io";
 const DESTINOS = [
@@ -33,8 +34,8 @@ type Answer = {
 };
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-cron-secret",
+  ...supabaseCorsHeaders,
+  "Access-Control-Allow-Headers": `${supabaseCorsHeaders["Access-Control-Allow-Headers"]}, x-cron-secret, x-supabase-api-version`,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
