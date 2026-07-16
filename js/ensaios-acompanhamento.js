@@ -16,7 +16,7 @@ let IAUDITOR_RELATORIO_ATUAL = null;
 
 const CAMPOS = [
   'producaoLoteId', 'dataEnsaio', 'dataProducao', 'fornecedor', 'projeto', 'bitola', 'lote',
-  'quantidadeEnsaiada', 'resultado', 'serie', 'responsavel', 'linkRelatorio', 'observacoes'
+  'resultado', 'serie', 'responsavel', 'linkRelatorio', 'observacoes'
 ];
 
 const RESULTADOS = ['Aprovado', 'Reprovado', 'Pendente'];
@@ -188,7 +188,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data do ensaio</th><th>Semana</th><th>Fornecedor</th><th>Projeto</th><th>Bitola</th><th>Lote</th>
-      <th>Produção / prazo</th><th>Série</th><th>Resultado</th><th class="right">Qtd.</th><th>Origem</th><th>Relatório</th><th>Ações</th>
+      <th>Produção / prazo</th><th>Série</th><th>Resultado</th><th>Origem</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataEnsaio)}</td>
@@ -198,14 +198,15 @@ function renderTabela(lista, total) {
       <td>${badgeBitolaValor(bitolaRegistro(r))}</td>
       <td><strong>${U.esc(r.lote || '—')}</strong>${r.producaoLoteId ? '<div class="txt-mini txt-cinza">Vinculado à produção</div>' : '<div class="txt-mini txt-cinza">Manual</div>'}</td>
       <td>${celulaPrazo(r)}</td>
-      <td>${U.esc(r.serie || '—')}</td>
+      <td>${celulaSerie(r)}</td>
       <td>${badgeResultado(r.resultado)}</td>
-      <td class="right">${U.esc(r.quantidadeEnsaiada || '—')}</td>
       <td>${SafetyCultureSync.origemBadge(r)}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
         <button class="icone-btn" title="Ver" onclick="ver('${r.id}')">${ICN.olho}</button>
-        ${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
+        ${SafetyCultureSync.gerenciadoPelaApi(r) && Auth.pode('editar')
+          ? `<button class="icone-btn" title="Corrigir série" onclick="abrirCorrecaoSerie('${r.id}')">${ICN.edit}</button>`
+          : SafetyCultureSync.podeEditarRegistro(r) ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
         ${SafetyCultureSync.podeExcluirRegistro(r) ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
       </td>
     </tr>`).join('')}</tbody>
@@ -257,7 +258,6 @@ function preencherDadosDoLote(id) {
   setValor('lote', l.lote);
   if (!document.getElementById('dataProducao')?.value && l.dataFabricacao) setValor('dataProducao', l.dataFabricacao);
   if (!document.getElementById('serie')?.value && l.serie) setValor('serie', l.serie);
-  if (!document.getElementById('quantidadeEnsaiada')?.value && l.ensaiados) setValor('quantidadeEnsaiada', l.ensaiados);
   preencherSugestoesFormulario();
 }
 
@@ -357,6 +357,65 @@ async function salvar() {
   }
 }
 
+function abrirCorrecaoSerie(id) {
+  if (!Auth.pode('editar')) {
+    App.toast(Auth.mensagemSemPermissao('corrigir a série do acompanhamento'), 'aviso');
+    return;
+  }
+  const r = obterEnsaio(id);
+  if (!r) return;
+  setValor('serieRegistroId', r.id);
+  setValor('serieCorrecao', r.serie || '');
+  const resumo = document.getElementById('serieRegistroResumo');
+  if (resumo) {
+    resumo.innerHTML = `Lote <strong>${U.esc(r.lote || '—')}</strong> · ${U.esc(r.fornecedor || '—')} · ${U.esc(r.projeto || '—')}`;
+  }
+  document.getElementById('modalSerie')?.classList.add('aberto');
+  setTimeout(() => document.getElementById('serieCorrecao')?.focus(), 0);
+}
+
+function fecharCorrecaoSerie() {
+  document.getElementById('modalSerie')?.classList.remove('aberto');
+}
+
+async function salvarCorrecaoSerie() {
+  if (!Auth.pode('editar')) {
+    App.toast(Auth.mensagemSemPermissao('corrigir a série do acompanhamento'), 'aviso');
+    return;
+  }
+  const id = document.getElementById('serieRegistroId')?.value || '';
+  const serie = document.getElementById('serieCorrecao')?.value.trim() || '';
+  if (!id || !serie) {
+    App.toast('Informe a série correta do lote.', 'aviso');
+    return;
+  }
+
+  const btn = document.getElementById('btnSalvarSerie');
+  const textoOriginal = btn?.innerHTML;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Salvando...';
+  }
+
+  try {
+    const salvo = await StoreSupabase.atualizarSerieEnsaioAcompanhamento(id, serie);
+    const convertido = mapEnsaioDoBanco(salvo);
+    const idx = ACOMP_REGISTROS.findIndex(r => r.id === convertido.id);
+    if (idx >= 0) ACOMP_REGISTROS[idx] = convertido;
+    App.toast('Série corrigida. O ajuste será preservado nas próximas sincronizações.');
+    fecharCorrecaoSerie();
+    render();
+  } catch (err) {
+    console.error('Erro ao corrigir série do acompanhamento', err);
+    App.toast(mensagemErroBanco(err, 'Não foi possível corrigir a série no Supabase.'), 'erro');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = textoOriginal || 'Salvar série';
+    }
+  }
+}
+
 async function excluir(id) {
   const r = obterEnsaio(id);
   if (!r) return;
@@ -394,11 +453,15 @@ function ver(id) {
     </div>
     <div class="detalhe-secao">Resultado do acompanhamento (não libera série)</div>
     <div class="detalhe-grid">
-      ${item('Resultado', badgeResultado(r.resultado))}${item('Quantidade ensaiada', U.esc(r.quantidadeEnsaiada))}
+      ${item('Resultado', badgeResultado(r.resultado))}
       ${item('Responsável', U.esc(r.responsavel))}${item('Relatório', linkRelatorio(r))}
     </div>
     ${r.observacoes ? `<div class="detalhe-secao">Observações</div><p style="font-size:13.5px;color:var(--cinza-texto);line-height:1.7">${U.esc(r.observacoes)}</p>` : ''}
-    <div class="form-acoes"><button class="btn btn-secundario" onclick="fecharVer()">Fechar</button>${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="btn btn-primario" onclick="fecharVer(); editar('${r.id}')">Editar</button>` : ''}</div>`;
+    <div class="form-acoes"><button class="btn btn-secundario" onclick="fecharVer()">Fechar</button>${
+      SafetyCultureSync.gerenciadoPelaApi(r) && Auth.pode('editar')
+        ? `<button class="btn btn-primario" onclick="fecharVer(); abrirCorrecaoSerie('${r.id}')">Corrigir série</button>`
+        : SafetyCultureSync.podeEditarRegistro(r) ? `<button class="btn btn-primario" onclick="fecharVer(); editar('${r.id}')">Editar</button>` : ''
+    }</div>`;
   document.getElementById('modalVer').classList.add('aberto');
 }
 
@@ -514,7 +577,6 @@ function montarRegistroAPartirDoIauditor(data, fileName, textoBruto) {
     projeto: projeto || prod?.projeto || '',
     bitola: bitola || U.bitolaDe(prod || {}),
     lote: lote || prod?.lote || '',
-    quantidadeEnsaiada: '',
     resultado,
     serie,
     responsavel,
@@ -919,7 +981,6 @@ function mapEnsaioDoBanco(r) {
     lote: r.lote_ensaiado || '',
     serie: r.serie || '',
     resultado: r.resultado || '',
-    quantidadeEnsaiada: valorBanco(r.quantidade_ensaiada),
     responsavel: r.responsavel || '',
     linkRelatorio: r.link_relatorio_iauditor || '',
     arquivoOrigem: r.arquivo_origem || '',
@@ -928,6 +989,7 @@ function mapEnsaioDoBanco(r) {
     safecultureAuditId: r.safeculture_audit_id || '',
     safecultureTemplateId: r.safeculture_template_id || '',
     safecultureModifiedAt: r.safeculture_modified_at || '',
+    serieAjustadaManualmente: !!r.serie_ajustada_manualmente,
   };
 }
 
@@ -949,7 +1011,6 @@ function mapEnsaioParaBanco(reg) {
     lote_ensaiado: textoOuNull(reg.lote || prod?.lote),
     serie: textoOuNull(reg.serie || prod?.serie),
     resultado: textoOuNull(reg.resultado),
-    quantidade_ensaiada: inteiroOuZero(reg.quantidadeEnsaiada),
     responsavel: textoOuNull(reg.responsavel),
     link_relatorio_iauditor: textoOuNull(reg.linkRelatorio),
     arquivo_origem: textoOuNull(reg.arquivoOrigem),
@@ -962,6 +1023,13 @@ function mapEnsaioParaBanco(reg) {
 
 function obterEnsaio(id) { return ACOMP_REGISTROS.find(r => r.id === id); }
 function obterProducao(id) { return PRODUCAO_LOTES.find(l => l.id === id); }
+
+function celulaSerie(r) {
+  const serie = U.esc(r.serie || '—');
+  return r.serieAjustadaManualmente
+    ? `${serie}<div class="txt-mini txt-cinza">Ajustada manualmente</div>`
+    : serie;
+}
 
 function encontrarProducaoPorLote(lote, fornecedor = '') {
   const alvo = U.norm(lote);
@@ -979,7 +1047,6 @@ function valorBanco(v) { return v == null ? '' : String(v); }
 function dataBanco(v) { return v ? String(v).slice(0, 10) : ''; }
 function textoOuNull(v) { const s = String(v == null ? '' : v).trim(); return s ? s : null; }
 function dataOuNull(v) { const s = String(v == null ? '' : v).slice(0, 10).trim(); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; }
-function inteiroOuZero(v) { const n = parseInt(String(v == null ? '' : v).replace(/[^0-9-]/g, ''), 10); return isNaN(n) ? 0 : n; }
 function uuidOuNull(v) { const s = String(v == null ? '' : v).trim(); return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s) ? s : null; }
 
 function mensagemErroBanco(err, padrao) {
@@ -1017,7 +1084,6 @@ function registrarExportacaoAcompanhamento(lista) {
         { key: 'lote', label: 'Lote ensaiado' },
         { key: 'serie', label: 'Série (referência)' },
         { key: 'resultado', label: 'Resultado' },
-        { key: 'quantidadeEnsaiada', label: 'Quantidade ensaiada' },
         { key: 'responsavel', label: 'Responsável' },
         { key: 'linkRelatorio', label: 'Link relatório SharePoint/iAuditor' },
         { key: 'observacoes', label: 'Observações' },

@@ -281,6 +281,23 @@ const StoreSupabase = (() => {
     return data;
   }
 
+  async function atualizarSerieEnsaioAcompanhamento(id, serie) {
+    exigirPermissao('editar', 'corrigir a série do acompanhamento');
+    const user = await usuarioAtual();
+    const { data, error } = await db()
+      .from('ensaios_acompanhamento')
+      .update({
+        serie,
+        serie_ajustada_manualmente: true,
+        atualizado_por: user?.id || null,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   async function removerEnsaioAcompanhamento(id) {
     exigirPermissao('excluir', 'excluir registros');
     const { error } = await db().from('ensaios_acompanhamento').delete().eq('id', id);
@@ -813,6 +830,7 @@ const StoreSupabase = (() => {
     removerEnsaioLiberacao,
     listarEnsaiosAcompanhamento,
     salvarEnsaioAcompanhamento,
+    atualizarSerieEnsaioAcompanhamento,
     removerEnsaioAcompanhamento,
     listarEnsaiosBitola,
     salvarEnsaioBitola,

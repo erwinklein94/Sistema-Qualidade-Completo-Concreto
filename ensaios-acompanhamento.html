@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ensaios de Acompanhamento · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
-  <link rel="stylesheet" href="css/style.css?v=20260716-safeculture-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260716-serie-v2">
 </head>
 <body>
   <div class="app" id="app">
@@ -91,8 +91,6 @@
             <div class="campo"><label>Projeto <span class="obrig">*</span></label><select id="projeto" required></select></div>
             <div class="campo"><label>Bitola <span class="obrig">*</span></label><select id="bitola" required></select></div>
             <div class="campo"><label>Lote ensaiado <span class="obrig">*</span></label><input id="lote" type="text" list="listaLotes" required placeholder="Digite ou escolha um lote"></div>
-            <div class="campo"><label>Quantidade ensaiada</label><input id="quantidadeEnsaiada" type="number" min="0" placeholder="ex.: 1"></div>
-
             <div class="form-secao">Resultado do acompanhamento (não libera série)</div>
             <div class="campo"><label>Resultado <span class="obrig">*</span></label><select id="resultado" required></select></div>
             <div class="campo"><label>Série do lote <span class="dica">(referência)</span></label><input id="serie" type="text" list="listaSeries" placeholder="ex.: Série 01 - FN"></div>
@@ -121,6 +119,28 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modalSerie">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-cab">
+        <h2>Corrigir série do lote</h2>
+        <button class="fechar-modal" onclick="fecharCorrecaoSerie()">×</button>
+      </div>
+      <div class="modal-corpo">
+        <input type="hidden" id="serieRegistroId">
+        <p class="txt-cinza" id="serieRegistroResumo" style="margin-top:0"></p>
+        <div class="campo">
+          <label>Série correta <span class="obrig">*</span></label>
+          <input id="serieCorrecao" type="text" list="listaSeries" placeholder="ex.: Série 28 - FN">
+          <small>Esta correção local será preservada nas próximas sincronizações do SafetyCulture.</small>
+        </div>
+        <div class="form-acoes">
+          <button type="button" class="btn btn-secundario" onclick="fecharCorrecaoSerie()">Cancelar</button>
+          <button type="button" class="btn btn-primario" id="btnSalvarSerie" onclick="salvarCorrecaoSerie()">Salvar série</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260523-2"></script>
@@ -128,7 +148,7 @@
   <script>Auth.exigirLogin();</script>
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
-  <script src="js/store-supabase.js?v=20260703-acomp-v1"></script>
+  <script src="js/store-supabase.js?v=20260716-serie-v2"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
@@ -136,7 +156,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
   <script src="js/iauditor-parser.js?v=20260526-1"></script>
-  <script src="js/ensaios-acompanhamento.js?v=20260716-safeculture-v1"></script>
+  <script src="js/ensaios-acompanhamento.js?v=20260716-serie-v2"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

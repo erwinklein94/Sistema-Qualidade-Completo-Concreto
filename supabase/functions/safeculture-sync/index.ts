@@ -502,11 +502,24 @@ async function processAudit(
   }, { onConflict: "audit_id" });
   if (pendingRawError) throw pendingRawError;
 
+  const existingColumns = template.destino === "ensaios_acompanhamento"
+    ? "id,serie,serie_ajustada_manualmente"
+    : "id";
   const { data: existing } = await supabase
     .from(template.destino)
-    .select("id")
+    .select(existingColumns)
     .eq("safeculture_audit_id", audit.audit_id)
     .maybeSingle();
+
+  if (
+    template.destino === "ensaios_acompanhamento" &&
+    existing?.serie_ajustada_manualmente &&
+    clean(existing.serie)
+  ) {
+    const acompanhamento = mapped as Record<string, unknown>;
+    acompanhamento.serie = clean(existing.serie);
+    acompanhamento.serie_ajustada_manualmente = true;
+  }
 
   const { data: saved, error: saveError } = await supabase
     .from(template.destino)
@@ -692,6 +705,7 @@ async function mapToDestination(
   ])) || 0;
 
   if (template.destino === "ensaios_acompanhamento") {
+    const sourceSeries = clean(field("serie", ["serie de lotes", "serie"]));
     return {
       ...common,
       data_ensaio: dataEnsaio,
@@ -708,9 +722,9 @@ async function mapToDestination(
       projeto: projeto || production?.projeto || null,
       bitola,
       lote_ensaiado: lote || production?.lote || null,
-      serie: clean(field("serie", ["serie de lotes", "serie"])) || production?.serie || null,
+      serie: seriesReference(sourceSeries, production?.serie, lote),
+      serie_ajustada_manualmente: false,
       resultado: result,
-      quantidade_ensaiada: quantity,
       responsavel: responsavel || null,
       link_relatorio_iauditor: reportLink || null,
       arquivo_origem: sourceName,
@@ -750,6 +764,14 @@ async function findProductionLot(supabase: SupabaseClient, lot: string, supplier
   const list = data || [];
   const supplierNorm = normalize(supplier);
   return list.find((row) => supplierNorm && normalize(row.fornecedor) === supplierNorm) || list[0] || null;
+}
+
+function seriesReference(sourceSeries: string, productionSeries: unknown, lot: string) {
+  const linkedSeries = clean(String(productionSeries || ""));
+  if (linkedSeries) return linkedSeries;
+  const importedSeries = clean(sourceSeries);
+  if (!importedSeries || normalize(importedSeries) === normalize(lot)) return null;
+  return importedSeries;
 }
 
 function flattenAnswers(inspection: Record<string, unknown>) {

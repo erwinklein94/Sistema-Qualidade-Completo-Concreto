@@ -444,7 +444,7 @@ function renderAcompanhamentosSemana(lista) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Semana</th><th>Fornecedor</th><th>Projeto</th><th>Bitola</th><th>Lote</th>
-      <th>Produção / prazo</th><th>Série</th><th>Resultado</th><th class="right">Qtd.</th><th>Responsável</th><th>Relatório</th>
+      <th>Produção / prazo</th><th>Série</th><th>Resultado</th><th>Responsável</th><th>Relatório</th>
     </tr></thead><tbody>${lista.map(linhaAcompanhamentoSemana).join('')}</tbody></table></div>`;
 }
 
@@ -459,7 +459,6 @@ function linhaAcompanhamentoSemana(r) {
     <td>${celulaPrazoAcompanhamentoSemanal(r)}</td>
     <td>${U.esc(r.serie || '—')}</td>
     <td>${badgeResultadoSemanal(r.resultado)}</td>
-    <td class="right">${U.esc(r.quantidadeEnsaiada || '—')}</td>
     <td>${U.esc(r.responsavel || '—')}</td>
     <td>${linkRelatorioSemanal(r)}</td>
   </tr>`;
@@ -825,7 +824,6 @@ function mapAcompanhamento(r) {
     lote: r.lote_ensaiado || '',
     serie: r.serie || '',
     resultado: r.resultado || '',
-    quantidadeEnsaiada: valorBanco(r.quantidade_ensaiada),
     responsavel: r.responsavel || '',
     linkRelatorio: r.link_relatorio_iauditor || '',
     semana: r.semana || '',
@@ -1017,7 +1015,6 @@ function registrarExportacaoSemanal(lista, reps = [], ens = [], acomp = [], arra
         { key: 'lote', label: 'Lote ensaiado' },
         { key: 'serie', label: 'Série (referência)' },
         { key: 'resultado', label: 'Resultado' },
-        { key: 'quantidadeEnsaiada', label: 'Quantidade ensaiada' },
         { key: 'responsavel', label: 'Responsável' },
         { key: 'linkRelatorio', label: 'Relatório' }
       ],
