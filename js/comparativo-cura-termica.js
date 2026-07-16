@@ -1,7 +1,7 @@
 /* =====================================================================
-   COMPARATIVO-CURA-TERMICA.JS — Ferro Norte · CPs 14 × 28 dias
-   Compara compressão axial e tração dos corpos de prova dos lotes de
-   cura térmica: acompanhamento (14 dias) × liberação (28 dias).
+   COMPARATIVO-CURA-TERMICA.JS — Ferro Norte · histórico de CPs 14 × 28 dias
+   Compara compressão axial e tração dos corpos de prova de todos os lotes,
+   com filtro entre cura térmica e cura normal.
    Mostra os valores REAIS de cada corpo de prova (CP1 e CP2), sem média.
    Fonte: producao_lotes (comp_14/tracao_14/comp_28/tracao_28 + CP2).
    ===================================================================== */
@@ -10,7 +10,7 @@ const CCT = { prod: [], carregando: true, erro: '' };
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
-  App.montarLayout('comparativoCuraTermica', 'Comparativo Cura Térmica', 'Ferro Norte · compressão axial e tração dos CPs — 14 × 28 dias');
+  App.montarLayout('comparativoCuraTermica', 'Histórico de Cura — Ferro Norte', 'Compressão axial e tração dos CPs · cura térmica e normal · 14 × 28 dias');
   App.acoesTopo(`<button class="btn btn-primario" onclick="carregarComparativoCuraTermica()">${ICN.filtro}Atualizar</button>`);
 
   document.getElementById('fFornecedor').innerHTML = U.opcoes(CFG.listas.fornecedores, '', 'Todas');
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearTimeout(buscaTimer);
     buscaTimer = setTimeout(renderComparativo, 200);
   });
-  ['fFornecedor', 'fPeriodoIni', 'fPeriodoFim'].forEach(id => {
+  ['fFornecedor', 'fTipoCura', 'fPeriodoIni', 'fPeriodoFim'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', renderComparativo);
   });
 
@@ -28,18 +28,70 @@ document.addEventListener('DOMContentLoaded', async () => {
   await carregarComparativoCuraTermica();
 });
 
+async function listarHistoricoFerroNorte() {
+  const cliente = window.Auth?.cliente?.();
+  if (!cliente) throw new Error('Supabase não configurado.');
+
+  const tamanhoPagina = 1000;
+  const colunas = [
+    'id',
+    'lote',
+    'data_fabricacao',
+    'fornecedor',
+    'projeto',
+    'cura_termica',
+    'comp_14',
+    'comp_14_cp2',
+    'tracao_14',
+    'tracao_14_cp2',
+    'comp_28',
+    'comp_28_cp2',
+    'tracao_28',
+    'tracao_28_cp2',
+  ].join(',');
+  const historico = [];
+  let ultimoId = '';
+
+  for (;;) {
+    let consulta = cliente
+      .from('producao_lotes')
+      .select(colunas)
+      .ilike('projeto', 'ferro%')
+      .order('id', { ascending: true })
+      .limit(tamanhoPagina);
+
+    if (ultimoId) consulta = consulta.gt('id', ultimoId);
+
+    const { data, error } = await consulta;
+
+    if (error) throw error;
+
+    const pagina = data || [];
+    historico.push(...pagina);
+    if (pagina.length < tamanhoPagina) break;
+
+    const proximoId = String(pagina[pagina.length - 1]?.id || '');
+    if (!proximoId || proximoId === ultimoId) {
+      throw new Error('Não foi possível avançar na paginação do histórico.');
+    }
+    ultimoId = proximoId;
+  }
+
+  return historico;
+}
+
 async function carregarComparativoCuraTermica() {
   CCT.carregando = true;
   CCT.erro = '';
   renderComparativo();
   try {
-    const producao = await StoreSupabase.listarProducao({ limite: 10000 });
+    const producao = await listarHistoricoFerroNorte();
     CCT.prod = (producao || []).filter(r =>
-      !!(r.cura_termica) && FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE');
+      FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE');
     CCT.carregando = false;
     renderComparativo();
   } catch (err) {
-    console.error('Erro ao carregar comparativo de cura térmica', err);
+    console.error('Erro ao carregar histórico de cura da Ferro Norte', err);
     CCT.carregando = false;
     CCT.erro = err?.message || 'Não foi possível carregar os lotes do Supabase.';
     App.toast(CCT.erro, 'erro');
@@ -65,6 +117,11 @@ function temValor(p) {
   return p.cp1 != null || p.cp2 != null;
 }
 
+function temResultado(lote) {
+  return temValor(lote.comp14) || temValor(lote.tracao14)
+    || temValor(lote.comp28) || temValor(lote.tracao28);
+}
+
 function fmtCp(v, casas = 1) {
   return v == null ? '—' : v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
 }
@@ -77,6 +134,7 @@ function ganhoPct(v14, v28) {
 function lotesComparativo() {
   const busca = document.getElementById('busca')?.value.toLowerCase().trim() || '';
   const fornecedor = document.getElementById('fFornecedor')?.value || '';
+  const tipoCura = document.getElementById('fTipoCura')?.value || '';
   const ini = document.getElementById('fPeriodoIni')?.value || '';
   const fim = document.getElementById('fPeriodoFim')?.value || '';
 
@@ -84,6 +142,8 @@ function lotesComparativo() {
     .filter(r => {
       const data = String(r.data_fabricacao || '').slice(0, 10);
       if (fornecedor && r.fornecedor !== fornecedor) return false;
+      if (tipoCura === 'termica' && !r.cura_termica) return false;
+      if (tipoCura === 'normal' && !!r.cura_termica) return false;
       if (ini && (!data || data < ini)) return false;
       if (fim && (!data || data > fim)) return false;
       if (busca && !String(r.lote || '').toLowerCase().includes(busca)) return false;
@@ -93,12 +153,12 @@ function lotesComparativo() {
       lote: String(r.lote || '—'),
       data: String(r.data_fabricacao || '').slice(0, 10),
       fornecedor: r.fornecedor || '',
+      curaTermica: !!r.cura_termica,
       comp14: par(r.comp_14, r.comp_14_cp2),
       tracao14: par(r.tracao_14, r.tracao_14_cp2),
       comp28: par(r.comp_28, r.comp_28_cp2),
       tracao28: par(r.tracao_28, r.tracao_28_cp2),
     }))
-    .filter(l => temValor(l.comp14) || temValor(l.tracao14) || temValor(l.comp28) || temValor(l.tracao28))
     .sort((a, b) => a.data.localeCompare(b.data)
       || String(a.lote).localeCompare(String(b.lote), 'pt-BR', { numeric: true }));
 }
@@ -109,7 +169,7 @@ function renderComparativo() {
   if (!kpis || !tabela) return;
 
   if (CCT.carregando) {
-    kpis.innerHTML = `<div class="kpi escuro"><div class="rotulo">Comparativo</div><div class="valor">...</div><div class="extra">Carregando lotes de cura térmica</div></div>`;
+    kpis.innerHTML = `<div class="kpi escuro"><div class="rotulo">Histórico Ferro Norte</div><div class="valor">...</div><div class="extra">Carregando todos os tipos de cura</div></div>`;
     tabela.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Carregando</h3><p>Buscando produção no Supabase.</p></div>`;
     destruirGraficosComparativo();
     return;
@@ -152,9 +212,11 @@ function renderKpisComparativo(lotes) {
   const completos = lotes.filter(l => temValor(l.comp14) && temValor(l.comp28)).length;
   const gComp = ganhoPct(mComp14, mComp28);
   const gTracao = ganhoPct(mTracao14, mTracao28);
+  const termicos = lotes.filter(l => l.curaTermica).length;
+  const normais = lotes.length - termicos;
 
   document.getElementById('kpisComparativo').innerHTML = `
-    <div class="kpi escuro"><div class="rotulo">Lotes cura térmica FN</div><div class="valor">${lotes.length}</div><div class="extra">${completos} com CPs de 14 e 28 dias</div></div>
+    <div class="kpi escuro"><div class="rotulo">Lotes Ferro Norte</div><div class="valor">${lotes.length}</div><div class="extra">${termicos} térmicos · ${normais} normais<br>${completos} com compressão em 14 e 28 dias</div></div>
     <div class="kpi"><div class="rotulo">Compressão média 14d</div><div class="valor">${fmtCp(mComp14)}</div><div class="extra">MPa · média de todos os CPs</div></div>
     <div class="kpi verde"><div class="rotulo">Compressão média 28d</div><div class="valor">${fmtCp(mComp28)}</div><div class="extra">${gComp == null ? 'sem base de comparação' : `ganho de ${fmtCp(gComp)}% sobre 14d`}</div></div>
     <div class="kpi"><div class="rotulo">Tração média 14d</div><div class="valor">${fmtCp(mTracao14)}</div><div class="extra">MPa · média de todos os CPs</div></div>
@@ -208,15 +270,16 @@ function dsCp({ label, data, cor, eixo, cp2 }) {
 
 function desenharGraficosComparativo(lotes) {
   destruirGraficosComparativo();
+  const lotesComResultado = lotes.filter(temResultado);
   const C = App.coresGrafico();
-  const labels = lotes.map(l => l.lote);
+  const labels = lotesComResultado.map(l => l.lote);
   const corComp14 = C.azulClaro || '#32A6E6';
   const corComp28 = C.azulEscuro || '#003567';
   const corTracao14 = C.amarelo || '#FFD401';
   const corTracao28 = C.erro || '#c0392b';
-  const val = (metrica, cp) => lotes.map(l => l[metrica][cp]);
+  const val = (metrica, cp) => lotesComResultado.map(l => l[metrica][cp]);
 
-  if (!lotes.length) return;
+  if (!lotesComResultado.length) return;
 
   CCT_CHARTS.c14 = new Chart(document.getElementById('chart14'), {
     data: {
@@ -287,13 +350,16 @@ function celulaGanho(p14, p28) {
 function renderTabelaComparativo(lotes) {
   const alvo = document.getElementById('tabelaComparativo');
   if (!lotes.length) {
-    alvo.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhum lote encontrado</h3><p>Não há lotes de cura térmica do Ferro Norte com CPs lançados para os filtros atuais. Confira a marcação "Cura Térmica" e as resistências na Produção.</p></div>`;
+    alvo.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhum lote encontrado</h3><p>Não há lotes da Ferro Norte para os filtros atuais. Ajuste o tipo de cura, a fábrica, o período ou a busca pelo lote.</p></div>`;
     return;
   }
   const linha = l => `<tr>
       <td><strong>${U.esc(l.lote)}</strong></td>
       <td>${U.dataBR(l.data)}</td>
       <td>${U.esc(l.fornecedor || '—')}</td>
+      <td>${l.curaTermica
+        ? '<span class="tag-termica">Cura térmica</span>'
+        : '<span class="badge badge-entregue">Cura normal</span>'}</td>
       <td class="right">${celulaPar(l.comp14)}</td>
       <td class="right">${celulaPar(l.comp28)}</td>
       <td class="right">${celulaGanho(l.comp14, l.comp28)}</td>
@@ -303,7 +369,7 @@ function renderTabelaComparativo(lotes) {
     </tr>`;
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela tabela-cp">
     <thead><tr>
-      <th>Lote</th><th>Fabricação</th><th>Fábrica</th>
+      <th>Lote</th><th>Fabricação</th><th>Fábrica</th><th>Tipo de cura</th>
       <th class="right">Comp. 14d</th><th class="right">Comp. 28d</th><th class="right">Ganho comp.</th>
       <th class="right">Tração 14d</th><th class="right">Tração 28d</th><th class="right">Ganho tração</th>
     </tr></thead>
@@ -326,15 +392,16 @@ function ganhoTexto(p14, p28) {
 function registrarExportacaoComparativo(lotes) {
   if (!window.Exportacoes) return;
   Exportacoes.registrar({
-    titulo: 'Comparativo Cura Térmica — Ferro Norte (14 × 28 dias)',
-    nomeArquivo: 'comparativo-cura-termica-fn',
+    titulo: 'Histórico de Cura — Ferro Norte (14 × 28 dias)',
+    nomeArquivo: 'historico-cura-ferro-norte',
     filtros: Exportacoes.filtrosDaTela(),
     secoes: [{
-      titulo: 'Lotes de cura térmica FN — CPs 14 × 28 dias (valores reais)',
+      titulo: 'Todos os lotes Ferro Norte — CPs 14 × 28 dias (valores reais)',
       columns: [
         { key: 'lote', label: 'Lote' },
         { key: 'dataExport', label: 'Fabricação' },
         { key: 'fornecedor', label: 'Fábrica' },
+        { key: 'tipoCuraExport', label: 'Tipo de cura' },
         { key: 'comp14Export', label: 'Compressão 14d (MPa)' },
         { key: 'comp28Export', label: 'Compressão 28d (MPa)' },
         { key: 'ganhoCompExport', label: 'Ganho compressão' },
@@ -345,6 +412,7 @@ function registrarExportacaoComparativo(lotes) {
       rows: lotes.map(l => ({
         lote: l.lote,
         fornecedor: l.fornecedor,
+        tipoCuraExport: l.curaTermica ? 'Cura térmica' : 'Cura normal',
         dataExport: U.dataBR(l.data),
         comp14Export: parTexto(l.comp14),
         comp28Export: parTexto(l.comp28),

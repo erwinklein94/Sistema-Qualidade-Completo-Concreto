@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comparativo Cura Térmica · Controle de Dormentes Rumo</title>
+  <title>Histórico de Cura Ferro Norte · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260708-editar-lotes-v1">
   <style>
@@ -26,13 +26,13 @@
 
         <div class="card">
           <div class="card-titulo">
-            <span class="acento">Ferro Norte · Corpos de prova 14 × 28 dias</span>
-            <span class="card-sub">Compressão axial e tração dos lotes de cura térmica: acompanhamento de 14 dias comparado ao resultado de 28 dias</span>
+            <span class="acento">Ferro Norte · Histórico de corpos de prova 14 × 28 dias</span>
+            <span class="card-sub">Compressão axial e tração de todos os lotes, com separação entre cura térmica e cura normal</span>
           </div>
           <p class="txt-cinza" style="font-size:14px;line-height:1.7">
-            Esta visão reúne todos os lotes do projeto <strong>FERRO NORTE</strong> marcados como <strong>cura térmica</strong> na Produção
-            e compara as resistências dos corpos de prova (média de CP 1 e CP 2 quando os dois existem): o ensaio de acompanhamento aos
-            <strong>14 dias</strong> contra o resultado de liberação aos <strong>28 dias</strong>.
+            Esta visão reúne <strong>todo o histórico do projeto FERRO NORTE</strong>, incluindo lotes de <strong>cura térmica</strong>
+            e de <strong>cura normal</strong>. As mesmas informações de CP 1 e CP 2 são exibidas para ambos os tipos; quando um resultado
+            ainda não foi lançado na Produção, a tabela mostra o campo sem valor.
           </p>
         </div>
 
@@ -42,6 +42,14 @@
             <input type="text" id="busca" placeholder="Número do lote...">
           </div>
           <div class="campo"><label>Fábrica</label><select id="fFornecedor"></select></div>
+          <div class="campo">
+            <label>Tipo de cura</label>
+            <select id="fTipoCura">
+              <option value="">Todos</option>
+              <option value="termica">Cura térmica</option>
+              <option value="normal">Cura normal</option>
+            </select>
+          </div>
           <div class="campo"><label>Fabricação inicial</label><input type="date" id="fPeriodoIni"></div>
           <div class="campo"><label>Fabricação final</label><input type="date" id="fPeriodoFim"></div>
         </div>
@@ -51,17 +59,17 @@
         <div class="grid-graficos">
           <div class="card span2">
             <div class="card-titulo"><span class="acento">Acompanhamento 14 dias — Compressão axial × Tração</span>
-              <span class="card-sub">Valores reais de cada CP por lote · CP1 = linha cheia · CP2 = tracejada</span></div>
+              <span class="card-sub">Lotes com resultados lançados · CP1 = linha cheia · CP2 = tracejada</span></div>
             <div class="chart-box alto"><canvas id="chart14"></canvas></div>
           </div>
           <div class="card span2">
             <div class="card-titulo"><span class="acento">Liberação 28 dias — Compressão axial × Tração</span>
-              <span class="card-sub">Valores reais de cada CP por lote · CP1 = linha cheia · CP2 = tracejada</span></div>
+              <span class="card-sub">Lotes com resultados lançados · CP1 = linha cheia · CP2 = tracejada</span></div>
             <div class="chart-box alto"><canvas id="chart28"></canvas></div>
           </div>
           <div class="card span2">
             <div class="card-titulo"><span class="acento">Comparativo 14 × 28 dias — Compressão axial e Tração juntas</span>
-              <span class="card-sub">CP1 = linha cheia · CP2 = tracejada · as cores separam 14/28 dias e compressão/tração</span></div>
+              <span class="card-sub">Lotes com resultados lançados · CP1 = linha cheia · CP2 = tracejada · cores separam idade e ensaio</span></div>
             <div class="chart-box alto"><canvas id="chartComparativo"></canvas></div>
           </div>
         </div>
@@ -89,7 +97,7 @@
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
-  <script src="js/comparativo-cura-termica.js?v=20260713-cp-reais-v1"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260716-historico-fn-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
