@@ -92,7 +92,7 @@ async function authorize(req: Request, supabase: SupabaseClient) {
     .eq("id", userData.user.id)
     .maybeSingle();
   if (profileError) throw profileError;
-  if (!profile?.ativo || normalize(profile.perfil) !== "admin") {
+  if (!profile?.ativo || normalize(profile.perfil) !== "ADMIN") {
     throw new HttpError(403, "Somente administradores podem sincronizar o SafetyCulture.");
   }
   return { kind: "user" as const, userId: userData.user.id };
