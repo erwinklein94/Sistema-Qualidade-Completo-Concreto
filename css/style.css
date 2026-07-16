@@ -7795,3 +7795,71 @@ body[data-tema="escuro"] .subir-pagina-icone {
 @media print {
   .subir-pagina-btn { display: none !important; }
 }
+/* =====================================================================
+   Integração SafetyCulture
+   ===================================================================== */
+.btn-safeculture {
+  background: #5b2ca0;
+  border-color: #5b2ca0;
+  color: #fff;
+}
+.btn-safeculture:hover { background: #48217f; border-color: #48217f; }
+.safeculture-status-topo {
+  align-self: center;
+  max-width: 230px;
+  color: var(--cinza-texto);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.safeculture-status-topo.erro { color: var(--erro); }
+.badge-safeculture { background: #eee5fb; color: #542692; border: 1px solid #d8c2f5; }
+.badge-pdf { background: #e8f3fb; color: #075985; border: 1px solid #bddff3; }
+.badge-manual { background: #edf1f4; color: #4b5965; border: 1px solid #d7dfe5; }
+.safeculture-resumo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.safeculture-resumo {
+  padding: 13px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 10px;
+  background: var(--branco);
+}
+.safeculture-resumo span {
+  display: block;
+  color: var(--cinza-texto);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.safeculture-resumo strong { display: block; margin-top: 5px; color: var(--azul-escuro); }
+.safeculture-resumo.ok { border-left: 4px solid var(--verde); }
+.safeculture-resumo.aviso { border-left: 4px solid var(--amarelo); }
+.safeculture-resumo.erro { border-left: 4px solid var(--erro); }
+.safeculture-template-id {
+  display: block;
+  max-width: 280px;
+  overflow-wrap: anywhere;
+  color: var(--cinza-texto);
+  font-size: 11px;
+}
+.safeculture-select { min-width: 220px; }
+.safeculture-switch { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.safeculture-carregando { display: flex; align-items: center; gap: 10px; color: var(--cinza-texto); }
+.safeculture-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255,255,255,.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: safeculture-spin .8s linear infinite;
+}
+@keyframes safeculture-spin { to { transform: rotate(360deg); } }
+@media (max-width: 900px) {
+  .safeculture-resumo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .safeculture-status-topo { width: 100%; max-width: none; }
+}
+@media (max-width: 520px) {
+  .safeculture-resumo-grid { grid-template-columns: 1fr; }
+}

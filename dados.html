@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dados do Sistema · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
-  <link rel="stylesheet" href="css/style.css?v=20260702-menu-trem-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260716-safeculture-v1">
 </head>
 <body>
   <div class="app" id="app">
@@ -49,6 +49,31 @@
             <button class="btn btn-primario" id="btnExcelSiteCompleto" onclick="exportarExcelSiteCompleto()">📗 Excel do site completo</button>
             <span class="txt-mini txt-cinza" id="excelSiteCompletoStatus"></span>
           </div>
+        </div>
+
+        <div class="card" id="safecultureAdminCard">
+          <div class="card-titulo">
+            <span class="acento">Integração SafetyCulture</span>
+            <span class="card-sub">Sincronização automática dos relatórios de inspeção e ensaios</span>
+          </div>
+          <p class="txt-cinza" style="margin-bottom:16px;font-size:14px;line-height:1.7">
+            O token fica protegido nas Edge Function Secrets do Supabase. O navegador recebe somente o resultado da sincronização e nunca tem acesso à credencial do SafetyCulture.
+          </p>
+          <div id="safecultureAdminStatus"></div>
+          <div class="flex gap12" style="flex-wrap:wrap;align-items:center;margin:18px 0">
+            <button class="btn btn-secundario" id="btnSafecultureTestar" onclick="SafetyCultureSync.testarConexao()">Testar conexão e descobrir templates</button>
+            <button class="btn btn-safeculture" id="btnSafecultureSincronizar" onclick="SafetyCultureSync.sincronizarAdmin()">Sincronizar SafetyCulture</button>
+            <button class="btn btn-secundario" id="btnSafecultureReprocessar" onclick="SafetyCultureSync.sincronizarAdmin(48)">Reprocessar últimas 48 horas</button>
+          </div>
+          <div class="card-titulo" style="margin-top:18px">
+            <span class="acento">Templates encontrados</span>
+            <span class="card-sub">Confirme em qual página cada modelo deve ser gravado</span>
+          </div>
+          <div id="safecultureTemplates"></div>
+          <div class="card-titulo" style="margin-top:24px">
+            <span class="acento">Últimas execuções</span>
+          </div>
+          <div id="safecultureHistorico"></div>
         </div>
 
         <div class="card">
@@ -130,7 +155,8 @@
   <script src="js/exportacoes.js?v=20260715-excel-site-v1"></script>
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/dados.js?v=20260715-excel-site-v2"></script>
+  <script src="js/safeculture-integracao.js?v=20260716-api-v1"></script>
+  <script src="js/dados.js?v=20260716-safeculture-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

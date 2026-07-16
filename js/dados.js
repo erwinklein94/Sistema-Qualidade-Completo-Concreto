@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.FestaHexa?.sincronizar().then(atualizarBotaoFestaHexa);
   atualizarBotaoTremFujao();
   sincronizarTremFujao();
+  SafetyCultureSync.renderAdmin();
 });
 
 /* ---------- Comemoração da Copa (Rumo ao Hexa) — configuração global ---------- */

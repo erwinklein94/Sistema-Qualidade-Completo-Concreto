@@ -35,8 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.montarLayout('inspecaoConcretagem', 'Inspeção de Concretagem', 'Histórico consultivo de inspeções de concretagem — link do relatório opcional');
   App.acoesTopo(`
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
+    ${SafetyCultureSync.controlesTopoHtml()}
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo relatório</button>` : App.avisoModoConsulta()}
   `);
+  SafetyCultureSync.carregarStatusTopo();
 
   preencherSelect('projeto', CFG.listas.projetos, 'Selecione...');
   preencherSelect('bitola', CFG.listas.bitolas, 'Selecione...');
@@ -115,7 +117,12 @@ function mapDoBanco(row) {
     linkRelatorio: row.link_relatorio || '',
     arquivoOrigem: row.arquivo_origem || '',
     observacoes: row.observacoes || '',
-    criadoEm: row.criado_em || ''
+    resultado: row.resultado || '',
+    criadoEm: row.criado_em || '',
+    origemDados: row.origem_dados || 'manual',
+    safecultureAuditId: row.safeculture_audit_id || '',
+    safecultureTemplateId: row.safeculture_template_id || '',
+    safecultureModifiedAt: row.safeculture_modified_at || ''
   };
 }
 
@@ -133,11 +140,12 @@ function mapParaBanco(reg) {
     slump_abatimento: reg.slumpAbatimento || null,
     slump_espalhamento: reg.slumpEspalhamento || null,
     temperatura_lancamento: reg.temperaturaLancamento || null,
-    resultado: null,
+    resultado: reg.resultado || null,
     responsavel: reg.responsavel || null,
     link_relatorio: reg.linkRelatorio || null,
     arquivo_origem: reg.arquivoOrigem || null,
     observacoes: reg.observacoes || null,
+    origem_dados: reg.origemDados || (reg.arquivoOrigem ? 'pdf' : 'manual'),
   };
   if (reg.id) payload.id = reg.id;
   return payload;
@@ -217,7 +225,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>Pista</th>
-      <th>Responsável</th><th>Relatório</th><th>Ações</th>
+      <th>Responsável</th><th>Origem</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataInspecao)}</td>
@@ -226,11 +234,12 @@ function renderTabela(lista, total) {
       <td>${badgeBitolaValor(r.bitola)}</td>
       <td>${U.esc(r.pista || '—')}</td>
       <td>${U.esc(r.responsavel || '—')}</td>
+      <td>${SafetyCultureSync.origemBadge(r)}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
         <button class="icone-btn" title="Ver" onclick="ver('${r.id}')">${ICN.olho}</button>
-        ${Auth.pode('editar') ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
-        ${Auth.pode('excluir') ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
+        ${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
+        ${SafetyCultureSync.podeExcluirRegistro(r) ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
       </td>
     </tr>`).join('')}</tbody>
   </table></div>`;
@@ -267,6 +276,7 @@ function editar(id) {
   if (!Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('editar registros'), 'aviso'); return; }
   const r = CONCRETAGEM_REGISTROS.find(x => x.id === id);
   if (!r) return;
+  if (SafetyCultureSync.bloquearAlteracao(r)) return;
   document.getElementById('form').reset();
   document.getElementById('id').value = r.id;
   CAMPOS_CONCRETAGEM.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
@@ -309,6 +319,7 @@ async function salvar() {
 async function excluir(id) {
   if (!Auth.pode('excluir')) { App.toast(Auth.mensagemSemPermissao('excluir registros'), 'aviso'); return; }
   const r = CONCRETAGEM_REGISTROS.find(x => x.id === id);
+  if (!r || SafetyCultureSync.bloquearAlteracao(r)) return;
   if (!App.confirmar(`Excluir a inspeção de concretagem${r?.lote ? ' do lote ' + r.lote : ''}? Esta ação não pode ser desfeita.`)) return;
   try {
     await StoreSupabase.removerInspecaoConcretagem(id);

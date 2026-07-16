@@ -1,5 +1,11 @@
 # Sistema de Qualidade de Dormentes
 
+## Integração SafetyCulture
+
+Consulte `README_INTEGRACAO_SAFETYCULTURE_API.md` para implantar a integração
+automática via API, configurar os secrets, mapear templates e ativar o
+agendamento no Supabase.
+
 Sistema web para controle de produção, reprovas, painel de séries e ensaios de liberação de dormentes.
 
 ## Estado desta versão

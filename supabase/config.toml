@@ -1,0 +1,4 @@
+project_id = "sistema-qualidade-completo"
+
+[functions.safeculture-sync]
+verify_jwt = true

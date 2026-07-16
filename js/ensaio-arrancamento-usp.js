@@ -20,8 +20,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   App.montarLayout('ensaioArrancamentoUsp', 'Ensaio de Arrancamento USP', 'Histórico consultivo de ensaios de arrancamento USP — abre o relatório pelo link');
   App.acoesTopo(`
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
+    ${SafetyCultureSync.controlesTopoHtml()}
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo relatório</button>` : App.avisoModoConsulta()}
   `);
+  SafetyCultureSync.carregarStatusTopo();
 
   preencherSelect('projeto', CFG.listas.projetos, 'Selecione...');
   preencherSelect('bitola', CFG.listas.bitolas, 'Selecione...');
@@ -89,7 +91,11 @@ function mapDoBanco(row) {
     linkRelatorio: row.link_relatorio || '',
     arquivoOrigem: row.arquivo_origem || '',
     observacoes: filtrarTextoSemOmbreira(row.observacoes || ''),
-    criadoEm: row.criado_em || ''
+    criadoEm: row.criado_em || '',
+    origemDados: row.origem_dados || 'manual',
+    safecultureAuditId: row.safeculture_audit_id || '',
+    safecultureTemplateId: row.safeculture_template_id || '',
+    safecultureModifiedAt: row.safeculture_modified_at || ''
   };
 }
 
@@ -106,6 +112,7 @@ function mapParaBanco(reg) {
     link_relatorio: reg.linkRelatorio || null,
     arquivo_origem: reg.arquivoOrigem || null,
     observacoes: filtrarTextoSemOmbreira(reg.observacoes) || null,
+    origem_dados: reg.origemDados || (reg.arquivoOrigem ? 'pdf' : 'manual'),
   };
   if (reg.id) payload.id = reg.id;
   return payload;
@@ -191,7 +198,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Lote</th><th>Projeto</th><th>Bitola</th><th>USP</th>
-      <th>Resultado</th><th>Responsável</th><th>Relatório</th><th>Ações</th>
+      <th>Resultado</th><th>Responsável</th><th>Origem</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataEnsaio)}</td>
@@ -201,11 +208,12 @@ function renderTabela(lista, total) {
       <td>${U.esc(r.usp || '—')}</td>
       <td>${badgeResultado(r.resultado)}</td>
       <td>${U.esc(r.responsavel || '—')}</td>
+      <td>${SafetyCultureSync.origemBadge(r)}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
         <button class="icone-btn" title="Ver" onclick="ver('${r.id}')">${ICN.olho}</button>
-        ${Auth.pode('editar') ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
-        ${Auth.pode('excluir') ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
+        ${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
+        ${SafetyCultureSync.podeExcluirRegistro(r) ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
       </td>
     </tr>`).join('')}</tbody>
   </table></div>`;
@@ -242,6 +250,7 @@ function editar(id) {
   if (!Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('editar registros'), 'aviso'); return; }
   const r = ARRANCAMENTO_USP_REGISTROS.find(x => x.id === id);
   if (!r) return;
+  if (SafetyCultureSync.bloquearAlteracao(r)) return;
   document.getElementById('form').reset();
   document.getElementById('id').value = r.id;
   CAMPOS_ARRANCAMENTO_USP.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
@@ -281,6 +290,7 @@ async function salvar() {
 async function excluir(id) {
   if (!Auth.pode('excluir')) { App.toast(Auth.mensagemSemPermissao('excluir registros'), 'aviso'); return; }
   const r = ARRANCAMENTO_USP_REGISTROS.find(x => x.id === id);
+  if (!r || SafetyCultureSync.bloquearAlteracao(r)) return;
   if (!App.confirmar(`Excluir o ensaio de arrancamento USP${r?.lote ? ' do lote ' + r.lote : ''}? Esta ação não pode ser desfeita.`)) return;
   try {
     await StoreSupabase.removerEnsaioArrancamentoUsp(id);

@@ -22,8 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     <button class="btn btn-secundario" onclick="location.href='ensaios.html'">${ICN.ensaios}Fluxo de Liberação</button>
     <button class="btn btn-secundario" onclick="location.href='fluxo-liberacao.html'">${ICN.trem}Painel de séries</button>
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
+    ${SafetyCultureSync.controlesTopoHtml()}
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo ensaio manual</button>` : App.avisoModoConsulta()}
   `);
+  SafetyCultureSync.carregarStatusTopo();
 
   preencherSelect('fornecedor', CFG.listas.fornecedores, 'Selecione...');
   preencherSelect('projeto', CFG.listas.projetos, 'Selecione...');
@@ -179,7 +181,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Semana</th><th>Fornecedor</th><th>Projeto</th><th>Bitola</th><th>Lote ensaiado</th>
-      <th>Série liberada</th><th>Resultado</th><th class="right">Qtd.</th><th>Relatório</th><th>Ações</th>
+      <th>Série liberada</th><th>Resultado</th><th class="right">Qtd.</th><th>Origem</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataEnsaio)}</td>
@@ -191,11 +193,12 @@ function renderTabela(lista, total) {
       <td>${U.esc(r.serieLiberada || '—')}</td>
       <td>${badgeResultado(r.resultado)}</td>
       <td class="right">${U.esc(r.quantidadeEnsaiada || '—')}</td>
+      <td>${SafetyCultureSync.origemBadge(r)}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">
         <button class="icone-btn" title="Ver" onclick="ver('${r.id}')">${ICN.olho}</button>
-        ${Auth.pode('editar') ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
-        ${Auth.pode('excluir') ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
+        ${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="icone-btn" title="Editar" onclick="editar('${r.id}')">${ICN.edit}</button>` : ''}
+        ${SafetyCultureSync.podeExcluirRegistro(r) ? `<button class="icone-btn del" title="Excluir" onclick="excluir('${r.id}')">${ICN.del}</button>` : ''}
       </td>
     </tr>`).join('')}</tbody>
   </table></div>`;
@@ -261,6 +264,7 @@ function editar(id) {
   if (!Auth.pode('editar')) { App.toast(Auth.mensagemSemPermissao('editar registros'), 'aviso'); return; }
   const r = obterEnsaio(id);
   if (!r) return;
+  if (SafetyCultureSync.bloquearAlteracao(r)) return;
   document.getElementById('form').reset();
   document.getElementById('id').value = r.id;
   popularSelectLotes(r.producaoLoteId || '');
@@ -328,6 +332,7 @@ async function salvar() {
 async function excluir(id) {
   const r = obterEnsaio(id);
   if (!r) return;
+  if (SafetyCultureSync.bloquearAlteracao(r)) return;
   if (!Auth.pode('excluir')) {
     App.toast(Auth.mensagemSemPermissao('excluir registros'), 'aviso');
     return;
@@ -363,7 +368,7 @@ function ver(id) {
       ${item('Responsável', U.esc(r.responsavel))}${item('Relatório', linkRelatorio(r))}
     </div>
     ${r.observacoes ? `<div class="detalhe-secao">Observações</div><p style="font-size:13.5px;color:var(--cinza-texto);line-height:1.7">${U.esc(r.observacoes)}</p>` : ''}
-    <div class="form-acoes"><button class="btn btn-secundario" onclick="fecharVer()">Fechar</button>${Auth.pode('editar') ? `<button class="btn btn-primario" onclick="fecharVer(); editar('${r.id}')">Editar</button>` : ''}</div>`;
+    <div class="form-acoes"><button class="btn btn-secundario" onclick="fecharVer()">Fechar</button>${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="btn btn-primario" onclick="fecharVer(); editar('${r.id}')">Editar</button>` : ''}</div>`;
   document.getElementById('modalVer').classList.add('aberto');
 }
 
@@ -897,6 +902,10 @@ function mapEnsaioDoBanco(r) {
     responsavel: r.responsavel || '',
     linkRelatorio: r.link_relatorio_iauditor || '',
     observacoes: r.observacoes || '',
+    origemDados: r.origem_dados || 'manual',
+    safecultureAuditId: r.safeculture_audit_id || '',
+    safecultureTemplateId: r.safeculture_template_id || '',
+    safecultureModifiedAt: r.safeculture_modified_at || '',
   };
 }
 
@@ -921,6 +930,7 @@ function mapEnsaioParaBanco(reg) {
     responsavel: textoOuNull(reg.responsavel),
     link_relatorio_iauditor: textoOuNull(reg.linkRelatorio),
     observacoes: textoOuNull(reg.observacoes),
+    origem_dados: reg.origemDados || (/importado do leitor/i.test(reg.observacoes || '') ? 'pdf' : 'manual'),
   };
   if (reg.id) payload.id = reg.id;
   return payload;
