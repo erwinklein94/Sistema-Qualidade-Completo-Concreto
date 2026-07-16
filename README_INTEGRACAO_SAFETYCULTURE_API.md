@@ -124,8 +124,9 @@ Serão criados:
   atualizado na próxima sincronização.
 - Registros vindos da API ficam bloqueados para edição/exclusão local.
 - Nos Ensaios de Acompanhamento, a série vinculada na Produção tem prioridade
-  sobre o campo do relatório. Administradores e fiscalização podem corrigir
-  somente a série; esse ajuste fica marcado e não é sobrescrito pela API.
+  sobre o campo do relatório e é consultada automaticamente ao carregar a
+  página. A correção manual fica disponível somente quando o lote não possui
+  série localizada na Produção.
 - Registros manuais e importados de PDF continuam funcionando.
 - A integração não cria automaticamente registros em `producao_lotes`.
 - Quando o lote não é encontrado, o relatório é importado sem vínculo e a

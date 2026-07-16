@@ -770,6 +770,7 @@ function mapProducao(r) {
     tipo: r.tipo_dormente || '',
     total: valorBanco(r.total_produzido),
     dataFabricacao: dataBanco(r.data_fabricacao),
+    serie: r.serie || '',
   };
 }
 
@@ -815,6 +816,12 @@ function mapEnsaio(r) {
 }
 
 function mapAcompanhamento(r) {
+  const producao = Semanal.prod.find(p => p.id === (r.producao_lote_id || ''))
+    || Semanal.prod.find(p =>
+      mesmoTexto(p.lote, r.lote_ensaiado) &&
+      (!r.fornecedor || mesmoTexto(p.fornecedor, r.fornecedor))
+    )
+    || Semanal.prod.find(p => mesmoTexto(p.lote, r.lote_ensaiado));
   return {
     id: r.id,
     producaoLoteId: r.producao_lote_id || '',
@@ -822,7 +829,7 @@ function mapAcompanhamento(r) {
     projeto: r.projeto || '',
     bitola: r.bitola || '',
     lote: r.lote_ensaiado || '',
-    serie: r.serie || '',
+    serie: producao?.serie || r.serie || '',
     resultado: r.resultado || '',
     responsavel: r.responsavel || '',
     linkRelatorio: r.link_relatorio_iauditor || '',
