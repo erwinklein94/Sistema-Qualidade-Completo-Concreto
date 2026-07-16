@@ -6,7 +6,7 @@
    Fonte: producao_lotes (comp_14/tracao_14/comp_28/tracao_28 + CP2).
    ===================================================================== */
 let CCT_CHARTS = {};
-const CCT = { prod: [], carregando: true, erro: '' };
+const CCT = { prod: [], carregando: true, erro: '', ordem: 'desc' };
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   ['fFornecedor', 'fTipoCura', 'fPeriodoIni', 'fPeriodoFim'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', renderComparativo);
   });
+  document.getElementById('btnOrdenacao')?.addEventListener('click', alternarOrdemComparativo);
+  atualizarBotaoOrdenacao();
 
   App.aplicarPadraoGraficos();
   renderComparativo();
@@ -131,6 +133,29 @@ function ganhoPct(v14, v28) {
   return ((v28 - v14) / v14) * 100;
 }
 
+function atualizarBotaoOrdenacao() {
+  const botao = document.getElementById('btnOrdenacao');
+  if (!botao) return;
+
+  const recentesPrimeiro = CCT.ordem === 'desc';
+  botao.textContent = recentesPrimeiro
+    ? '↓ Mais recentes primeiro'
+    : '↑ Mais antigos primeiro';
+  botao.setAttribute(
+    'aria-label',
+    recentesPrimeiro
+      ? 'Ordenação atual: lotes mais recentes primeiro. Clique para mostrar os mais antigos primeiro.'
+      : 'Ordenação atual: lotes mais antigos primeiro. Clique para mostrar os mais recentes primeiro.',
+  );
+  botao.setAttribute('aria-pressed', recentesPrimeiro ? 'false' : 'true');
+}
+
+function alternarOrdemComparativo() {
+  CCT.ordem = CCT.ordem === 'desc' ? 'asc' : 'desc';
+  atualizarBotaoOrdenacao();
+  renderComparativo();
+}
+
 function lotesComparativo() {
   const busca = document.getElementById('busca')?.value.toLowerCase().trim() || '';
   const fornecedor = document.getElementById('fFornecedor')?.value || '';
@@ -159,8 +184,17 @@ function lotesComparativo() {
       comp28: par(r.comp_28, r.comp_28_cp2),
       tracao28: par(r.tracao_28, r.tracao_28_cp2),
     }))
-    .sort((a, b) => a.data.localeCompare(b.data)
-      || String(a.lote).localeCompare(String(b.lote), 'pt-BR', { numeric: true }));
+    .sort((a, b) => {
+      if (!a.data && !b.data) {
+        return String(a.lote).localeCompare(String(b.lote), 'pt-BR', { numeric: true });
+      }
+      if (!a.data) return 1;
+      if (!b.data) return -1;
+
+      const direcao = CCT.ordem === 'asc' ? 1 : -1;
+      return (a.data.localeCompare(b.data) * direcao)
+        || (String(a.lote).localeCompare(String(b.lote), 'pt-BR', { numeric: true }) * direcao);
+    });
 }
 
 function renderComparativo() {
