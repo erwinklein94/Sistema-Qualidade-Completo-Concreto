@@ -627,7 +627,10 @@ async function mapToDestination(
   const lote = clean(field("lote", ["lote do dormente", "lote ensaiado", "lote"]));
   const fornecedor = normalizeSupplier(field("fornecedor", ["fornecedor", "fabrica", "empresa"]));
   const projeto = normalizeProject(field("projeto", ["projeto", "destino", "malha"]));
-  const bitola = normalizeGauge(field("bitola", ["tipo de dormente", "bitola", "projeto"]) || projeto);
+  const bitola = normalizeGauge(
+    field("bitola", ["tipo de dormente", "bitola", "projeto"]),
+    projeto,
+  );
   const responsavel = clean(field("responsavel", [
     "fiscal responsavel",
     "responsavel",
@@ -968,6 +971,7 @@ function addItemAnswer(
   const valueSource =
     getDeep(item, ["question_item", "responses"]) ??
     getDeep(item, ["text_item", "text"]) ??
+    getDeep(item, ["list_items", "responses"]) ??
     getDeep(item, ["datetime_item", "datetime"]) ??
     temperatureValue ??
     item.responses ??
@@ -1210,11 +1214,16 @@ function normalizeProject(value: string) {
   return clean(value).toUpperCase();
 }
 
-function normalizeGauge(value: string) {
+function normalizeGauge(value: string, fallback = "") {
+  const gauge = gaugeFromText(value) || gaugeFromText(fallback);
+  return gauge || "Sem bitola definida";
+}
+
+function gaugeFromText(value: string) {
   const text = normalize(value);
-  if (text.includes("BITOLA MISTA") || /(^| )BM( |$)/.test(text)) return "Bitola Mista";
-  if (text.includes("BITOLA LARGA") || /(^| )BL( |$)/.test(text)) return "Bitola Larga";
-  return "Sem bitola definida";
+  if (text.includes("BITOLA MISTA") || /(^| )(BM|BT MISTA)( |$)/.test(text)) return "Bitola Mista";
+  if (text.includes("BITOLA LARGA") || /(^| )(BL|BT LARGA)( |$)/.test(text)) return "Bitola Larga";
+  return "";
 }
 
 function operationalWeekInfo(iso: string) {
