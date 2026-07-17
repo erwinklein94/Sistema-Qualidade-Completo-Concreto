@@ -7863,3 +7863,83 @@ body[data-tema="escuro"] .subir-pagina-icone {
 @media (max-width: 520px) {
   .safeculture-resumo-grid { grid-template-columns: 1fr; }
 }
+
+/* =====================================================================
+   Ensaios de Acompanhamento — cabeçalho organizado em faixas
+   Evita que navegação, conta e ações da página se misturem livremente.
+   ===================================================================== */
+@media (min-width: 981px) {
+  body.pagina-ensaios-acompanhamento .topo {
+    display: grid !important;
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    align-items: start;
+    column-gap: 24px;
+  }
+
+  body.pagina-ensaios-acompanhamento .topo > .flex {
+    grid-column: 1;
+    min-width: 0;
+    padding-top: 34px;
+  }
+
+  body.pagina-ensaios-acompanhamento .topo > .topo-acoes {
+    grid-column: 2;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    align-items: center;
+    justify-items: end;
+  }
+
+  body.pagina-ensaios-acompanhamento .menu-dropdowns {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin: 0 !important;
+    justify-self: end;
+  }
+
+  body.pagina-ensaios-acompanhamento .tema-toggle {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  body.pagina-ensaios-acompanhamento .usuario-auth {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  body.pagina-ensaios-acompanhamento #topoAcoes {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-end !important;
+    align-items: center;
+    gap: 8px !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  body.pagina-ensaios-acompanhamento #topoAcoes > .btn,
+  body.pagina-ensaios-acompanhamento #topoAcoes > a.btn {
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding: 7px 11px;
+    font-size: 12.3px;
+    white-space: nowrap;
+  }
+
+  body.pagina-ensaios-acompanhamento #topoAcoes .exportacoes-grupo {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
+  body.pagina-ensaios-acompanhamento #topoAcoes .safeculture-status-topo {
+    order: 20;
+    flex: 0 0 100%;
+    max-width: none;
+    text-align: right;
+  }
+}
