@@ -14,12 +14,18 @@ const CCT = {
   modalChart: null,
   modalLoteId: '',
   ultimoFoco: null,
+  modoPersonalizado: 'lotes',
+  personalizadoAberto: false,
+  personalizadoCharts: {},
+  ultimoFocoPersonalizado: null,
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   App.montarLayout('comparativoCuraTermica', 'Histórico de Cura — Ferro Norte', 'Compressão axial e tração dos CPs · cura térmica e normal · 14 × 28 dias');
-  App.acoesTopo(`<button class="btn btn-primario" onclick="carregarComparativoCuraTermica()">${ICN.filtro}Atualizar</button>`);
+  App.acoesTopo(`
+    <button class="btn btn-secundario" onclick="abrirComparativoPersonalizado(this)">Comparativo Personalizado</button>
+    <button class="btn btn-primario" onclick="carregarComparativoCuraTermica()">${ICN.filtro}Atualizar</button>`);
 
   document.getElementById('fFornecedor').innerHTML = U.opcoes(CFG.listas.fornecedores, '', 'Todas');
   let buscaTimer = null;
@@ -35,6 +41,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('fecharModalDetalhe')?.addEventListener('click', fecharDetalheLote);
   document.getElementById('modalDetalheLote')?.addEventListener('click', eventoFecharOverlayDetalhe);
   document.addEventListener('keydown', eventoTecladoDetalhe);
+  document.getElementById('fecharComparativoPersonalizado')?.addEventListener('click', fecharComparativoPersonalizado);
+  document.getElementById('modalComparativoPersonalizado')?.addEventListener('click', eventoFecharComparativoPersonalizado);
+  document.querySelector('.comparativo-personalizado-modos')?.addEventListener('click', eventoModoComparativoPersonalizado);
+  document.getElementById('comparativoPersonalizadoCampos')?.addEventListener('input', eventoCamposComparativoPersonalizado);
+  document.getElementById('comparativoPersonalizadoCampos')?.addEventListener('change', eventoCamposComparativoPersonalizado);
+  document.getElementById('gerarComparativoPersonalizado')?.addEventListener('click', gerarComparativoPersonalizado);
+  document.addEventListener('keydown', eventoTecladoComparativoPersonalizado);
   atualizarBotaoOrdenacao();
 
   App.aplicarPadraoGraficos();
@@ -613,6 +626,486 @@ function desenharGraficoDetalheLote(lote, medias) {
   });
 }
 
+function destruirGraficosPersonalizados() {
+  Object.values(CCT.personalizadoCharts).forEach(chart => chart?.destroy?.());
+  CCT.personalizadoCharts = {};
+}
+
+function abrirComparativoPersonalizado(elementoOrigem) {
+  if (CCT.carregando) {
+    App.toast('Aguarde o carregamento do histórico para montar o comparativo.', 'aviso');
+    return;
+  }
+  if (CCT.erro || !CCT.prod.length) {
+    App.toast('Não há histórico disponível para montar o comparativo.', 'erro');
+    return;
+  }
+
+  const modal = document.getElementById('modalComparativoPersonalizado');
+  if (!modal) return;
+
+  CCT.modoPersonalizado = 'lotes';
+  CCT.personalizadoAberto = true;
+  CCT.ultimoFocoPersonalizado = elementoOrigem || document.activeElement;
+  document.getElementById('comparativoIncluirHistorico').checked = true;
+  atualizarBotoesModoComparativoPersonalizado();
+  renderCamposComparativoPersonalizado();
+  limparResultadoComparativoPersonalizado();
+  modal.classList.add('aberto');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('fecharComparativoPersonalizado')?.focus();
+}
+
+function fecharComparativoPersonalizado() {
+  const modal = document.getElementById('modalComparativoPersonalizado');
+  if (!modal) return;
+  modal.classList.remove('aberto');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  CCT.personalizadoAberto = false;
+  destruirGraficosPersonalizados();
+  CCT.ultimoFocoPersonalizado?.focus?.();
+  CCT.ultimoFocoPersonalizado = null;
+}
+
+function eventoFecharComparativoPersonalizado(event) {
+  if (event.target.id === 'modalComparativoPersonalizado') fecharComparativoPersonalizado();
+}
+
+function eventoTecladoComparativoPersonalizado(event) {
+  if (event.key === 'Escape' && CCT.personalizadoAberto) fecharComparativoPersonalizado();
+}
+
+function eventoModoComparativoPersonalizado(event) {
+  const botao = event.target.closest('[data-comparativo-modo]');
+  if (!botao) return;
+  alterarModoComparativoPersonalizado(botao.dataset.comparativoModo);
+}
+
+function alterarModoComparativoPersonalizado(modo) {
+  if (!['lotes', 'semanas', 'periodos', 'cura'].includes(modo)) return;
+  CCT.modoPersonalizado = modo;
+  atualizarBotoesModoComparativoPersonalizado();
+  renderCamposComparativoPersonalizado();
+  limparResultadoComparativoPersonalizado();
+}
+
+function atualizarBotoesModoComparativoPersonalizado() {
+  document.querySelectorAll('[data-comparativo-modo]').forEach(botao => {
+    const ativo = botao.dataset.comparativoModo === CCT.modoPersonalizado;
+    botao.classList.toggle('ativo', ativo);
+    botao.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+  });
+}
+
+function limparResultadoComparativoPersonalizado() {
+  destruirGraficosPersonalizados();
+  const vazio = document.getElementById('comparativoPersonalizadoVazio');
+  const conteudo = document.getElementById('comparativoPersonalizadoConteudo');
+  if (vazio) vazio.hidden = false;
+  if (conteudo) conteudo.hidden = true;
+}
+
+function lotesPersonalizadosDisponiveis() {
+  return historicoCompletoComparativo()
+    .sort((a, b) => (b.data || '').localeCompare(a.data || '')
+      || String(b.lote).localeCompare(String(a.lote), 'pt-BR', { numeric: true }));
+}
+
+function semanaIso(dataIso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataIso || '')) return null;
+  const data = new Date(`${dataIso}T12:00:00Z`);
+  if (Number.isNaN(data.getTime())) return null;
+  data.setUTCDate(data.getUTCDate() + 4 - (data.getUTCDay() || 7));
+  const ano = data.getUTCFullYear();
+  const inicioAno = new Date(Date.UTC(ano, 0, 1));
+  const semana = Math.ceil((((data - inicioAno) / 86400000) + 1) / 7);
+  return { ano, semana, chave: `${ano}-W${String(semana).padStart(2, '0')}` };
+}
+
+function semanasPersonalizadasDisponiveis() {
+  const agrupadas = new Map();
+  historicoCompletoComparativo().forEach(lote => {
+    const semana = semanaIso(lote.data);
+    if (!semana) return;
+    if (!agrupadas.has(semana.chave)) {
+      agrupadas.set(semana.chave, { ...semana, lotes: [], inicio: lote.data, fim: lote.data });
+    }
+    const grupo = agrupadas.get(semana.chave);
+    grupo.lotes.push(lote);
+    if (lote.data < grupo.inicio) grupo.inicio = lote.data;
+    if (lote.data > grupo.fim) grupo.fim = lote.data;
+  });
+  return [...agrupadas.values()].sort((a, b) => b.chave.localeCompare(a.chave));
+}
+
+function deslocarDataIso(dataIso, dias) {
+  const data = new Date(`${dataIso}T12:00:00Z`);
+  if (Number.isNaN(data.getTime())) return '';
+  data.setUTCDate(data.getUTCDate() + dias);
+  return data.toISOString().slice(0, 10);
+}
+
+function limitesHistoricoPersonalizado() {
+  const datas = [...new Set(historicoCompletoComparativo()
+    .map(lote => lote.data)
+    .filter(data => /^\d{4}-\d{2}-\d{2}$/.test(data)))]
+    .sort();
+  const min = datas[0] || '';
+  const max = datas[datas.length - 1] || '';
+  if (datas.length < 2) return { min, max, inicioA: min, fimA: max, inicioB: min, fimB: max };
+
+  const limiteRecente = deslocarDataIso(max, -59);
+  const janela = datas.filter(data => data >= limiteRecente);
+  const base = janela.length >= 2 ? janela : datas;
+  const corte = Math.max(1, Math.floor(base.length / 2));
+  const antigas = base.slice(0, corte);
+  const recentes = base.slice(corte);
+  return {
+    min,
+    max,
+    inicioA: recentes[0],
+    fimA: recentes[recentes.length - 1],
+    inicioB: antigas[0],
+    fimB: antigas[antigas.length - 1],
+  };
+}
+
+function opcaoComparativoPersonalizado({ nome, valor, titulo, detalhe }) {
+  return `<label class="comparativo-personalizado-opcao" data-comparativo-texto="${U.esc(`${titulo} ${detalhe}`.toLowerCase())}">
+    <input type="checkbox" name="${nome}" value="${U.esc(valor)}">
+    <span><strong>${U.esc(titulo)}</strong><small>${U.esc(detalhe)}</small></span>
+  </label>`;
+}
+
+function renderCamposLotesPersonalizados() {
+  const lotes = lotesPersonalizadosDisponiveis();
+  return `<p class="comparativo-personalizado-ajuda">Escolha até 12 lotes. Cada lote será uma linha independente na tabela e nos gráficos.</p>
+    <div class="comparativo-personalizado-campo">
+      <label for="buscaLotePersonalizado">Localizar lote</label>
+      <input type="search" id="buscaLotePersonalizado" data-comparativo-busca placeholder="Digite o número do lote">
+    </div>
+    <div class="comparativo-personalizado-lista">
+      ${lotes.map(lote => opcaoComparativoPersonalizado({
+        nome: 'comparativoLote',
+        valor: lote.id,
+        titulo: `Lote ${lote.lote}`,
+        detalhe: `${U.dataBR(lote.data)} · ${lote.curaTermica ? 'cura térmica' : 'cura normal'} · ${lote.fornecedor || 'fábrica não informada'}`,
+      })).join('')}
+    </div>
+    <p class="comparativo-personalizado-contador" data-comparativo-contador="comparativoLote">0 de 12 selecionados</p>`;
+}
+
+function renderCamposSemanasPersonalizadas() {
+  const semanas = semanasPersonalizadasDisponiveis();
+  return `<p class="comparativo-personalizado-ajuda">Escolha até 12 semanas de fabricação. Os valores de todos os lotes de cada semana serão agrupados.</p>
+    <div class="comparativo-personalizado-campo">
+      <label for="buscaSemanaPersonalizada">Localizar semana</label>
+      <input type="search" id="buscaSemanaPersonalizada" data-comparativo-busca placeholder="Ex.: 2026-W25">
+    </div>
+    <div class="comparativo-personalizado-lista">
+      ${semanas.map(semana => opcaoComparativoPersonalizado({
+        nome: 'comparativoSemana',
+        valor: semana.chave,
+        titulo: `Semana ${semana.semana} de ${semana.ano}`,
+        detalhe: `${semana.lotes.length} lote(s) · ${U.dataBR(semana.inicio)} a ${U.dataBR(semana.fim)} · ${semana.chave}`,
+      })).join('')}
+    </div>
+    <p class="comparativo-personalizado-contador" data-comparativo-contador="comparativoSemana">0 de 12 selecionadas</p>`;
+}
+
+function campoDataPersonalizado(id, rotulo, valor, limites) {
+  return `<label>${rotulo}<input type="date" id="${id}" value="${valor}" min="${limites.min}" max="${limites.max}"></label>`;
+}
+
+function renderCamposPeriodosPersonalizados() {
+  const limites = limitesHistoricoPersonalizado();
+  return `<p class="comparativo-personalizado-ajuda">Defina dois períodos independentes. Cada intervalo será consolidado para facilitar a comparação.</p>
+    <div class="comparativo-periodos">
+      <div class="comparativo-periodo"><strong>Período A</strong><div class="comparativo-periodo-grid">
+        ${campoDataPersonalizado('comparativoPeriodoAIni', 'De', limites.inicioA, limites)}
+        ${campoDataPersonalizado('comparativoPeriodoAFim', 'Até', limites.fimA, limites)}
+      </div></div>
+      <div class="comparativo-periodo"><strong>Período B</strong><div class="comparativo-periodo-grid">
+        ${campoDataPersonalizado('comparativoPeriodoBIni', 'De', limites.inicioB, limites)}
+        ${campoDataPersonalizado('comparativoPeriodoBFim', 'Até', limites.fimB, limites)}
+      </div></div>
+    </div>`;
+}
+
+function renderCamposCuraPersonalizados() {
+  const limites = limitesHistoricoPersonalizado();
+  return `<p class="comparativo-personalizado-ajuda">Compare cura térmica e cura normal em todo o histórico ou restrinja a análise a um período.</p>
+    <div class="comparativo-personalizado-lista">
+      <label class="comparativo-personalizado-opcao"><input type="checkbox" name="comparativoCura" value="termica" checked><span><strong>Cura térmica</strong><small>Lotes produzidos com ciclo térmico.</small></span></label>
+      <label class="comparativo-personalizado-opcao"><input type="checkbox" name="comparativoCura" value="normal" checked><span><strong>Cura normal</strong><small>Lotes produzidos sem ciclo térmico.</small></span></label>
+    </div>
+    <div class="comparativo-periodo" style="margin-top:10px"><strong>Período opcional</strong><div class="comparativo-periodo-grid">
+      ${campoDataPersonalizado('comparativoCuraIni', 'De', '', limites)}
+      ${campoDataPersonalizado('comparativoCuraFim', 'Até', '', limites)}
+    </div></div>`;
+}
+
+function renderCamposComparativoPersonalizado() {
+  const alvo = document.getElementById('comparativoPersonalizadoCampos');
+  if (!alvo) return;
+  const renders = {
+    lotes: renderCamposLotesPersonalizados,
+    semanas: renderCamposSemanasPersonalizadas,
+    periodos: renderCamposPeriodosPersonalizados,
+    cura: renderCamposCuraPersonalizados,
+  };
+  alvo.innerHTML = renders[CCT.modoPersonalizado]();
+}
+
+function eventoCamposComparativoPersonalizado(event) {
+  const alvo = event.target;
+  if (alvo.matches('[data-comparativo-busca]') && event.type === 'input') {
+    const busca = alvo.value.toLowerCase().trim();
+    alvo.closest('.comparativo-personalizado-campos')?.querySelectorAll('[data-comparativo-texto]').forEach(opcao => {
+      opcao.hidden = !!busca && !opcao.dataset.comparativoTexto.includes(busca);
+    });
+    return;
+  }
+  if (alvo.type !== 'checkbox' || !['comparativoLote', 'comparativoSemana'].includes(alvo.name) || event.type !== 'change') return;
+  const marcados = [...document.querySelectorAll(`input[name="${alvo.name}"]:checked`)];
+  if (marcados.length > 12) {
+    alvo.checked = false;
+    App.toast('Você pode comparar no máximo 12 itens por vez.', 'aviso');
+  }
+  const quantidade = document.querySelectorAll(`input[name="${alvo.name}"]:checked`).length;
+  const contador = document.querySelector(`[data-comparativo-contador="${alvo.name}"]`);
+  if (contador) contador.textContent = `${quantidade} de 12 ${alvo.name === 'comparativoLote' ? 'selecionados' : 'selecionadas'}`;
+}
+
+function valoresSelecionadosComparativo(nome) {
+  return [...document.querySelectorAll(`input[name="${nome}"]:checked`)].map(input => input.value);
+}
+
+function valorCampoPersonalizado(id) {
+  return document.getElementById(id)?.value || '';
+}
+
+function validarIntervaloPersonalizado(inicio, fim, rotulo, obrigatorio = true) {
+  if (obrigatorio && (!inicio || !fim)) throw new Error(`Informe as duas datas do ${rotulo}.`);
+  if ((inicio && !fim) || (!inicio && fim)) throw new Error(`Informe as duas datas do ${rotulo}.`);
+  if (inicio && fim && inicio > fim) throw new Error(`A data inicial do ${rotulo} deve ser anterior à data final.`);
+}
+
+function gruposBaseComparativoPersonalizado(historico) {
+  if (CCT.modoPersonalizado === 'lotes') {
+    const ids = valoresSelecionadosComparativo('comparativoLote');
+    return ids.map(id => {
+      const lote = historico.find(item => item.id === id);
+      return lote ? {
+        chave: `lote-${lote.id}`,
+        rotulo: `Lote ${lote.lote}`,
+        detalhe: `${U.dataBR(lote.data)} · ${lote.curaTermica ? 'cura térmica' : 'cura normal'}`,
+        lotes: [lote],
+      } : null;
+    }).filter(Boolean);
+  }
+
+  if (CCT.modoPersonalizado === 'semanas') {
+    const chaves = valoresSelecionadosComparativo('comparativoSemana');
+    return chaves.map(chave => {
+      const lotes = historico.filter(lote => semanaIso(lote.data)?.chave === chave);
+      const semana = semanaIso(lotes[0]?.data);
+      return {
+        chave: `semana-${chave}`,
+        rotulo: semana ? `Semana ${semana.semana} de ${semana.ano}` : chave,
+        detalhe: `${lotes.length} lote(s) · ${chave}`,
+        lotes,
+      };
+    });
+  }
+
+  if (CCT.modoPersonalizado === 'periodos') {
+    const aIni = valorCampoPersonalizado('comparativoPeriodoAIni');
+    const aFim = valorCampoPersonalizado('comparativoPeriodoAFim');
+    const bIni = valorCampoPersonalizado('comparativoPeriodoBIni');
+    const bFim = valorCampoPersonalizado('comparativoPeriodoBFim');
+    validarIntervaloPersonalizado(aIni, aFim, 'período A');
+    validarIntervaloPersonalizado(bIni, bFim, 'período B');
+    return [
+      { chave: 'periodo-a', rotulo: 'Período A', detalhe: `${U.dataBR(aIni)} a ${U.dataBR(aFim)}`, lotes: historico.filter(lote => lote.data >= aIni && lote.data <= aFim) },
+      { chave: 'periodo-b', rotulo: 'Período B', detalhe: `${U.dataBR(bIni)} a ${U.dataBR(bFim)}`, lotes: historico.filter(lote => lote.data >= bIni && lote.data <= bFim) },
+    ];
+  }
+
+  const tipos = valoresSelecionadosComparativo('comparativoCura');
+  const inicio = valorCampoPersonalizado('comparativoCuraIni');
+  const fim = valorCampoPersonalizado('comparativoCuraFim');
+  validarIntervaloPersonalizado(inicio, fim, 'período opcional', false);
+  const noPeriodo = lote => !inicio || (lote.data >= inicio && lote.data <= fim);
+  return tipos.map(tipo => {
+    const termica = tipo === 'termica';
+    const lotes = historico.filter(lote => lote.curaTermica === termica && noPeriodo(lote));
+    return {
+      chave: `cura-${tipo}`,
+      rotulo: termica ? 'Cura térmica' : 'Cura normal',
+      detalhe: inicio ? `${lotes.length} lote(s) · ${U.dataBR(inicio)} a ${U.dataBR(fim)}` : `${lotes.length} lote(s) · histórico completo`,
+      lotes,
+    };
+  });
+}
+
+function montarGruposComparativoPersonalizado() {
+  const historico = historicoCompletoComparativo();
+  const incluirHistorico = document.getElementById('comparativoIncluirHistorico')?.checked === true;
+  const grupos = gruposBaseComparativoPersonalizado(historico);
+
+  if (!grupos.length) throw new Error('Selecione pelo menos um item para comparar.');
+  const grupoVazio = grupos.find(grupo => !grupo.lotes.length);
+  if (grupoVazio) throw new Error(`${grupoVazio.rotulo} não possui lotes no recorte informado.`);
+  if (grupos.length + (incluirHistorico ? 1 : 0) < 2) {
+    throw new Error('Escolha ao menos dois itens ou inclua a média histórica para fazer a comparação.');
+  }
+
+  if (incluirHistorico) {
+    grupos.push({
+      chave: 'historico-completo',
+      rotulo: 'Média histórica completa',
+      detalhe: `${historico.length} lote(s) · sem considerar os filtros da tela`,
+      lotes: historico,
+      historico: true,
+    });
+  }
+  return grupos;
+}
+
+function resumoMetricaPersonalizado(lotes, metrica) {
+  const cp1 = lotes.map(lote => lote[metrica].cp1).filter(valor => valor != null);
+  const cp2 = lotes.map(lote => lote[metrica].cp2).filter(valor => valor != null);
+  return {
+    cp1: mediaLista(cp1),
+    cp2: mediaLista(cp2),
+    media: mediaLista([...cp1, ...cp2]),
+    quantidade: cp1.length + cp2.length,
+  };
+}
+
+function resumirGrupoPersonalizado(grupo) {
+  return {
+    ...grupo,
+    quantidadeLotes: grupo.lotes.length,
+    comp14: resumoMetricaPersonalizado(grupo.lotes, 'comp14'),
+    comp28: resumoMetricaPersonalizado(grupo.lotes, 'comp28'),
+    tracao14: resumoMetricaPersonalizado(grupo.lotes, 'tracao14'),
+    tracao28: resumoMetricaPersonalizado(grupo.lotes, 'tracao28'),
+  };
+}
+
+function celulaMetricaPersonalizada(metrica) {
+  if (!metrica.quantidade) return '—';
+  return `<span class="comparativo-personalizado-par">
+    <span><i>CP1</i><b>${fmtCp(metrica.cp1)}</b></span>
+    <span><i>CP2</i><b>${fmtCp(metrica.cp2)}</b></span>
+    <span><i>MÉDIA</i><b>${fmtCp(metrica.media)}</b></span>
+  </span>`;
+}
+
+function renderTabelaComparativoPersonalizado(resumos) {
+  const alvo = document.getElementById('tabelaComparativoPersonalizado');
+  if (!alvo) return;
+  alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
+    <thead><tr>
+      <th>Comparado</th><th>Lotes</th><th>Compressão 14d (MPa)</th><th>Compressão 28d (MPa)</th><th>Tração 14d (MPa)</th><th>Tração 28d (MPa)</th>
+    </tr></thead>
+    <tbody>${resumos.map(grupo => `<tr class="${grupo.historico ? 'historico' : ''}">
+      <td class="comparativo-personalizado-nome"><strong>${U.esc(grupo.rotulo)}</strong><small>${U.esc(grupo.detalhe)}</small></td>
+      <td>${grupo.quantidadeLotes}</td>
+      <td>${celulaMetricaPersonalizada(grupo.comp14)}</td>
+      <td>${celulaMetricaPersonalizada(grupo.comp28)}</td>
+      <td>${celulaMetricaPersonalizada(grupo.tracao14)}</td>
+      <td>${celulaMetricaPersonalizada(grupo.tracao28)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function opcoesGraficoPersonalizado() {
+  const corTexto = App.cssVar('--cinza-texto', '#5a6b7b');
+  const corGrid = App.cssVar('--cinza-borda', '#e2e8f0');
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'nearest', intersect: false },
+    layout: { padding: { top: 5, right: 8, bottom: 3, left: 5 } },
+    plugins: {
+      legend: { position: 'top', labels: { color: corTexto, usePointStyle: true, padding: 11, boxWidth: 9, font: { size: 10 } } },
+      tooltip: {
+        backgroundColor: App.cssVar('--azul-escuro', '#003567'),
+        padding: 10,
+        cornerRadius: 8,
+        callbacks: { label: contexto => `${contexto.dataset.label}: ${fmtCp(contexto.parsed.y)} MPa` },
+      },
+    },
+    scales: {
+      x: { ticks: { color: corTexto, font: { weight: '700' } }, grid: { display: false } },
+      y: { beginAtZero: false, title: { display: true, text: 'MPa', color: corTexto }, ticks: { color: corTexto }, grid: { color: corGrid } },
+    },
+  };
+}
+
+function desenharGraficosPersonalizados(resumos) {
+  destruirGraficosPersonalizados();
+  const escuro = document.body.dataset.tema === 'escuro';
+  const cores = escuro
+    ? ['#54c7ff', '#7fe06c', '#ffd84f', '#ff8a8a', '#d79cff', '#ffffff', '#ffad66', '#55e6d1', '#a6b8ff', '#f58bd3', '#c5ef73', '#8fd3ff']
+    : ['#0879c9', '#15946f', '#d28b00', '#c74242', '#8146b8', '#28506f', '#e36d1d', '#008a87', '#5867c7', '#b63c87', '#668b19', '#0097c6'];
+  const estilosPonto = ['circle', 'triangle', 'rect', 'rectRot', 'star', 'crossRot'];
+  const datasets = metrica14 => resumos.map((grupo, indice) => {
+    const metrica28 = metrica14 === 'comp14' ? 'comp28' : 'tracao28';
+    const cor = grupo.historico ? (escuro ? '#7fe06c' : '#00886a') : cores[indice % cores.length];
+    return {
+      type: 'line',
+      label: grupo.rotulo,
+      data: [grupo[metrica14].media, grupo[metrica28].media],
+      borderColor: cor,
+      backgroundColor: cor,
+      borderWidth: grupo.historico ? 3.2 : 2.5,
+      borderDash: grupo.historico ? [10, 6] : [],
+      tension: 0.15,
+      spanGaps: true,
+      pointRadius: grupo.historico ? 5 : 4.2,
+      pointHoverRadius: 7,
+      pointStyle: grupo.historico ? 'rectRot' : estilosPonto[indice % estilosPonto.length],
+    };
+  });
+
+  CCT.personalizadoCharts.compressao = new Chart(document.getElementById('chartPersonalizadoCompressao'), {
+    data: { labels: ['14 dias', '28 dias'], datasets: datasets('comp14') },
+    options: opcoesGraficoPersonalizado(),
+  });
+  CCT.personalizadoCharts.tracao = new Chart(document.getElementById('chartPersonalizadoTracao'), {
+    data: { labels: ['14 dias', '28 dias'], datasets: datasets('tracao14') },
+    options: opcoesGraficoPersonalizado(),
+  });
+}
+
+function gerarComparativoPersonalizado() {
+  try {
+    const resumos = montarGruposComparativoPersonalizado().map(resumirGrupoPersonalizado);
+    const vazio = document.getElementById('comparativoPersonalizadoVazio');
+    const conteudo = document.getElementById('comparativoPersonalizadoConteudo');
+    const resumo = document.getElementById('comparativoPersonalizadoResumo');
+    const nomesModo = { lotes: 'Comparação por lotes', semanas: 'Comparação por semanas', periodos: 'Comparação por períodos', cura: 'Comparação por tipo de cura' };
+    const comHistorico = resumos.some(grupo => grupo.historico);
+    if (resumo) resumo.innerHTML = `
+      <span>${nomesModo[CCT.modoPersonalizado]}</span>
+      <span>${resumos.length - (comHistorico ? 1 : 0)} seleção(ões)</span>
+      <span>Média histórica: ${comHistorico ? 'incluída' : 'não incluída'}</span>
+      <span>Gráficos: média de CP1 + CP2</span>`;
+    renderTabelaComparativoPersonalizado(resumos);
+    if (vazio) vazio.hidden = true;
+    if (conteudo) conteudo.hidden = false;
+    requestAnimationFrame(() => desenharGraficosPersonalizados(resumos));
+  } catch (erro) {
+    App.toast(erro?.message || 'Não foi possível gerar o comparativo.', 'aviso');
+  }
+}
+
 // Texto "CP1 x · CP2 y" para as exportações.
 function parTexto(p) {
   return `CP1 ${p.cp1 == null ? '—' : fmtCp(p.cp1)} · CP2 ${p.cp2 == null ? '—' : fmtCp(p.cp2)}`;
@@ -670,3 +1163,5 @@ window.render = renderComparativo;
 window.carregarComparativoCuraTermica = carregarComparativoCuraTermica;
 window.abrirDetalheLote = abrirDetalheLote;
 window.fecharDetalheLote = fecharDetalheLote;
+window.abrirComparativoPersonalizado = abrirComparativoPersonalizado;
+window.fecharComparativoPersonalizado = fecharComparativoPersonalizado;
