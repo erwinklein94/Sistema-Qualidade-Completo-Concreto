@@ -61,7 +61,7 @@ async function carregar() {
   try {
     await Auth.exigirLogin();
     const dados = await StoreSupabase.listarEnsaiosArrancamentoUsp({ limite: 5000 });
-    ARRANCAMENTO_USP_REGISTROS = (dados || []).map(mapDoBanco);
+    ARRANCAMENTO_USP_REGISTROS = SafetyCultureSync.filtrarDuplicadosPorLote((dados || []).map(mapDoBanco));
     ARRANCAMENTO_USP_CARREGANDO = false;
     render();
   } catch (err) {
@@ -80,6 +80,7 @@ async function carregar() {
 function mapDoBanco(row) {
   return {
     id: row.id,
+    producaoLoteId: row.producao_lote_id || '',
     dataEnsaio: row.data_ensaio || '',
     lote: row.lote || '',
     projeto: row.projeto || '',

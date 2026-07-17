@@ -253,6 +253,43 @@ const SafetyCultureSync = (() => {
       || !!(registro?.safecultureAuditId || registro?.safeculture_audit_id);
   }
 
+  function chaveLote(valor) {
+    return String(valor || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\bLOTE\b/gi, '')
+      .replace(/[^a-z0-9]/gi, '')
+      .toUpperCase();
+  }
+
+  function chavesRegistroPorLote(registro) {
+    const chaves = [];
+    const producaoId = String(registro?.producaoLoteId || registro?.producao_lote_id || '').trim();
+    const lote = chaveLote(registro?.lote ?? registro?.loteEnsaiado ?? registro?.lote_ensaiado);
+    if (producaoId) chaves.push(`producao:${producaoId}`);
+    if (lote) chaves.push(`lote:${lote}`);
+    return chaves;
+  }
+
+  function filtrarDuplicadosPorLote(registros) {
+    const lista = Array.isArray(registros) ? registros : [];
+    const chavesHistoricas = new Set();
+    lista.forEach(registro => {
+      if (gerenciadoPelaApi(registro)) return;
+      chavesRegistroPorLote(registro).forEach(chave => chavesHistoricas.add(chave));
+    });
+
+    const chavesSafetyCultureExibidas = new Set();
+    return lista.filter(registro => {
+      if (!gerenciadoPelaApi(registro)) return true;
+      const chaves = chavesRegistroPorLote(registro);
+      if (chaves.some(chave => chavesHistoricas.has(chave))) return false;
+      if (chaves.some(chave => chavesSafetyCultureExibidas.has(chave))) return false;
+      chaves.forEach(chave => chavesSafetyCultureExibidas.add(chave));
+      return true;
+    });
+  }
+
   function podeEditarRegistro(registro) {
     return !gerenciadoPelaApi(registro) && !!Auth.pode('editar');
   }
@@ -329,6 +366,7 @@ const SafetyCultureSync = (() => {
     salvarTemplate,
     origemBadge,
     gerenciadoPelaApi,
+    filtrarDuplicadosPorLote,
     podeEditarRegistro,
     podeExcluirRegistro,
     bloquearAlteracao,

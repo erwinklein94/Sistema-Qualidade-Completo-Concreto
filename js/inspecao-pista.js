@@ -99,7 +99,7 @@ async function carregar() {
   try {
     await Auth.exigirLogin();
     const dados = await StoreSupabase.listarInspecoesPista({ limite: 5000 });
-    PISTA_REGISTROS = (dados || []).map(mapDoBanco);
+    PISTA_REGISTROS = SafetyCultureSync.filtrarDuplicadosPorLote((dados || []).map(mapDoBanco));
     PISTA_CARREGANDO = false;
     render();
   } catch (err) {
@@ -118,6 +118,7 @@ async function carregar() {
 function mapDoBanco(row) {
   return {
     id: row.id,
+    producaoLoteId: row.producao_lote_id || '',
     dataInspecao: row.data_inspecao || '',
     lote: row.lote || '',
     projeto: row.projeto || '',

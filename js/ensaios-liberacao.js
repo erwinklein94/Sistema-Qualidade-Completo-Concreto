@@ -84,7 +84,7 @@ async function carregarEnsaiosLiberacao() {
     ]);
 
     PRODUCAO_LOTES = (producao || []).map(mapProducaoDoBancoSimples);
-    ENSAIOS_REGISTROS = filtrarDuplicadosSafetyCulture(
+    ENSAIOS_REGISTROS = SafetyCultureSync.filtrarDuplicadosPorLote(
       (ensaios || []).map(mapEnsaioDoBanco)
     );
 
@@ -101,42 +101,6 @@ async function carregarEnsaiosLiberacao() {
     App.toast(ENSAIOS_ERRO, 'erro');
     render();
   }
-}
-
-function chaveLoteLiberacao(valor) {
-  return String(valor || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\bLOTE\b/gi, '')
-    .replace(/[^a-z0-9]/gi, '')
-    .toUpperCase();
-}
-
-function chavesRegistroLiberacao(registro) {
-  const chaves = [];
-  const producaoId = String(registro?.producaoLoteId || '').trim();
-  const lote = chaveLoteLiberacao(registro?.lote);
-  if (producaoId) chaves.push(`producao:${producaoId}`);
-  if (lote) chaves.push(`lote:${lote}`);
-  return chaves;
-}
-
-function filtrarDuplicadosSafetyCulture(registros) {
-  const chavesHistoricas = new Set();
-  registros.forEach(registro => {
-    if (SafetyCultureSync.gerenciadoPelaApi(registro)) return;
-    chavesRegistroLiberacao(registro).forEach(chave => chavesHistoricas.add(chave));
-  });
-
-  const chavesSafetyCultureExibidas = new Set();
-  return registros.filter(registro => {
-    if (!SafetyCultureSync.gerenciadoPelaApi(registro)) return true;
-    const chaves = chavesRegistroLiberacao(registro);
-    if (chaves.some(chave => chavesHistoricas.has(chave))) return false;
-    if (chaves.some(chave => chavesSafetyCultureExibidas.has(chave))) return false;
-    chaves.forEach(chave => chavesSafetyCultureExibidas.add(chave));
-    return true;
-  });
 }
 
 function filtros() {

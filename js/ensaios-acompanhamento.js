@@ -91,7 +91,9 @@ async function carregarEnsaiosAcompanhamento() {
     ]);
 
     PRODUCAO_LOTES = (producao || []).map(mapProducaoDoBancoSimples);
-    ACOMP_REGISTROS = (ensaios || []).map(mapEnsaioDoBanco);
+    ACOMP_REGISTROS = SafetyCultureSync.filtrarDuplicadosPorLote(
+      (ensaios || []).map(mapEnsaioDoBanco)
+    );
 
     popularSelectLotes();
     preencherSugestoesFormulario();

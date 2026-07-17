@@ -32,11 +32,30 @@ type Answer = {
   section: string;
   value: string;
 };
-type ReleaseLotEntry = {
+type DestinationLotEntry = {
   id: string;
   auditId: string;
 };
-type ReleaseLotRegistry = Map<string, ReleaseLotEntry[]>;
+type DestinationLotIndex = Map<string, DestinationLotEntry[]>;
+type DestinationLotRegistry = Map<Destino, DestinationLotIndex>;
+
+const LOT_FIELD_BY_DESTINATION: Record<Destino, "lote" | "lote_ensaiado"> = {
+  inspecoes_pista: "lote",
+  inspecoes_concretagem: "lote",
+  ensaios_bitola: "lote",
+  ensaios_arrancamento_usp: "lote",
+  ensaios_liberacao: "lote_ensaiado",
+  ensaios_acompanhamento: "lote_ensaiado",
+};
+
+const DESTINATION_LABELS: Record<Destino, string> = {
+  inspecoes_pista: "Inspeções de Pista",
+  inspecoes_concretagem: "Inspeções de Concretagem",
+  ensaios_bitola: "Ensaios de Bitola",
+  ensaios_arrancamento_usp: "Ensaios de Arrancamento USP",
+  ensaios_liberacao: "Ensaios de Liberação",
+  ensaios_acompanhamento: "Ensaios de Acompanhamento",
+};
 
 const corsHeaders = {
   ...supabaseCorsHeaders,
@@ -333,7 +352,7 @@ async function runSync(
     const templateMap = new Map(
       (templates as TemplateConfig[]).map((template) => [template.template_id, template]),
     );
-    const releaseLots = await loadReleaseLotRegistry(supabase);
+    const destinationLots = await loadDestinationLotRegistry(supabase);
 
     let maxModified = checkpoint;
     for (let index = 0; index < selected.length; index += 5) {
@@ -342,7 +361,7 @@ async function runSync(
         try {
           return {
             audit,
-            result: await processAudit(supabase, audit, templateMap, releaseLots),
+            result: await processAudit(supabase, audit, templateMap, destinationLots),
             error: null,
           };
         } catch (error) {
@@ -465,7 +484,7 @@ async function processAudit(
   supabase: SupabaseClient,
   audit: AuditSearchRow,
   templateMap: Map<string, TemplateConfig>,
-  releaseLots: ReleaseLotRegistry,
+  destinationLots: DestinationLotRegistry,
 ) {
   const inspection = await getInspection(audit.audit_id);
   const templateId = String(
@@ -532,27 +551,32 @@ async function processAudit(
     acompanhamento.serie_ajustada_manualmente = true;
   }
 
-  let releaseReserved = false;
-  if (template.destino === "ensaios_liberacao") {
-    const release = mapped as Record<string, unknown>;
-    const duplicate = findDuplicateReleaseLot(releaseLots, release, audit.audit_id);
-    if (duplicate) {
-      const lot = clean(String(release.lote_ensaiado || ""));
-      const now = new Date().toISOString();
-      const { error: ignoredError } = await supabase.from("safeculture_inspecoes").update({
-        status_processamento: "ignorado",
-        registro_destino_id: duplicate.id || null,
-        erro_processamento: `Lote ${lot || "sem identificação"} ignorado: já existe no histórico de Ensaios de Liberação.`,
-        processado_em: now,
-        atualizado_em: now,
-      }).eq("audit_id", audit.audit_id);
-      if (ignoredError) throw ignoredError;
-      return "ignored";
-    }
-    if (!existing?.id) {
-      reserveReleaseLot(releaseLots, release, audit.audit_id);
-      releaseReserved = true;
-    }
+  const destinationRecord = mapped as Record<string, unknown>;
+  const duplicate = findDuplicateDestinationLot(
+    destinationLots,
+    template.destino,
+    destinationRecord,
+    audit.audit_id,
+  );
+  if (duplicate) {
+    const lotField = LOT_FIELD_BY_DESTINATION[template.destino];
+    const lot = clean(String(destinationRecord[lotField] || ""));
+    const now = new Date().toISOString();
+    const { error: ignoredError } = await supabase.from("safeculture_inspecoes").update({
+      status_processamento: "ignorado",
+      registro_destino_id: duplicate.id || null,
+      erro_processamento: `Lote ${lot || "sem identificação"} ignorado: já existe no histórico de ${DESTINATION_LABELS[template.destino]}.`,
+      processado_em: now,
+      atualizado_em: now,
+    }).eq("audit_id", audit.audit_id);
+    if (ignoredError) throw ignoredError;
+    return "ignored";
+  }
+
+  let destinationReserved = false;
+  if (!existing?.id) {
+    reserveDestinationLot(destinationLots, template.destino, destinationRecord, audit.audit_id);
+    destinationReserved = true;
   }
 
   const { data: saved, error: saveError } = await supabase
@@ -561,7 +585,9 @@ async function processAudit(
     .select("id")
     .single();
   if (saveError) {
-    if (releaseReserved) removeReleaseLotReservation(releaseLots, audit.audit_id);
+    if (destinationReserved) {
+      removeDestinationLotReservation(destinationLots, template.destino, audit.audit_id);
+    }
     throw saveError;
   }
 
@@ -803,73 +829,91 @@ async function findProductionLot(supabase: SupabaseClient, lot: string, supplier
   return list.find((row) => supplierNorm && normalize(row.fornecedor) === supplierNorm) || list[0] || null;
 }
 
-async function loadReleaseLotRegistry(supabase: SupabaseClient): Promise<ReleaseLotRegistry> {
-  const { data, error } = await supabase
-    .from("ensaios_liberacao")
-    .select("id,lote_ensaiado,producao_lote_id,safeculture_audit_id")
-    .limit(5000);
-  if (error) throw error;
+async function loadDestinationLotRegistry(supabase: SupabaseClient): Promise<DestinationLotRegistry> {
+  const registry: DestinationLotRegistry = new Map();
+  await Promise.all(DESTINOS.map(async (destination) => {
+    const lotField = LOT_FIELD_BY_DESTINATION[destination];
+    const { data, error } = await supabase
+      .from(destination)
+      .select(`id,${lotField},producao_lote_id,safeculture_audit_id`)
+      .limit(5000);
+    if (error) throw error;
 
-  const registry: ReleaseLotRegistry = new Map();
-  for (const row of data || []) {
-    addReleaseLotEntry(registry, row as Record<string, unknown>, {
-      id: String(row.id || ""),
-      auditId: String(row.safeculture_audit_id || ""),
-    });
-  }
+    const index: DestinationLotIndex = new Map();
+    for (const row of data || []) {
+      addDestinationLotEntry(index, row as Record<string, unknown>, lotField, {
+        id: String(row.id || ""),
+        auditId: String(row.safeculture_audit_id || ""),
+      });
+    }
+    registry.set(destination, index);
+  }));
   return registry;
 }
 
-function releaseLotKeys(record: Record<string, unknown>) {
+function destinationLotKeys(record: Record<string, unknown>, lotField: "lote" | "lote_ensaiado") {
   const keys: string[] = [];
   const productionId = clean(String(record.producao_lote_id || ""));
-  const lot = normalizeReleaseLot(record.lote_ensaiado);
+  const lot = normalizeDestinationLot(record[lotField]);
   if (productionId) keys.push(`production:${productionId}`);
   if (lot) keys.push(`lot:${lot}`);
   return keys;
 }
 
-function normalizeReleaseLot(value: unknown) {
+function normalizeDestinationLot(value: unknown) {
   return normalize(value).replace(/\bLOTE\b/g, "").replace(/[^A-Z0-9]/g, "");
 }
 
-function addReleaseLotEntry(
-  registry: ReleaseLotRegistry,
+function addDestinationLotEntry(
+  index: DestinationLotIndex,
   record: Record<string, unknown>,
-  entry: ReleaseLotEntry,
+  lotField: "lote" | "lote_ensaiado",
+  entry: DestinationLotEntry,
 ) {
-  for (const key of releaseLotKeys(record)) {
-    const entries = registry.get(key) || [];
+  for (const key of destinationLotKeys(record, lotField)) {
+    const entries = index.get(key) || [];
     entries.push(entry);
-    registry.set(key, entries);
+    index.set(key, entries);
   }
 }
 
-function findDuplicateReleaseLot(
-  registry: ReleaseLotRegistry,
+function findDuplicateDestinationLot(
+  registry: DestinationLotRegistry,
+  destination: Destino,
   record: Record<string, unknown>,
   currentAuditId: string,
 ) {
-  for (const key of releaseLotKeys(record)) {
-    const duplicate = (registry.get(key) || []).find((entry) => entry.auditId !== currentAuditId);
+  const index = registry.get(destination) || new Map();
+  const lotField = LOT_FIELD_BY_DESTINATION[destination];
+  for (const key of destinationLotKeys(record, lotField)) {
+    const duplicate = (index.get(key) || []).find((entry) => entry.auditId !== currentAuditId);
     if (duplicate) return duplicate;
   }
   return null;
 }
 
-function reserveReleaseLot(
-  registry: ReleaseLotRegistry,
+function reserveDestinationLot(
+  registry: DestinationLotRegistry,
+  destination: Destino,
   record: Record<string, unknown>,
   auditId: string,
 ) {
-  addReleaseLotEntry(registry, record, { id: "", auditId });
+  const index = registry.get(destination) || new Map();
+  addDestinationLotEntry(index, record, LOT_FIELD_BY_DESTINATION[destination], { id: "", auditId });
+  registry.set(destination, index);
 }
 
-function removeReleaseLotReservation(registry: ReleaseLotRegistry, auditId: string) {
-  for (const [key, entries] of registry.entries()) {
+function removeDestinationLotReservation(
+  registry: DestinationLotRegistry,
+  destination: Destino,
+  auditId: string,
+) {
+  const index = registry.get(destination);
+  if (!index) return;
+  for (const [key, entries] of index.entries()) {
     const remaining = entries.filter((entry) => entry.id || entry.auditId !== auditId);
-    if (remaining.length) registry.set(key, remaining);
-    else registry.delete(key);
+    if (remaining.length) index.set(key, remaining);
+    else index.delete(key);
   }
 }
 
