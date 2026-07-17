@@ -84,7 +84,9 @@ async function carregarEnsaiosLiberacao() {
     ]);
 
     PRODUCAO_LOTES = (producao || []).map(mapProducaoDoBancoSimples);
-    ENSAIOS_REGISTROS = (ensaios || []).map(mapEnsaioDoBanco);
+    ENSAIOS_REGISTROS = filtrarDuplicadosSafetyCulture(
+      (ensaios || []).map(mapEnsaioDoBanco)
+    );
 
     popularSelectLotes();
     preencherSugestoesFormulario();
@@ -99,6 +101,42 @@ async function carregarEnsaiosLiberacao() {
     App.toast(ENSAIOS_ERRO, 'erro');
     render();
   }
+}
+
+function chaveLoteLiberacao(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\bLOTE\b/gi, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toUpperCase();
+}
+
+function chavesRegistroLiberacao(registro) {
+  const chaves = [];
+  const producaoId = String(registro?.producaoLoteId || '').trim();
+  const lote = chaveLoteLiberacao(registro?.lote);
+  if (producaoId) chaves.push(`producao:${producaoId}`);
+  if (lote) chaves.push(`lote:${lote}`);
+  return chaves;
+}
+
+function filtrarDuplicadosSafetyCulture(registros) {
+  const chavesHistoricas = new Set();
+  registros.forEach(registro => {
+    if (SafetyCultureSync.gerenciadoPelaApi(registro)) return;
+    chavesRegistroLiberacao(registro).forEach(chave => chavesHistoricas.add(chave));
+  });
+
+  const chavesSafetyCultureExibidas = new Set();
+  return registros.filter(registro => {
+    if (!SafetyCultureSync.gerenciadoPelaApi(registro)) return true;
+    const chaves = chavesRegistroLiberacao(registro);
+    if (chaves.some(chave => chavesHistoricas.has(chave))) return false;
+    if (chaves.some(chave => chavesSafetyCultureExibidas.has(chave))) return false;
+    chaves.forEach(chave => chavesSafetyCultureExibidas.add(chave));
+    return true;
+  });
 }
 
 function filtros() {
@@ -181,7 +219,7 @@ function renderTabela(lista, total) {
   alvo.innerHTML = `<div class="tabela-wrap"><table class="tabela">
     <thead><tr>
       <th>Data</th><th>Semana</th><th>Fornecedor</th><th>Projeto</th><th>Bitola</th><th>Lote ensaiado</th>
-      <th>Série liberada</th><th>Resultado</th><th class="right">Qtd.</th><th>Origem</th><th>Relatório</th><th>Ações</th>
+      <th>Série liberada</th><th>Resultado</th><th>Origem</th><th>Relatório</th><th>Ações</th>
     </tr></thead>
     <tbody>${lista.map(r => `<tr>
       <td>${U.dataBR(r.dataEnsaio)}</td>
@@ -192,7 +230,6 @@ function renderTabela(lista, total) {
       <td><strong>${U.esc(r.lote || '—')}</strong>${r.producaoLoteId ? '<div class="txt-mini txt-cinza">Vinculado à produção</div>' : '<div class="txt-mini txt-cinza">Manual</div>'}</td>
       <td>${U.esc(r.serieLiberada || '—')}</td>
       <td>${badgeResultado(r.resultado)}</td>
-      <td class="right">${U.esc(r.quantidadeEnsaiada || '—')}</td>
       <td>${SafetyCultureSync.origemBadge(r)}</td>
       <td>${linkRelatorio(r)}</td>
       <td class="acoes-cel">

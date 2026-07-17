@@ -32,6 +32,11 @@ type Answer = {
   section: string;
   value: string;
 };
+type ReleaseLotEntry = {
+  id: string;
+  auditId: string;
+};
+type ReleaseLotRegistry = Map<string, ReleaseLotEntry[]>;
 
 const corsHeaders = {
   ...supabaseCorsHeaders,
@@ -328,13 +333,18 @@ async function runSync(
     const templateMap = new Map(
       (templates as TemplateConfig[]).map((template) => [template.template_id, template]),
     );
+    const releaseLots = await loadReleaseLotRegistry(supabase);
 
     let maxModified = checkpoint;
     for (let index = 0; index < selected.length; index += 5) {
       const batch = selected.slice(index, index + 5);
       const results = await Promise.all(batch.map(async (audit) => {
         try {
-          return { audit, result: await processAudit(supabase, audit, templateMap), error: null };
+          return {
+            audit,
+            result: await processAudit(supabase, audit, templateMap, releaseLots),
+            error: null,
+          };
         } catch (error) {
           await supabase.from("safeculture_inspecoes").upsert({
             audit_id: audit.audit_id,
@@ -455,6 +465,7 @@ async function processAudit(
   supabase: SupabaseClient,
   audit: AuditSearchRow,
   templateMap: Map<string, TemplateConfig>,
+  releaseLots: ReleaseLotRegistry,
 ) {
   const inspection = await getInspection(audit.audit_id);
   const templateId = String(
@@ -521,12 +532,38 @@ async function processAudit(
     acompanhamento.serie_ajustada_manualmente = true;
   }
 
+  let releaseReserved = false;
+  if (template.destino === "ensaios_liberacao") {
+    const release = mapped as Record<string, unknown>;
+    const duplicate = findDuplicateReleaseLot(releaseLots, release, audit.audit_id);
+    if (duplicate) {
+      const lot = clean(String(release.lote_ensaiado || ""));
+      const now = new Date().toISOString();
+      const { error: ignoredError } = await supabase.from("safeculture_inspecoes").update({
+        status_processamento: "ignorado",
+        registro_destino_id: duplicate.id || null,
+        erro_processamento: `Lote ${lot || "sem identificação"} ignorado: já existe no histórico de Ensaios de Liberação.`,
+        processado_em: now,
+        atualizado_em: now,
+      }).eq("audit_id", audit.audit_id);
+      if (ignoredError) throw ignoredError;
+      return "ignored";
+    }
+    if (!existing?.id) {
+      reserveReleaseLot(releaseLots, release, audit.audit_id);
+      releaseReserved = true;
+    }
+  }
+
   const { data: saved, error: saveError } = await supabase
     .from(template.destino)
     .upsert(mapped, { onConflict: "safeculture_audit_id" })
     .select("id")
     .single();
-  if (saveError) throw saveError;
+  if (saveError) {
+    if (releaseReserved) removeReleaseLotReservation(releaseLots, audit.audit_id);
+    throw saveError;
+  }
 
   const { error: rawError } = await supabase.from("safeculture_inspecoes").upsert({
     audit_id: audit.audit_id,
@@ -764,6 +801,76 @@ async function findProductionLot(supabase: SupabaseClient, lot: string, supplier
   const list = data || [];
   const supplierNorm = normalize(supplier);
   return list.find((row) => supplierNorm && normalize(row.fornecedor) === supplierNorm) || list[0] || null;
+}
+
+async function loadReleaseLotRegistry(supabase: SupabaseClient): Promise<ReleaseLotRegistry> {
+  const { data, error } = await supabase
+    .from("ensaios_liberacao")
+    .select("id,lote_ensaiado,producao_lote_id,safeculture_audit_id")
+    .limit(5000);
+  if (error) throw error;
+
+  const registry: ReleaseLotRegistry = new Map();
+  for (const row of data || []) {
+    addReleaseLotEntry(registry, row as Record<string, unknown>, {
+      id: String(row.id || ""),
+      auditId: String(row.safeculture_audit_id || ""),
+    });
+  }
+  return registry;
+}
+
+function releaseLotKeys(record: Record<string, unknown>) {
+  const keys: string[] = [];
+  const productionId = clean(String(record.producao_lote_id || ""));
+  const lot = normalizeReleaseLot(record.lote_ensaiado);
+  if (productionId) keys.push(`production:${productionId}`);
+  if (lot) keys.push(`lot:${lot}`);
+  return keys;
+}
+
+function normalizeReleaseLot(value: unknown) {
+  return normalize(value).replace(/\bLOTE\b/g, "").replace(/[^A-Z0-9]/g, "");
+}
+
+function addReleaseLotEntry(
+  registry: ReleaseLotRegistry,
+  record: Record<string, unknown>,
+  entry: ReleaseLotEntry,
+) {
+  for (const key of releaseLotKeys(record)) {
+    const entries = registry.get(key) || [];
+    entries.push(entry);
+    registry.set(key, entries);
+  }
+}
+
+function findDuplicateReleaseLot(
+  registry: ReleaseLotRegistry,
+  record: Record<string, unknown>,
+  currentAuditId: string,
+) {
+  for (const key of releaseLotKeys(record)) {
+    const duplicate = (registry.get(key) || []).find((entry) => entry.auditId !== currentAuditId);
+    if (duplicate) return duplicate;
+  }
+  return null;
+}
+
+function reserveReleaseLot(
+  registry: ReleaseLotRegistry,
+  record: Record<string, unknown>,
+  auditId: string,
+) {
+  addReleaseLotEntry(registry, record, { id: "", auditId });
+}
+
+function removeReleaseLotReservation(registry: ReleaseLotRegistry, auditId: string) {
+  for (const [key, entries] of registry.entries()) {
+    const remaining = entries.filter((entry) => entry.id || entry.auditId !== auditId);
+    if (remaining.length) registry.set(key, remaining);
+    else registry.delete(key);
+  }
 }
 
 function seriesReference(sourceSeries: string, productionSeries: unknown, lot: string) {
