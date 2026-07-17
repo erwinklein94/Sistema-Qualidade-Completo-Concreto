@@ -16,6 +16,7 @@ const CCT = {
   ultimoFoco: null,
   personalizadoAberto: false,
   personalizadoCharts: {},
+  personalizadoResumos: [],
   ultimoFocoPersonalizado: null,
 };
 
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   App.montarLayout('comparativoCuraTermica', 'Histórico de Cura — Ferro Norte', 'Compressão axial e tração dos CPs · cura térmica e normal · 14 × 28 dias');
   App.acoesTopo(`
-    <button class="btn btn-secundario" onclick="abrirComparativoPersonalizado(this)">Comparativo Personalizado</button>
+    <button class="btn btn-comparativo-personalizado" onclick="abrirComparativoPersonalizado(this)">Comparativo Personalizado</button>
     <button class="btn btn-primario" onclick="carregarComparativoCuraTermica()">${ICN.filtro}Atualizar</button>`);
 
   document.getElementById('fFornecedor').innerHTML = U.opcoes(CFG.listas.fornecedores, '', 'Todas');
@@ -46,6 +47,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('comparativoPersonalizadoCampos')?.addEventListener('change', eventoCamposComparativoPersonalizado);
   document.getElementById('comparativoIncluirHistorico')?.addEventListener('change', limparResultadoComparativoPersonalizado);
   document.getElementById('gerarComparativoPersonalizado')?.addEventListener('click', gerarComparativoPersonalizado);
+  document.getElementById('exportarComparativoPersonalizadoPDF')?.addEventListener('click', exportarComparativoPersonalizadoPDF);
   document.addEventListener('keydown', eventoTecladoComparativoPersonalizado);
   atualizarBotaoOrdenacao();
 
@@ -676,10 +678,19 @@ function eventoTecladoComparativoPersonalizado(event) {
 
 function limparResultadoComparativoPersonalizado() {
   destruirGraficosPersonalizados();
+  CCT.personalizadoResumos = [];
   const vazio = document.getElementById('comparativoPersonalizadoVazio');
   const conteudo = document.getElementById('comparativoPersonalizadoConteudo');
   if (vazio) vazio.hidden = false;
   if (conteudo) conteudo.hidden = true;
+  atualizarBotaoExportacaoComparativoPersonalizado();
+}
+
+function atualizarBotaoExportacaoComparativoPersonalizado(gerando = false) {
+  const botao = document.getElementById('exportarComparativoPersonalizadoPDF');
+  if (!botao) return;
+  botao.disabled = gerando || !CCT.personalizadoResumos.length;
+  botao.textContent = gerando ? 'Gerando PDF...' : '↓ Exportar PDF';
 }
 
 function lotesPersonalizadosDisponiveis() {
@@ -1121,11 +1132,137 @@ function gerarComparativoPersonalizado() {
       <span>Média histórica: ${comHistorico ? 'incluída' : 'não incluída'}</span>
       <span>Gráficos: média de CP1 + CP2</span>`;
     renderTabelaComparativoPersonalizado(resumos);
+    CCT.personalizadoResumos = resumos;
+    atualizarBotaoExportacaoComparativoPersonalizado();
     if (vazio) vazio.hidden = true;
     if (conteudo) conteudo.hidden = false;
     requestAnimationFrame(() => desenharGraficosPersonalizados(resumos));
   } catch (erro) {
     App.toast(erro?.message || 'Não foi possível gerar o comparativo.', 'aviso');
+  }
+}
+
+function textoMetricaComparativoPDF(metrica) {
+  if (!metrica?.quantidade) return '-';
+  return `CP1 ${fmtCp(metrica.cp1)} | CP2 ${fmtCp(metrica.cp2)} | Média ${fmtCp(metrica.media)}`;
+}
+
+function filtrosComparativoPersonalizadoPDF() {
+  const historico = historicoCompletoComparativo();
+  const lotes = valoresSelecionadosComparativo('comparativoLote')
+    .map(id => historico.find(lote => lote.id === id)?.lote)
+    .filter(Boolean);
+  const semanas = valoresSelecionadosComparativo('comparativoSemana');
+  const periodos = ['A', 'B'].filter(letra => document.getElementById(`comparativoPeriodo${letra}Ativo`)?.checked).map(letra => {
+    const inicio = valorCampoPersonalizado(`comparativoPeriodo${letra}Ini`);
+    const fim = valorCampoPersonalizado(`comparativoPeriodo${letra}Fim`);
+    return `${letra}: ${U.dataBR(inicio)} a ${U.dataBR(fim)}`;
+  });
+  const curas = valoresSelecionadosComparativo('comparativoCura').map(tipo => rotuloCuraPersonalizada(tipo, true));
+  const historica = document.getElementById('comparativoIncluirHistorico')?.checked ? 'Incluída' : 'Não incluída';
+  return [
+    { campo: 'Lotes escolhidos', valor: lotes.length ? lotes.join(', ') : 'Nenhum' },
+    { campo: 'Semanas escolhidas', valor: semanas.length ? semanas.join(', ') : 'Nenhuma' },
+    { campo: 'Períodos escolhidos', valor: periodos.length ? periodos.join(' | ') : 'Nenhum' },
+    { campo: 'Tipos de cura', valor: curas.length ? curas.join(' + ') : 'Curas reunidas' },
+    { campo: 'Média histórica', valor: historica },
+  ];
+}
+
+function aguardarGraficosComparativoPersonalizado() {
+  return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}
+
+function imagemCanvasComFundoBranco(canvas) {
+  if (!canvas) return '';
+  const copia = document.createElement('canvas');
+  copia.width = canvas.width;
+  copia.height = canvas.height;
+  const contexto = copia.getContext('2d');
+  contexto.fillStyle = '#ffffff';
+  contexto.fillRect(0, 0, copia.width, copia.height);
+  contexto.drawImage(canvas, 0, 0);
+  return copia.toDataURL('image/png');
+}
+
+async function graficosComparativoPersonalizadoPDF(resumos) {
+  const temaOriginal = document.body.dataset.tema || 'claro';
+  const precisaRestaurar = temaOriginal === 'escuro';
+  if (precisaRestaurar) document.body.dataset.tema = 'claro';
+  try {
+    desenharGraficosPersonalizados(resumos);
+    await aguardarGraficosComparativoPersonalizado();
+    const canvasComp = document.getElementById('chartPersonalizadoCompressao');
+    const canvasTracao = document.getElementById('chartPersonalizadoTracao');
+    return [
+      {
+        titulo: 'Compressão axial - evolução média entre 14 e 28 dias',
+        imagem: imagemCanvasComFundoBranco(canvasComp),
+        largura: canvasComp?.width,
+        altura: canvasComp?.height,
+      },
+      {
+        titulo: 'Tração - evolução média entre 14 e 28 dias',
+        imagem: imagemCanvasComFundoBranco(canvasTracao),
+        largura: canvasTracao?.width,
+        altura: canvasTracao?.height,
+      },
+    ];
+  } finally {
+    if (precisaRestaurar) {
+      document.body.dataset.tema = temaOriginal;
+      desenharGraficosPersonalizados(resumos);
+      await aguardarGraficosComparativoPersonalizado();
+    }
+  }
+}
+
+async function exportarComparativoPersonalizadoPDF() {
+  if (!CCT.personalizadoResumos.length) {
+    App.toast('Gere o comparativo antes de exportar o PDF.', 'aviso');
+    return;
+  }
+  if (!window.Exportacoes?.exportarRelatorioPDF) {
+    App.toast('O recurso de exportação para PDF não está disponível.', 'erro');
+    return;
+  }
+
+  atualizarBotaoExportacaoComparativoPersonalizado(true);
+  try {
+    const resumos = CCT.personalizadoResumos;
+    const graficos = await graficosComparativoPersonalizadoPDF(resumos);
+    await Exportacoes.exportarRelatorioPDF({
+      titulo: 'Comparativo Personalizado - Cura Ferro Norte',
+      nomeArquivo: 'comparativo-personalizado-cura-ferro-norte',
+      filtros: filtrosComparativoPersonalizadoPDF(),
+      tituloGraficos: 'Gráficos da comparação personalizada',
+      secoes: [{
+        titulo: 'Valores comparados de compressão axial e tração',
+        columns: [
+          { key: 'comparado', label: 'Comparado' },
+          { key: 'lotes', label: 'Lotes' },
+          { key: 'comp14', label: 'Compressão 14d (MPa)' },
+          { key: 'comp28', label: 'Compressão 28d (MPa)' },
+          { key: 'tracao14', label: 'Tração 14d (MPa)' },
+          { key: 'tracao28', label: 'Tração 28d (MPa)' },
+        ],
+        rows: resumos.map(grupo => ({
+          comparado: `${grupo.rotulo} - ${grupo.detalhe}`,
+          lotes: grupo.quantidadeLotes,
+          comp14: textoMetricaComparativoPDF(grupo.comp14),
+          comp28: textoMetricaComparativoPDF(grupo.comp28),
+          tracao14: textoMetricaComparativoPDF(grupo.tracao14),
+          tracao28: textoMetricaComparativoPDF(grupo.tracao28),
+        })),
+      }],
+      graficos,
+      observacao: 'Fonte: Supabase. PDF gerado com os critérios combinados escolhidos no Comparativo Personalizado. Os gráficos usam a média dos valores disponíveis de CP1 e CP2.',
+    });
+  } catch (erro) {
+    console.error('Erro ao exportar comparativo personalizado', erro);
+    App.toast(erro?.message || 'Não foi possível gerar o PDF do comparativo.', 'erro');
+  } finally {
+    atualizarBotaoExportacaoComparativoPersonalizado(false);
   }
 }
 

@@ -31,6 +31,12 @@ const Exportacoes = (() => {
     }
   }
 
+  async function exportarRelatorioPDF(relatorio) {
+    const rel = normalizarRelatorio(relatorio);
+    if (!rel?.secoes?.length) throw new Error('Não há dados para gerar o PDF.');
+    await exportarPDF(rel);
+  }
+
   function normalizarRelatorio(rel) {
     if (!rel) return null;
     const titulo = rel.titulo || tituloPagina();
@@ -54,6 +60,7 @@ const Exportacoes = (() => {
       filtros,
       secoes,
       graficos: normalizarGraficos(rel.graficos),
+      tituloGraficos: rel.tituloGraficos || 'Gráficos do relatório',
       observacao: rel.observacao || 'Fonte: Supabase. Exportação gerada somente a partir dos filtros aplicados na tela.',
       xlsxSomenteDados: !!rel.xlsxSomenteDados,
       toastXlsx: rel.toastXlsx || ''
@@ -338,7 +345,7 @@ const Exportacoes = (() => {
         if (idx === 0) {
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(13);
-          doc.text('Gráficos do Dashboard', margem, y);
+          doc.text(rel.tituloGraficos || 'Gráficos do relatório', margem, y);
           y += 8;
         }
       }
@@ -418,7 +425,7 @@ const Exportacoes = (() => {
     return limpo || `Dados ${idx + 1}`;
   }
 
-  return { botoes, registrar, exportarAtual, exportarFichaPDF, filtrosDaTela, garantirXLSX };
+  return { botoes, registrar, exportarAtual, exportarRelatorioPDF, exportarFichaPDF, filtrosDaTela, garantirXLSX };
 })();
 
 window.Exportacoes = Exportacoes;

@@ -335,6 +335,33 @@
     body[data-tema="escuro"] .comparativo-historico-toggle { border-color: rgba(127,224,108,.38); background: rgba(30,159,127,.18); }
     body[data-tema="escuro"] .comparativo-personalizado-tabela tr.historico td { background: rgba(127,224,108,.11); }
 
+    .btn-comparativo-personalizado {
+      border-color: #e2ba00 !important;
+      color: #062d52 !important;
+      background: var(--amarelo, #ffd401) !important;
+      box-shadow: 0 7px 18px rgba(226,186,0,.26);
+    }
+    .btn-comparativo-personalizado:hover,
+    .btn-comparativo-personalizado:focus-visible {
+      border-color: #c9a600 !important;
+      color: #002b50 !important;
+      background: #ffe34c !important;
+      transform: translateY(-1px);
+    }
+    .modal-personalizado-cab-acoes { display: flex; align-items: center; gap: 8px; }
+    .btn-exportar-comparativo {
+      border: 1px solid rgba(0,53,103,.22);
+      color: #fff;
+      background: var(--azul-escuro, #003567);
+      box-shadow: 0 5px 14px rgba(0,53,103,.16);
+      font-size: 10.5px;
+    }
+    .btn-exportar-comparativo:hover:not(:disabled),
+    .btn-exportar-comparativo:focus-visible:not(:disabled) { background: #005792; transform: translateY(-1px); }
+    .btn-exportar-comparativo:disabled { opacity: .48; cursor: not-allowed; box-shadow: none; }
+    body[data-tema="escuro"] .btn-comparativo-personalizado { border-color: #ffd401 !important; color: #031b31 !important; background: #ffd401 !important; }
+    body[data-tema="escuro"] .btn-exportar-comparativo { border-color: rgba(255,255,255,.25); color: #fff; background: #126da8; }
+
     /* Modal combinado: cabe no viewport e mantém somente listas/tabela com rolagem interna. */
     .modal-personalizado .modal {
       width: calc(100vw - 36px);
@@ -488,6 +515,8 @@
       .comparativo-personalizado-graficos { grid-template-columns: 1fr; }
       .comparativo-personalizado-chart { height: 280px; }
       .modal-personalizado .modal-cab h2 { font-size: 20px; }
+      .modal-personalizado-cab-acoes { align-items: flex-end; flex-direction: column-reverse; }
+      .btn-exportar-comparativo { padding: 6px 8px; font-size: 9.5px; }
       .modal-personalizado .modal { width: calc(100vw - 16px); height: calc(100vh - 16px); }
       .modal-personalizado .modal-corpo { overflow-y: auto; }
       .comparativo-personalizado-layout { height: auto; }
@@ -607,7 +636,10 @@
           <h2 id="comparativoPersonalizadoTitulo">Comparativo Personalizado</h2>
           <p id="comparativoPersonalizadoSubtitulo">Combine lotes, semanas, períodos e tipos de cura, com média histórica opcional.</p>
         </div>
-        <button type="button" class="fechar-modal" id="fecharComparativoPersonalizado" aria-label="Fechar comparativo personalizado">⨯</button>
+        <div class="modal-personalizado-cab-acoes">
+          <button type="button" class="btn btn-exportar-comparativo" id="exportarComparativoPersonalizadoPDF" disabled>↓ Exportar PDF</button>
+          <button type="button" class="fechar-modal" id="fecharComparativoPersonalizado" aria-label="Fechar comparativo personalizado">⨯</button>
+        </div>
       </header>
       <div class="modal-corpo">
         <div class="comparativo-personalizado-layout">
@@ -656,11 +688,11 @@
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/store-supabase.js?v=20260703-acomp-v1"></script>
-  <script src="js/exportacoes.js?v=20260708-ficha-pdf-v1"></script>
+  <script src="js/exportacoes.js?v=20260717-comparativo-pdf-v2"></script>
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
-  <script src="js/comparativo-cura-termica.js?v=20260717-comparativo-combinado-v2"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260717-comparativo-pdf-v3"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
