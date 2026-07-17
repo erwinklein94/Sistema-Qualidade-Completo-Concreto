@@ -6,7 +6,15 @@
    Fonte: producao_lotes (comp_14/tracao_14/comp_28/tracao_28 + CP2).
    ===================================================================== */
 let CCT_CHARTS = {};
-const CCT = { prod: [], carregando: true, erro: '', ordem: 'desc' };
+const CCT = {
+  prod: [],
+  carregando: true,
+  erro: '',
+  ordem: 'desc',
+  modalChart: null,
+  modalLoteId: '',
+  ultimoFoco: null,
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
@@ -23,6 +31,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById(id)?.addEventListener('change', renderComparativo);
   });
   document.getElementById('btnOrdenacao')?.addEventListener('click', alternarOrdemComparativo);
+  document.getElementById('tabelaComparativo')?.addEventListener('click', eventoDetalheLote);
+  document.getElementById('fecharModalDetalhe')?.addEventListener('click', fecharDetalheLote);
+  document.getElementById('modalDetalheLote')?.addEventListener('click', eventoFecharOverlayDetalhe);
+  document.addEventListener('keydown', eventoTecladoDetalhe);
   atualizarBotaoOrdenacao();
 
   App.aplicarPadraoGraficos();
@@ -156,6 +168,26 @@ function alternarOrdemComparativo() {
   renderComparativo();
 }
 
+function normalizarLote(r) {
+  const lote = String(r.lote || '—');
+  const data = String(r.data_fabricacao || '').slice(0, 10);
+  return {
+    id: String(r.id || `${lote}::${data}`),
+    lote,
+    data,
+    fornecedor: r.fornecedor || '',
+    curaTermica: !!r.cura_termica,
+    comp14: par(r.comp_14, r.comp_14_cp2),
+    tracao14: par(r.tracao_14, r.tracao_14_cp2),
+    comp28: par(r.comp_28, r.comp_28_cp2),
+    tracao28: par(r.tracao_28, r.tracao_28_cp2),
+  };
+}
+
+function historicoCompletoComparativo() {
+  return CCT.prod.map(normalizarLote);
+}
+
 function lotesComparativo() {
   const busca = document.getElementById('busca')?.value.toLowerCase().trim() || '';
   const fornecedor = document.getElementById('fFornecedor')?.value || '';
@@ -174,16 +206,7 @@ function lotesComparativo() {
       if (busca && !String(r.lote || '').toLowerCase().includes(busca)) return false;
       return true;
     })
-    .map(r => ({
-      lote: String(r.lote || '—'),
-      data: String(r.data_fabricacao || '').slice(0, 10),
-      fornecedor: r.fornecedor || '',
-      curaTermica: !!r.cura_termica,
-      comp14: par(r.comp_14, r.comp_14_cp2),
-      tracao14: par(r.tracao_14, r.tracao_14_cp2),
-      comp28: par(r.comp_28, r.comp_28_cp2),
-      tracao28: par(r.tracao_28, r.tracao_28_cp2),
-    }))
+    .map(normalizarLote)
     .sort((a, b) => {
       if (!a.data && !b.data) {
         return String(a.lote).localeCompare(String(b.lote), 'pt-BR', { numeric: true });
@@ -236,6 +259,15 @@ function todosCps(lotes, metrica) {
     if (l[metrica].cp2 != null) out.push(l[metrica].cp2);
   });
   return out;
+}
+
+function mediasHistoricasCompletas() {
+  const lotes = historicoCompletoComparativo();
+  return ['comp14', 'comp28', 'tracao14', 'tracao28'].reduce((acc, metrica) => {
+    const valores = todosCps(lotes, metrica);
+    acc[metrica] = { media: mediaLista(valores), quantidade: valores.length };
+    return acc;
+  }, {});
 }
 
 function renderKpisComparativo(lotes) {
@@ -388,7 +420,7 @@ function renderTabelaComparativo(lotes) {
     return;
   }
   const linha = l => `<tr>
-      <td><strong>${U.esc(l.lote)}</strong></td>
+      <td><button type="button" class="lote-detalhe-btn" data-detalhe-id="${U.esc(l.id)}" aria-label="Abrir resultados do lote ${U.esc(l.lote)}">${U.esc(l.lote)}</button></td>
       <td>${U.dataBR(l.data)}</td>
       <td>${U.esc(l.fornecedor || '—')}</td>
       <td>${l.curaTermica
@@ -409,6 +441,175 @@ function renderTabelaComparativo(lotes) {
     </tr></thead>
     <tbody>${lotes.map(linha).join('')}</tbody>
   </table></div>`;
+}
+
+function mediaDoPar(p) {
+  return mediaLista([p.cp1, p.cp2]);
+}
+
+function diferencaReferencia(mediaLote, mediaHistorica) {
+  if (mediaLote == null || mediaHistorica == null) return 'Sem comparação';
+  const diferenca = mediaLote - mediaHistorica;
+  return `${diferenca >= 0 ? '+' : ''}${fmtCp(diferenca)} MPa vs. histórico`;
+}
+
+function valorMetrica(rotulo, valor, complemento = 'MPa') {
+  return `<div class="modal-lote-valor">
+    <small>${rotulo}</small>
+    <b>${fmtCp(valor)}</b>
+    <em>${valor == null ? 'sem resultado' : complemento}</em>
+  </div>`;
+}
+
+function cartaoMetrica({ titulo, idade, tipo, parLote, referencia }) {
+  const mediaLote = mediaDoPar(parLote);
+  return `<article class="modal-lote-metrica ${tipo}">
+    <div class="modal-lote-metrica-cab"><strong>${titulo}</strong><span>${idade}</span></div>
+    <div class="modal-lote-valores">
+      ${valorMetrica('CP1', parLote.cp1)}
+      ${valorMetrica('CP2', parLote.cp2)}
+      ${valorMetrica('Média do lote', mediaLote, diferencaReferencia(mediaLote, referencia.media))}
+      ${valorMetrica('Média histórica', referencia.media, `${referencia.quantidade} CPs considerados`)}
+    </div>
+  </article>`;
+}
+
+function eventoDetalheLote(event) {
+  const botao = event.target.closest('[data-detalhe-id]');
+  if (!botao) return;
+  abrirDetalheLote(botao.dataset.detalheId, botao);
+}
+
+function eventoFecharOverlayDetalhe(event) {
+  if (event.target.id === 'modalDetalheLote') fecharDetalheLote();
+}
+
+function eventoTecladoDetalhe(event) {
+  if (event.key === 'Escape' && CCT.modalLoteId) fecharDetalheLote();
+}
+
+function abrirDetalheLote(id, elementoOrigem) {
+  const lote = historicoCompletoComparativo().find(item => item.id === String(id));
+  const modal = document.getElementById('modalDetalheLote');
+  if (!lote || !modal) return;
+
+  const medias = mediasHistoricasCompletas();
+  CCT.modalLoteId = lote.id;
+  CCT.ultimoFoco = elementoOrigem || document.activeElement;
+  document.getElementById('modalDetalheTitulo').textContent = `Lote ${lote.lote}`;
+  document.getElementById('modalDetalheSubtitulo').textContent =
+    'Compressão axial e tração dos CPs aos 14 e 28 dias';
+  document.getElementById('modalDetalheMeta').innerHTML = `
+    <span>Fabricação: ${U.dataBR(lote.data)}</span>
+    <span>Fábrica: ${U.esc(lote.fornecedor || '—')}</span>
+    <span>${lote.curaTermica ? 'Cura térmica' : 'Cura normal'}</span>`;
+  document.getElementById('modalDetalheMetricas').innerHTML = [
+    cartaoMetrica({ titulo: 'Compressão axial', idade: '14 dias', tipo: 'comp', parLote: lote.comp14, referencia: medias.comp14 }),
+    cartaoMetrica({ titulo: 'Compressão axial', idade: '28 dias', tipo: 'comp', parLote: lote.comp28, referencia: medias.comp28 }),
+    cartaoMetrica({ titulo: 'Tração', idade: '14 dias', tipo: 'tracao', parLote: lote.tracao14, referencia: medias.tracao14 }),
+    cartaoMetrica({ titulo: 'Tração', idade: '28 dias', tipo: 'tracao', parLote: lote.tracao28, referencia: medias.tracao28 }),
+  ].join('');
+
+  modal.classList.add('aberto');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('fecharModalDetalhe')?.focus();
+  requestAnimationFrame(() => desenharGraficoDetalheLote(lote, medias));
+}
+
+function fecharDetalheLote() {
+  const modal = document.getElementById('modalDetalheLote');
+  if (!modal) return;
+  modal.classList.remove('aberto');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  CCT.modalLoteId = '';
+  if (CCT.modalChart) CCT.modalChart.destroy();
+  CCT.modalChart = null;
+  CCT.ultimoFoco?.focus?.();
+  CCT.ultimoFoco = null;
+}
+
+function datasetDetalhe({ label, data, cor, eixo, cp2 = false, historico = false }) {
+  return {
+    type: 'line',
+    label,
+    data,
+    borderColor: cor,
+    backgroundColor: cor,
+    borderWidth: historico ? 3 : 2.4,
+    borderDash: historico ? [10, 6] : (cp2 ? [3, 4] : []),
+    tension: 0.2,
+    spanGaps: true,
+    pointRadius: historico ? 4.5 : 5,
+    pointHoverRadius: 7,
+    pointStyle: historico ? 'rectRot' : (cp2 ? 'triangle' : 'circle'),
+    pointBackgroundColor: cor,
+    yAxisID: eixo,
+  };
+}
+
+function desenharGraficoDetalheLote(lote, medias) {
+  if (CCT.modalChart) CCT.modalChart.destroy();
+  const canvas = document.getElementById('chartDetalheLote');
+  if (!canvas || !document.getElementById('modalDetalheLote')?.classList.contains('aberto')) return;
+
+  const C = App.coresGrafico();
+  const corComp1 = C.azulClaro || '#32A6E6';
+  const corComp2 = C.azulEscuro || '#003567';
+  const corTracao1 = C.amarelo || '#FFD401';
+  const corTracao2 = C.erro || '#c0392b';
+  const corHistComp = C.verde || '#00A67E';
+  const corHistTracao = '#8e44ad';
+  const corTexto = App.cssVar('--cinza-texto', '#5a6b7b');
+  const corGrid = App.cssVar('--cinza-borda', '#e2e8f0');
+
+  CCT.modalChart = new Chart(canvas, {
+    data: {
+      labels: ['14 dias', '28 dias'],
+      datasets: [
+        datasetDetalhe({ label: 'Compressão CP1 · lote', data: [lote.comp14.cp1, lote.comp28.cp1], cor: corComp1, eixo: 'y' }),
+        datasetDetalhe({ label: 'Compressão CP2 · lote', data: [lote.comp14.cp2, lote.comp28.cp2], cor: corComp2, eixo: 'y', cp2: true }),
+        datasetDetalhe({ label: 'Média histórica · compressão', data: [medias.comp14.media, medias.comp28.media], cor: corHistComp, eixo: 'y', historico: true }),
+        datasetDetalhe({ label: 'Tração CP1 · lote', data: [lote.tracao14.cp1, lote.tracao28.cp1], cor: corTracao1, eixo: 'y1' }),
+        datasetDetalhe({ label: 'Tração CP2 · lote', data: [lote.tracao14.cp2, lote.tracao28.cp2], cor: corTracao2, eixo: 'y1', cp2: true }),
+        datasetDetalhe({ label: 'Média histórica · tração', data: [medias.tracao14.media, medias.tracao28.media], cor: corHistTracao, eixo: 'y1', historico: true }),
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 8, right: 8, bottom: 4, left: 8 } },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: corTexto, usePointStyle: true, padding: 14, boxWidth: 10, font: { size: 11 } },
+        },
+        tooltip: {
+          backgroundColor: App.cssVar('--azul-escuro', '#003567'),
+          padding: 11,
+          cornerRadius: 9,
+          callbacks: { label: ctx => `${ctx.dataset.label}: ${fmtCp(ctx.parsed.y)} MPa` },
+        },
+      },
+      scales: {
+        x: { ticks: { color: corTexto, font: { weight: '700' } }, grid: { display: false } },
+        y: {
+          position: 'left',
+          title: { display: true, text: 'Compressão axial (MPa)', color: corTexto },
+          ticks: { color: corTexto },
+          grid: { color: corGrid },
+        },
+        y1: {
+          position: 'right',
+          title: { display: true, text: 'Tração (MPa)', color: corTexto },
+          ticks: { color: corTexto },
+          grid: { drawOnChartArea: false },
+        },
+      },
+    },
+  });
 }
 
 // Texto "CP1 x · CP2 y" para as exportações.
@@ -466,3 +667,5 @@ function registrarExportacaoComparativo(lotes) {
 
 window.render = renderComparativo;
 window.carregarComparativoCuraTermica = carregarComparativoCuraTermica;
+window.abrirDetalheLote = abrirDetalheLote;
+window.fecharDetalheLote = fecharDetalheLote;
