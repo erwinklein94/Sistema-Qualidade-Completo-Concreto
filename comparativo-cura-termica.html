@@ -362,7 +362,7 @@
     body[data-tema="escuro"] .btn-comparativo-personalizado { border-color: #ffd401 !important; color: #031b31 !important; background: #ffd401 !important; }
     body[data-tema="escuro"] .btn-exportar-comparativo { border-color: rgba(255,255,255,.25); color: #fff; background: #126da8; }
 
-    /* Modal combinado: cabe no viewport e mantém somente listas/tabela com rolagem interna. */
+    /* Modal combinado: seleções no topo e resultados em fluxo vertical. */
     .modal-personalizado .modal {
       width: calc(100vw - 36px);
       height: calc(100vh - 36px);
@@ -378,18 +378,18 @@
       min-height: 0;
       max-height: none;
       padding: 10px 12px 12px;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
     .comparativo-personalizado-layout {
-      height: 100%;
-      grid-template-columns: 390px minmax(0, 1fr);
-      gap: 12px;
-      align-items: stretch;
+      display: block;
+      height: auto;
     }
     .comparativo-personalizado-config {
-      min-height: 0;
+      min-height: auto;
+      margin-bottom: 10px;
       padding: 10px;
-      overflow: auto;
+      overflow: visible;
     }
     .comparativo-personalizado-etapa { margin-bottom: 3px; }
     .comparativo-personalizado-intro {
@@ -399,7 +399,7 @@
       line-height: 1.35;
     }
     .comparativo-personalizado-campos { min-height: 0; }
-    .comparativo-selecoes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .comparativo-selecoes-grid { display: grid; grid-template-columns: 1.12fr 1.12fr 1.38fr 1fr; gap: 7px; align-items: stretch; }
     .comparativo-selecao-card {
       min-width: 0;
       border: 1px solid var(--cinza-borda);
@@ -407,7 +407,7 @@
       padding: 7px;
       background: var(--cinza-bg);
     }
-    .comparativo-selecao-card.larga { grid-column: 1 / -1; }
+    .comparativo-selecao-card.larga { grid-column: auto; }
     .comparativo-selecao-cab { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-bottom: 5px; }
     .comparativo-selecao-cab strong { color: var(--azul-escuro); font-size: 10.5px; }
     .comparativo-selecao-cab span {
@@ -460,7 +460,7 @@
     .comparativo-periodo-combinado .comparativo-periodo-grid input[type="date"] { height: 27px; padding: 3px 5px; font-size: 9px; }
     .comparativo-curas-combinadas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
     .comparativo-curas-ajuda { margin: 5px 0 0; color: var(--cinza-texto); font-size: 8px; line-height: 1.25; }
-    .comparativo-personalizado-rodape { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 7px; align-items: stretch; margin-top: 7px; }
+    .comparativo-personalizado-rodape { display: grid; grid-template-columns: minmax(250px, 390px) 170px; gap: 7px; align-items: stretch; justify-content: end; margin-top: 7px; }
     .comparativo-personalizado-rodape .comparativo-historico-toggle { margin: 0; padding: 7px; border-radius: 9px; }
     .comparativo-personalizado-rodape .comparativo-historico-toggle strong { font-size: 9.5px; }
     .comparativo-personalizado-rodape .comparativo-historico-toggle small { font-size: 8px; }
@@ -468,17 +468,16 @@
     .comparativo-personalizado-resultado {
       min-height: 0;
       padding: 9px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      overflow: visible;
+      display: block;
     }
-    .comparativo-personalizado-vazio { width: 100%; height: 100%; min-height: 0; }
+    .comparativo-personalizado-vazio { width: 100%; height: auto; min-height: 220px; }
     #comparativoPersonalizadoConteudo:not([hidden]) {
-      height: 100%;
+      height: auto;
       min-height: 0;
       display: grid;
-      grid-template-rows: auto minmax(165px, .75fr) minmax(200px, 1.25fr);
-      gap: 7px;
+      grid-template-rows: auto auto auto;
+      gap: 9px;
     }
     .comparativo-personalizado-resumo { gap: 5px; margin: 0; min-height: 23px; }
     .comparativo-personalizado-resumo span { padding: 3px 7px; font-size: 8.5px; }
@@ -486,9 +485,9 @@
     .comparativo-personalizado-grafico { min-height: 0; padding: 7px; overflow: hidden; }
     .comparativo-personalizado-grafico strong { font-size: 10.5px; }
     .comparativo-personalizado-grafico small { margin: 1px 0 3px; font-size: 8px; }
-    .comparativo-personalizado-chart { height: calc(100% - 29px); min-height: 130px; }
-    .comparativo-personalizado-tabela { min-height: 0; overflow: hidden; }
-    .comparativo-personalizado-tabela .tabela-wrap { width: 100%; height: 100%; max-height: none; overflow: auto; }
+    .comparativo-personalizado-chart { height: 245px; min-height: 190px; }
+    .comparativo-personalizado-tabela { min-height: 0; overflow: visible; }
+    .comparativo-personalizado-tabela .tabela-wrap { width: 100%; height: auto; max-height: none; overflow-x: auto; overflow-y: visible; }
     .comparativo-personalizado-tabela table { width: 100%; min-width: 680px; table-layout: fixed; }
     .comparativo-personalizado-tabela th,
     .comparativo-personalizado-tabela td { padding: 5px 7px; font-size: 9px; }
@@ -506,6 +505,10 @@
     body[data-tema="escuro"] .comparativo-selecao-card input[type="search"] { border-color: rgba(255,255,255,.18); color: #fff; background: rgba(3,22,43,.86); }
     body[data-tema="escuro"] .comparativo-personalizado-intro,
     body[data-tema="escuro"] .comparativo-curas-ajuda { color: #d9e8f7; }
+    @media (max-width: 1100px) {
+      .comparativo-selecoes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .comparativo-selecao-card.larga { grid-column: auto; }
+    }
     @media (max-width: 760px) {
       .modal-lote-metricas { grid-template-columns: 1fr; }
       .modal-lote-valores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -657,7 +660,7 @@
           </aside>
           <section class="comparativo-personalizado-resultado" aria-live="polite">
             <div class="comparativo-personalizado-vazio" id="comparativoPersonalizadoVazio">
-              <div><b>Seu comparativo aparecerá aqui</b><span>Combine os critérios à esquerda e clique em “Gerar comparativo”. Semanas e períodos podem ser separados por cura térmica e cura normal na mesma análise.</span></div>
+              <div><b>Seu comparativo aparecerá aqui</b><span>Combine os critérios acima e clique em “Gerar comparativo”. Semanas e períodos podem ser separados por cura térmica e cura normal na mesma análise.</span></div>
             </div>
             <div id="comparativoPersonalizadoConteudo" hidden>
               <div class="comparativo-personalizado-resumo" id="comparativoPersonalizadoResumo"></div>
@@ -688,11 +691,11 @@
   <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/store-supabase.js?v=20260703-acomp-v1"></script>
-  <script src="js/exportacoes.js?v=20260717-comparativo-pdf-v2"></script>
+  <script src="js/exportacoes.js?v=20260717-comparativo-horizontal-v3"></script>
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
-  <script src="js/comparativo-cura-termica.js?v=20260717-comparativo-pdf-v3"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260717-comparativo-horizontal-v4"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

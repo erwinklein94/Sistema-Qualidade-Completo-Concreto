@@ -61,6 +61,7 @@ const Exportacoes = (() => {
       secoes,
       graficos: normalizarGraficos(rel.graficos),
       tituloGraficos: rel.tituloGraficos || 'Gráficos do relatório',
+      layoutGraficosPDF: rel.layoutGraficosPDF || 'apos-tabelas',
       observacao: rel.observacao || 'Fonte: Supabase. Exportação gerada somente a partir dos filtros aplicados na tela.',
       xlsxSomenteDados: !!rel.xlsxSomenteDados,
       toastXlsx: rel.toastXlsx || ''
@@ -227,8 +228,15 @@ const Exportacoes = (() => {
     doc.text(linhasFiltro, margem, y);
     y += Math.min(18, linhasFiltro.length * 4) + 2;
 
-    rel.secoes.forEach((sec, idx) => {
-      if (idx > 0 && y > 170) { doc.addPage(); y = 12; }
+    let graficosIncluidos = 0;
+    if (rel.layoutGraficosPDF === 'grade-antes-tabela') {
+      const resultadoGraficos = await adicionarGraficosGradePDF(doc, rel, margem, y);
+      graficosIncluidos = resultadoGraficos.quantidade;
+      y = resultadoGraficos.y;
+    }
+
+    rel.secoes.forEach(sec => {
+      if (y > 170) { doc.addPage(); y = 12; }
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.text(`${sec.titulo} (${sec.rows.length} linha${sec.rows.length === 1 ? '' : 's'})`, margem, y);
@@ -246,7 +254,9 @@ const Exportacoes = (() => {
       y = doc.lastAutoTable.finalY + 8;
     });
 
-    const graficosIncluidos = await adicionarGraficosPDF(doc, rel, margem);
+    if (rel.layoutGraficosPDF !== 'grade-antes-tabela') {
+      graficosIncluidos = await adicionarGraficosPDF(doc, rel, margem);
+    }
 
     doc.save(`${rel.nomeArquivo}.pdf`);
     App?.toast?.(graficosIncluidos ? 'PDF gerado com os dados e gráficos filtrados.' : 'PDF gerado com os dados filtrados.', 'sucesso');
@@ -321,6 +331,60 @@ const Exportacoes = (() => {
     doc.setTextColor(90, 107, 123);
     doc.text(`Fonte: Supabase · Página ${page}`, largura - margem, altura - 6, { align: 'right' });
     doc.setTextColor(0, 0, 0);
+  }
+
+  async function adicionarGraficosGradePDF(doc, rel, margem, inicioY) {
+    const graficos = await coletarImagensGraficos(rel.graficos || []);
+    if (!graficos.length) return { quantidade: 0, y: inicioY };
+
+    const larguraPagina = doc.internal.pageSize.getWidth();
+    const alturaPagina = doc.internal.pageSize.getHeight();
+    const larguraUtil = larguraPagina - (margem * 2);
+    const gap = 5;
+    const larguraColuna = (larguraUtil - gap) / 2;
+    let y = inicioY;
+
+    const desenharTituloSecao = () => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.text(rel.tituloGraficos || 'Gráficos do relatório', margem, y);
+      y += 6;
+    };
+
+    desenharTituloSecao();
+    for (let indice = 0; indice < graficos.length; indice += 2) {
+      const linha = graficos.slice(indice, indice + 2).map(grafico => {
+        const titulo = doc.splitTextToSize(grafico.titulo || 'Gráfico', larguraColuna - 6);
+        const alturaTitulo = Math.max(5, titulo.length * 4);
+        const dims = dimensionarImagem(grafico.largura, grafico.altura, larguraColuna - 6, 54);
+        return { grafico, titulo, alturaTitulo, dims, altura: alturaTitulo + dims.altura + 8 };
+      });
+      const alturaLinha = Math.max(...linha.map(item => item.altura));
+
+      if (y + alturaLinha > alturaPagina - 12) {
+        doc.addPage();
+        y = 12;
+        desenharTituloSecao();
+      }
+
+      linha.forEach((item, coluna) => {
+        const x = margem + (coluna * (larguraColuna + gap));
+        doc.setDrawColor(226, 232, 240);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x, y, larguraColuna, alturaLinha, 'FD');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.text(item.titulo, x + 3, y + 4.5);
+        const imagemX = x + ((larguraColuna - item.dims.largura) / 2);
+        const imagemY = y + item.alturaTitulo + 2;
+        doc.addImage(item.grafico.imagem, 'PNG', imagemX, imagemY, item.dims.largura, item.dims.altura, undefined, 'FAST');
+      });
+
+      y += alturaLinha + 4;
+      desenharRodapePDF(doc, margem);
+    }
+
+    return { quantidade: graficos.length, y: y + 1 };
   }
 
   async function adicionarGraficosPDF(doc, rel, margem) {

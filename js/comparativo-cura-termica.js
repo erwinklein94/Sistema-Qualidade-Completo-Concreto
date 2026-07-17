@@ -1191,6 +1191,10 @@ async function graficosComparativoPersonalizadoPDF(resumos) {
   if (precisaRestaurar) document.body.dataset.tema = 'claro';
   try {
     desenharGraficosPersonalizados(resumos);
+    Object.values(CCT.personalizadoCharts).forEach(grafico => {
+      grafico?.stop?.();
+      grafico?.update?.('none');
+    });
     await aguardarGraficosComparativoPersonalizado();
     const canvasComp = document.getElementById('chartPersonalizadoCompressao');
     const canvasTracao = document.getElementById('chartPersonalizadoTracao');
@@ -1236,6 +1240,7 @@ async function exportarComparativoPersonalizadoPDF() {
       nomeArquivo: 'comparativo-personalizado-cura-ferro-norte',
       filtros: filtrosComparativoPersonalizadoPDF(),
       tituloGraficos: 'Gráficos da comparação personalizada',
+      layoutGraficosPDF: 'grade-antes-tabela',
       secoes: [{
         titulo: 'Valores comparados de compressão axial e tração',
         columns: [
