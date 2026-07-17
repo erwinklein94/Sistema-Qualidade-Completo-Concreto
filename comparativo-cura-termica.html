@@ -99,9 +99,60 @@
     .modal-lote-grafico-cab strong { display: block; color: var(--azul-escuro); font-size: 14px; }
     .modal-lote-grafico-cab span { color: var(--cinza-texto); font-size: 11px; }
     .modal-lote-chart { position: relative; height: 390px; }
-    body[data-tema="escuro"] .lote-detalhe-btn,
-    body[data-tema="escuro"] .modal-lote-metrica { background: rgba(255,255,255,.04); }
-    body[data-tema="escuro"] .modal-lote-referencia { background: rgba(0, 166, 126, .12); }
+    body[data-tema="escuro"] .lote-detalhe-btn {
+      border-color: rgba(255,255,255,.28);
+      color: #f7fbff;
+      background: rgba(50,166,230,.17);
+    }
+    body[data-tema="escuro"] .lote-detalhe-btn::after { color: #7fe06c; }
+    body[data-tema="escuro"] .lote-detalhe-btn:hover,
+    body[data-tema="escuro"] .lote-detalhe-btn:focus-visible {
+      border-color: #7fe06c;
+      color: #fff;
+      background: rgba(50,166,230,.28);
+    }
+    body[data-tema="escuro"] .modal-detalhe-lote .modal,
+    body[data-tema="escuro"] .modal-detalhe-lote .modal-cab {
+      border-color: rgba(255,255,255,.18);
+      color: #f7fbff;
+      background: linear-gradient(180deg, #0a3157, #071f3a);
+    }
+    body[data-tema="escuro"] .modal-detalhe-lote .modal-cab h2,
+    body[data-tema="escuro"] .modal-lote-metrica-cab strong,
+    body[data-tema="escuro"] .modal-lote-grafico-cab strong { color: #fff; }
+    body[data-tema="escuro"] .modal-detalhe-lote .modal-cab p,
+    body[data-tema="escuro"] .modal-lote-metrica-cab span,
+    body[data-tema="escuro"] .modal-lote-grafico-cab span { color: #d9e8f7; }
+    body[data-tema="escuro"] .modal-lote-meta span {
+      border-color: rgba(255,255,255,.24);
+      color: #f7fbff;
+      background: rgba(3,22,43,.74);
+    }
+    body[data-tema="escuro"] .modal-lote-referencia {
+      border-color: rgba(127,224,108,.32);
+      color: #e8f3fd;
+      background: rgba(30,159,127,.18);
+    }
+    body[data-tema="escuro"] .modal-lote-referencia strong { color: #9af287; }
+    body[data-tema="escuro"] .modal-lote-metrica,
+    body[data-tema="escuro"] .modal-lote-grafico-card {
+      border-color: rgba(255,255,255,.24);
+      color: #f7fbff;
+      background: rgba(10,49,87,.72);
+      box-shadow: 0 8px 22px rgba(0,0,0,.20);
+    }
+    body[data-tema="escuro"] .modal-lote-valor {
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(3,22,43,.88);
+    }
+    body[data-tema="escuro"] .modal-lote-valor small { color: #c7d8e8; }
+    body[data-tema="escuro"] .modal-lote-valor b { color: #fff; }
+    body[data-tema="escuro"] .modal-lote-valor em { color: #d9e8f7; }
+    body[data-tema="escuro"] .modal-detalhe-lote .fechar-modal {
+      border: 1px solid rgba(255,255,255,.22);
+      color: #fff;
+      background: rgba(3,22,43,.45);
+    }
     @media (max-width: 760px) {
       .modal-lote-metricas { grid-template-columns: 1fr; }
       .modal-lote-valores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -222,7 +273,7 @@
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
-  <script src="js/comparativo-cura-termica.js?v=20260717-detalhe-lote-v1"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260717-detalhe-lote-v2"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

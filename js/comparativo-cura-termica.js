@@ -555,12 +555,13 @@ function desenharGraficoDetalheLote(lote, medias) {
   if (!canvas || !document.getElementById('modalDetalheLote')?.classList.contains('aberto')) return;
 
   const C = App.coresGrafico();
-  const corComp1 = C.azulClaro || '#32A6E6';
-  const corComp2 = C.azulEscuro || '#003567';
+  const temaEscuro = document.body.dataset.tema === 'escuro';
+  const corComp1 = temaEscuro ? '#54c7ff' : (C.azulClaro || '#32A6E6');
+  const corComp2 = temaEscuro ? '#ffffff' : (C.azulEscuro || '#003567');
   const corTracao1 = C.amarelo || '#FFD401';
-  const corTracao2 = C.erro || '#c0392b';
+  const corTracao2 = temaEscuro ? '#ff7f7f' : (C.erro || '#c0392b');
   const corHistComp = C.verde || '#00A67E';
-  const corHistTracao = '#8e44ad';
+  const corHistTracao = temaEscuro ? '#d79cff' : '#8e44ad';
   const corTexto = App.cssVar('--cinza-texto', '#5a6b7b');
   const corGrid = App.cssVar('--cinza-borda', '#e2e8f0');
 
