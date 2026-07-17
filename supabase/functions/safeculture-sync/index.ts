@@ -38,6 +38,36 @@ type DestinationLotEntry = {
 };
 type DestinationLotIndex = Map<string, DestinationLotEntry[]>;
 type DestinationLotRegistry = Map<Destino, DestinationLotIndex>;
+type ConcreteProductionInput = {
+  auditId: string;
+  reportLink: string;
+  lote: string;
+  projeto: string;
+  fornecedor: string;
+  bitola: string;
+  responsavel: string;
+  dataFabricacao: string;
+  pista: string | null;
+  quantidadeProduzida: string | null;
+  slumpAbatimento: string | null;
+  slumpEspalhamento: string | null;
+  temperaturaLancamento: string | null;
+  pedido: string | null;
+  tipoDormente: string | null;
+  tempoCura: string | null;
+  curaTermica: boolean | null;
+  comUsp: boolean | null;
+  uspLote: string | null;
+  tipoOmbreira: string | null;
+  loteOmbreira: string | null;
+  serie: string | null;
+  temperaturaMeio: string | null;
+  temperaturaFinal: string | null;
+  slumpMeioAbatimento: string | null;
+  slumpMeioEspalhamento: string | null;
+  slumpFinalAbatimento: string | null;
+  slumpFinalEspalhamento: string | null;
+};
 
 const LOT_FIELD_BY_DESTINATION: Record<Destino, "lote" | "lote_ensaiado"> = {
   inspecoes_pista: "lote",
@@ -638,7 +668,76 @@ async function mapToDestination(
     "autor",
   ]));
   const result = inferResult(answers, inspection);
-  const production = await findProductionLot(supabase, lote, fornecedor);
+  const concretagem = template.destino === "inspecoes_concretagem" ? {
+    data_inspecao: toDateISO(field("data_inspecao", [
+      "data da concretagem",
+      "data da fabricacao inspecao",
+      "data da fabricacao",
+      "data de producao",
+    ])) || completedDate,
+    pista: clean(field("pista", ["pista"])) || null,
+    molde: clean(field("molde", ["molde"])) || null,
+    cavidade: clean(field("cavidade", ["cavidade"])) || null,
+    quantidade_produzida: clean(field("quantidade_produzida", ["quantidade produzida"])) || null,
+    slump_abatimento: clean(field("slump_abatimento", ["slump abatimento", "abatimento"])) || null,
+    slump_espalhamento: clean(field("slump_espalhamento", ["slump espalhamento", "espalhamento"])) || null,
+    temperatura_lancamento: clean(field("temperatura_lancamento", [
+      "temperatura de lancamento",
+      "temperatura lancamento",
+    ])) || null,
+  } : null;
+  let production = await findProductionLot(supabase, lote, projeto, fornecedor);
+  if (concretagem && !production) {
+    production = await createProductionLotFromConcreteInspection(supabase, {
+      auditId: audit.audit_id,
+      reportLink,
+      lote,
+      projeto,
+      fornecedor,
+      bitola,
+      responsavel,
+      dataFabricacao: concretagem.data_inspecao,
+      pista: concretagem.pista,
+      quantidadeProduzida: concretagem.quantidade_produzida,
+      slumpAbatimento: concretagem.slump_abatimento,
+      slumpEspalhamento: concretagem.slump_espalhamento,
+      temperaturaLancamento: concretagem.temperatura_lancamento,
+      pedido: clean(field("pedido", ["numero do pedido", "n pedido", "pedido"])) || null,
+      tipoDormente: clean(field("tipo_dormente", [
+        "tipo de dormente",
+        "modelo do dormente",
+      ])) || null,
+      tempoCura: clean(field("tempo_cura", ["tempo de cura", "tempo cura"])) || null,
+      curaTermica: booleanValue(field("cura_termica", ["cura termica", "ciclo termico"])),
+      comUsp: booleanValue(field("com_usp", ["com usp", "possui usp", "usp"])),
+      uspLote: clean(field("usp_lote", ["lote usp", "usp lote"])) || null,
+      tipoOmbreira: clean(field("tipo_ombreira", ["tipo de ombreira", "ombreira"])) || null,
+      loteOmbreira: clean(field("lote_ombreira", [
+        "lote da ombreira",
+        "lote ombreira",
+        "lote da ombreira e clip",
+      ])) || null,
+      serie: clean(field("serie", ["serie de lotes", "serie"])) || null,
+      temperaturaMeio: clean(field("temp_meio", ["temperatura meio", "temperatura no meio"])) || null,
+      temperaturaFinal: clean(field("temp_final", ["temperatura final", "temperatura no final"])) || null,
+      slumpMeioAbatimento: clean(field("slump_meio_abatimento", [
+        "slump meio abatimento",
+        "abatimento meio",
+      ])) || null,
+      slumpMeioEspalhamento: clean(field("slump_meio_espalhamento", [
+        "slump meio espalhamento",
+        "espalhamento meio",
+      ])) || null,
+      slumpFinalAbatimento: clean(field("slump_final_abatimento", [
+        "slump final abatimento",
+        "abatimento final",
+      ])) || null,
+      slumpFinalEspalhamento: clean(field("slump_final_espalhamento", [
+        "slump final espalhamento",
+        "espalhamento final",
+      ])) || null,
+    });
+  }
   const modifiedAt = audit.modified_at || inspectionModifiedAt(inspection) || new Date().toISOString();
   const common = {
     producao_lote_id: production?.id || null,
@@ -687,26 +786,11 @@ async function mapToDestination(
   if (template.destino === "inspecoes_concretagem") {
     return {
       ...common,
-      data_inspecao: toDateISO(field("data_inspecao", [
-        "data da concretagem",
-        "data da fabricacao inspecao",
-        "data da fabricacao",
-        "data de producao",
-      ])) || completedDate,
+      ...(concretagem || {}),
       lote: lote || null,
       projeto: projeto || null,
       bitola,
       fornecedor: fornecedor || null,
-      pista: clean(field("pista", ["pista"])) || null,
-      molde: clean(field("molde", ["molde"])) || null,
-      cavidade: clean(field("cavidade", ["cavidade"])) || null,
-      quantidade_produzida: clean(field("quantidade_produzida", ["quantidade produzida"])) || null,
-      slump_abatimento: clean(field("slump_abatimento", ["slump abatimento", "abatimento"])) || null,
-      slump_espalhamento: clean(field("slump_espalhamento", ["slump espalhamento", "espalhamento"])) || null,
-      temperatura_lancamento: clean(field("temperatura_lancamento", [
-        "temperatura de lancamento",
-        "temperatura lancamento",
-      ])) || null,
       resultado: result,
       responsavel: responsavel || null,
       link_relatorio: reportLink || null,
@@ -819,17 +903,108 @@ async function mapToDestination(
   };
 }
 
-async function findProductionLot(supabase: SupabaseClient, lot: string, supplier: string) {
-  if (!lot) return null;
+async function createProductionLotFromConcreteInspection(
+  supabase: SupabaseClient,
+  input: ConcreteProductionInput,
+) {
+  if (!input.lote || !input.projeto || !input.fornecedor) return null;
+
+  const existing = await findProductionLot(supabase, input.lote, input.projeto, input.fornecedor);
+  if (existing) return existing;
+
+  const week = operationalWeekInfo(input.dataFabricacao);
+  const total = integerValue(input.quantidadeProduzida) || 0;
+  const sourceNote = [
+    "Cadastro criado automaticamente a partir de uma inspeção de concretagem do SafetyCulture.",
+    `Audit ID: ${input.auditId}`,
+    input.responsavel ? `Responsável: ${input.responsavel}` : "",
+  ].filter(Boolean).join("\n");
+  const payload = {
+    fornecedor: input.fornecedor,
+    pista: input.pista,
+    pedido: input.pedido,
+    lote: input.lote,
+    projeto: input.projeto,
+    bitola: input.bitola || "Sem bitola definida",
+    tipo_dormente: input.tipoDormente,
+    total_produzido: total,
+    data_fabricacao: input.dataFabricacao,
+    cura_14: addDaysIso(input.dataFabricacao, 14),
+    cura_28: addDaysIso(input.dataFabricacao, 28),
+    cura_termica: input.curaTermica === true,
+    tempo_cura: input.tempoCura,
+    com_usp: input.comUsp,
+    usp_lote: input.uspLote,
+    tipo_ombreira: input.tipoOmbreira,
+    lote_ombreira: input.loteOmbreira,
+    lotes_ombreira: input.loteOmbreira ? [input.loteOmbreira] : [],
+    temp_inicial: input.temperaturaLancamento,
+    temp_meio: input.temperaturaMeio,
+    temp_final: input.temperaturaFinal,
+    slump_inicial_abatimento: input.slumpAbatimento,
+    slump_inicial_espalhamento: input.slumpEspalhamento,
+    slump_meio_abatimento: input.slumpMeioAbatimento,
+    slump_meio_espalhamento: input.slumpMeioEspalhamento,
+    slump_final_abatimento: input.slumpFinalAbatimento,
+    slump_final_espalhamento: input.slumpFinalEspalhamento,
+    serie: input.serie,
+    iauditor: input.reportLink || null,
+    status: "Em processo de cura (14 dias)",
+    motivo: sourceNote,
+    semana: week.semana,
+    ano: week.ano,
+    periodo_inicio: week.ini,
+    periodo_fim: week.fim,
+  };
+
   const { data, error } = await supabase
     .from("producao_lotes")
+    .insert(payload)
     .select("id,lote,fornecedor,projeto,bitola,serie,data_fabricacao")
+    .single();
+  if (!error) return data;
+
+  if (String(error.code || "") === "23505") {
+    const concurrent = await findProductionLot(supabase, input.lote, input.projeto, input.fornecedor);
+    if (concurrent) return concurrent;
+  }
+  throw error;
+}
+
+async function findProductionLot(
+  supabase: SupabaseClient,
+  lot: string,
+  project = "",
+  supplier = "",
+) {
+  if (!lot) return null;
+  const columns = "id,lote,fornecedor,projeto,bitola,serie,data_fabricacao";
+  const exact = await supabase
+    .from("producao_lotes")
+    .select(columns)
     .eq("lote", lot)
-    .limit(20);
-  if (error) throw error;
-  const list = data || [];
+    .limit(50);
+  if (exact.error) throw exact.error;
+
+  let list = exact.data || [];
+  if (project && !list.some((row) => normalize(row.projeto) === normalize(project))) {
+    const sameProject = await supabase
+      .from("producao_lotes")
+      .select(columns)
+      .ilike("projeto", project)
+      .limit(5000);
+    if (sameProject.error) throw sameProject.error;
+    const lotKey = normalizeDestinationLot(lot);
+    list = (sameProject.data || []).filter((row) => normalizeDestinationLot(row.lote) === lotKey);
+  }
+
+  const projectNorm = normalize(project);
   const supplierNorm = normalize(supplier);
-  return list.find((row) => supplierNorm && normalize(row.fornecedor) === supplierNorm) || list[0] || null;
+  const sameProject = projectNorm
+    ? list.filter((row) => normalize(row.projeto) === projectNorm)
+    : list;
+  return sameProject.find((row) => supplierNorm && normalize(row.fornecedor) === supplierNorm) ||
+    sameProject[0] || null;
 }
 
 async function loadDestinationLotRegistry(supabase: SupabaseClient): Promise<DestinationLotRegistry> {
@@ -1287,6 +1462,14 @@ function integerValue(value: unknown) {
   return match ? Number(match[0]) : null;
 }
 
+function booleanValue(value: unknown) {
+  const text = normalize(value);
+  if (!text) return null;
+  if (/^(SIM|TRUE|VERDADEIRO|COM|POSSUI)$/.test(text)) return true;
+  if (/^(NAO|FALSE|FALSO|SEM|NAO POSSUI)$/.test(text)) return false;
+  return null;
+}
+
 function validDate(value: unknown) {
   if (!value) return "";
   const parsed = new Date(String(value));
@@ -1348,6 +1531,13 @@ function titleCase(value: string) {
 
 function dateIso(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function addDaysIso(iso: string, days: number) {
+  const [year, month, day] = iso.slice(0, 10).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return dateIso(date);
 }
 
 function todayIso() {
