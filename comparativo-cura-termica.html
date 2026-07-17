@@ -334,6 +334,151 @@
     body[data-tema="escuro"] .comparativo-personalizado-opcao:has(input:checked) { border-color: #7fe06c; background: rgba(127,224,108,.12); }
     body[data-tema="escuro"] .comparativo-historico-toggle { border-color: rgba(127,224,108,.38); background: rgba(30,159,127,.18); }
     body[data-tema="escuro"] .comparativo-personalizado-tabela tr.historico td { background: rgba(127,224,108,.11); }
+
+    /* Modal combinado: cabe no viewport e mantém somente listas/tabela com rolagem interna. */
+    .modal-personalizado .modal {
+      width: calc(100vw - 36px);
+      height: calc(100vh - 36px);
+      max-width: 1360px;
+      max-height: 900px;
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-personalizado .modal-cab { flex: 0 0 auto; padding-top: 14px; padding-bottom: 12px; }
+    .modal-personalizado .modal-cab h2 { font-size: 21px; }
+    .modal-personalizado .modal-corpo {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
+      padding: 10px 12px 12px;
+      overflow: hidden;
+    }
+    .comparativo-personalizado-layout {
+      height: 100%;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+    }
+    .comparativo-personalizado-config {
+      min-height: 0;
+      padding: 10px;
+      overflow: auto;
+    }
+    .comparativo-personalizado-etapa { margin-bottom: 3px; }
+    .comparativo-personalizado-intro {
+      margin: 0 0 7px;
+      color: var(--cinza-texto);
+      font-size: 9.5px;
+      line-height: 1.35;
+    }
+    .comparativo-personalizado-campos { min-height: 0; }
+    .comparativo-selecoes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .comparativo-selecao-card {
+      min-width: 0;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 11px;
+      padding: 7px;
+      background: var(--cinza-bg);
+    }
+    .comparativo-selecao-card.larga { grid-column: 1 / -1; }
+    .comparativo-selecao-cab { display: flex; align-items: center; justify-content: space-between; gap: 7px; margin-bottom: 5px; }
+    .comparativo-selecao-cab strong { color: var(--azul-escuro); font-size: 10.5px; }
+    .comparativo-selecao-cab span {
+      border-radius: 999px;
+      padding: 2px 6px;
+      color: var(--cinza-texto);
+      background: var(--branco);
+      font-size: 8.5px;
+      font-weight: 800;
+    }
+    .comparativo-selecao-card input[type="search"] {
+      width: 100%;
+      height: 29px;
+      margin-bottom: 5px;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 8px;
+      padding: 5px 7px;
+      color: var(--azul-escuro);
+      background: var(--branco);
+      font: inherit;
+      font-size: 10px;
+    }
+    .comparativo-selecao-card .comparativo-personalizado-lista {
+      max-height: 82px;
+      gap: 4px;
+      padding-right: 2px;
+    }
+    .comparativo-selecao-card .comparativo-personalizado-opcao {
+      grid-template-columns: 15px minmax(0, 1fr);
+      gap: 5px;
+      border-radius: 7px;
+      padding: 4px 5px;
+    }
+    .comparativo-selecao-card .comparativo-personalizado-opcao input { width: 14px; height: 14px; }
+    .comparativo-selecao-card .comparativo-personalizado-opcao strong { font-size: 9.5px; line-height: 1.15; }
+    .comparativo-selecao-card .comparativo-personalizado-opcao small { margin-top: 1px; font-size: 8px; line-height: 1.15; }
+    .comparativo-periodos-combinados { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .comparativo-periodo-combinado {
+      border: 1px solid var(--cinza-borda);
+      border-radius: 8px;
+      padding: 5px 6px;
+      background: var(--branco);
+    }
+    .comparativo-periodo-combinado.inativo { opacity: .62; }
+    .comparativo-periodo-ativar { display: flex; align-items: center; gap: 5px; color: var(--azul-escuro); font-size: 9px; font-weight: 800; cursor: pointer; }
+    .comparativo-periodo-ativar input { width: 14px; height: 14px; accent-color: var(--verde); }
+    .comparativo-periodo-combinado .comparativo-periodo-grid { grid-template-columns: 1fr; margin-top: 4px; gap: 3px; }
+    .comparativo-periodo-combinado .comparativo-periodo-grid label,
+    .comparativo-periodo-combinado .comparativo-periodo-grid input[type="date"] { min-width: 0; }
+    .comparativo-periodo-combinado .comparativo-periodo-grid input[type="date"] { height: 27px; padding: 3px 5px; font-size: 9px; }
+    .comparativo-curas-combinadas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+    .comparativo-curas-ajuda { margin: 5px 0 0; color: var(--cinza-texto); font-size: 8px; line-height: 1.25; }
+    .comparativo-personalizado-rodape { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 7px; align-items: stretch; margin-top: 7px; }
+    .comparativo-personalizado-rodape .comparativo-historico-toggle { margin: 0; padding: 7px; border-radius: 9px; }
+    .comparativo-personalizado-rodape .comparativo-historico-toggle strong { font-size: 9.5px; }
+    .comparativo-personalizado-rodape .comparativo-historico-toggle small { font-size: 8px; }
+    .comparativo-personalizado-rodape .btn { min-height: 100%; padding: 7px 9px; font-size: 10.5px; }
+    .comparativo-personalizado-resultado {
+      min-height: 0;
+      padding: 9px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .comparativo-personalizado-vazio { width: 100%; height: 100%; min-height: 0; }
+    #comparativoPersonalizadoConteudo:not([hidden]) {
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(165px, .75fr) minmax(200px, 1.25fr);
+      gap: 7px;
+    }
+    .comparativo-personalizado-resumo { gap: 5px; margin: 0; min-height: 23px; }
+    .comparativo-personalizado-resumo span { padding: 3px 7px; font-size: 8.5px; }
+    .comparativo-personalizado-graficos { min-height: 0; gap: 7px; margin: 0; }
+    .comparativo-personalizado-grafico { min-height: 0; padding: 7px; overflow: hidden; }
+    .comparativo-personalizado-grafico strong { font-size: 10.5px; }
+    .comparativo-personalizado-grafico small { margin: 1px 0 3px; font-size: 8px; }
+    .comparativo-personalizado-chart { height: calc(100% - 29px); min-height: 130px; }
+    .comparativo-personalizado-tabela { min-height: 0; overflow: hidden; }
+    .comparativo-personalizado-tabela .tabela-wrap { width: 100%; height: 100%; max-height: none; overflow: auto; }
+    .comparativo-personalizado-tabela table { width: 100%; min-width: 680px; table-layout: fixed; }
+    .comparativo-personalizado-tabela th,
+    .comparativo-personalizado-tabela td { padding: 5px 7px; font-size: 9px; }
+    .comparativo-personalizado-tabela th:first-child { width: 25%; }
+    .comparativo-personalizado-tabela th:nth-child(2) { width: 7%; }
+    .comparativo-personalizado-nome strong { font-size: 10px; }
+    .comparativo-personalizado-nome small { margin-top: 1px; font-size: 8px; }
+    .comparativo-personalizado-par { width: 100%; min-width: 72px; gap: 1px; font-size: 8.5px; }
+    .comparativo-personalizado-par i { font-size: 7.5px; }
+    body[data-tema="escuro"] .comparativo-selecao-card,
+    body[data-tema="escuro"] .comparativo-periodo-combinado { border-color: rgba(255,255,255,.18); background: rgba(3,22,43,.64); }
+    body[data-tema="escuro"] .comparativo-selecao-cab strong,
+    body[data-tema="escuro"] .comparativo-periodo-ativar { color: #fff; }
+    body[data-tema="escuro"] .comparativo-selecao-cab span,
+    body[data-tema="escuro"] .comparativo-selecao-card input[type="search"] { border-color: rgba(255,255,255,.18); color: #fff; background: rgba(3,22,43,.86); }
+    body[data-tema="escuro"] .comparativo-personalizado-intro,
+    body[data-tema="escuro"] .comparativo-curas-ajuda { color: #d9e8f7; }
     @media (max-width: 760px) {
       .modal-lote-metricas { grid-template-columns: 1fr; }
       .modal-lote-valores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -343,6 +488,15 @@
       .comparativo-personalizado-graficos { grid-template-columns: 1fr; }
       .comparativo-personalizado-chart { height: 280px; }
       .modal-personalizado .modal-cab h2 { font-size: 20px; }
+      .modal-personalizado .modal { width: calc(100vw - 16px); height: calc(100vh - 16px); }
+      .modal-personalizado .modal-corpo { overflow-y: auto; }
+      .comparativo-personalizado-layout { height: auto; }
+      .comparativo-selecoes-grid,
+      .comparativo-periodos-combinados,
+      .comparativo-personalizado-rodape { grid-template-columns: 1fr; }
+      #comparativoPersonalizadoConteudo:not([hidden]) { height: auto; display: block; }
+      .comparativo-personalizado-graficos { display: grid; }
+      .comparativo-personalizado-tabela { height: 300px; margin-top: 8px; }
     }
   </style>
 </head>
@@ -451,43 +605,37 @@
         <div>
           <span class="modal-lote-selo">Análise sob medida</span>
           <h2 id="comparativoPersonalizadoTitulo">Comparativo Personalizado</h2>
-          <p id="comparativoPersonalizadoSubtitulo">Escolha o recorte, inclua ou não a média histórica e gere sua comparação.</p>
+          <p id="comparativoPersonalizadoSubtitulo">Combine lotes, semanas, períodos e tipos de cura, com média histórica opcional.</p>
         </div>
         <button type="button" class="fechar-modal" id="fecharComparativoPersonalizado" aria-label="Fechar comparativo personalizado">⨯</button>
       </header>
       <div class="modal-corpo">
         <div class="comparativo-personalizado-layout">
           <aside class="comparativo-personalizado-config">
-            <div class="comparativo-personalizado-etapa">1. O que deseja comparar?</div>
-            <div class="comparativo-personalizado-modos" role="radiogroup" aria-label="Tipo de comparação">
-              <button type="button" class="comparativo-personalizado-modo ativo" data-comparativo-modo="lotes" aria-pressed="true">Lotes</button>
-              <button type="button" class="comparativo-personalizado-modo" data-comparativo-modo="semanas" aria-pressed="false">Semanas</button>
-              <button type="button" class="comparativo-personalizado-modo" data-comparativo-modo="periodos" aria-pressed="false">Períodos de datas</button>
-              <button type="button" class="comparativo-personalizado-modo" data-comparativo-modo="cura" aria-pressed="false">Tipo de cura</button>
-            </div>
-            <div class="comparativo-personalizado-etapa">2. Faça sua seleção</div>
+            <div class="comparativo-personalizado-etapa">Seleções combináveis</div>
+            <p class="comparativo-personalizado-intro">Marque lotes, semanas, períodos e tipos de cura na mesma análise. Os tipos de cura dividem as semanas e os períodos selecionados.</p>
             <div class="comparativo-personalizado-campos" id="comparativoPersonalizadoCampos"></div>
-            <label class="comparativo-historico-toggle">
-              <input type="checkbox" id="comparativoIncluirHistorico" checked>
-              <span><strong>Incluir média histórica</strong><small>Adiciona à tabela e aos gráficos a média de todo o histórico Ferro Norte.</small></span>
-            </label>
-            <div class="comparativo-personalizado-acoes">
+            <div class="comparativo-personalizado-rodape">
+              <label class="comparativo-historico-toggle">
+                <input type="checkbox" id="comparativoIncluirHistorico" checked>
+                <span><strong>Incluir média histórica</strong><small>Usa todo o histórico Ferro Norte como referência.</small></span>
+              </label>
               <button type="button" class="btn btn-primario" id="gerarComparativoPersonalizado">Gerar comparativo</button>
             </div>
           </aside>
           <section class="comparativo-personalizado-resultado" aria-live="polite">
             <div class="comparativo-personalizado-vazio" id="comparativoPersonalizadoVazio">
-              <div><b>Seu comparativo aparecerá aqui</b><span>Selecione os itens à esquerda e clique em “Gerar comparativo”. A tabela mostrará CP1, CP2 e média; os gráficos mostrarão a evolução média entre 14 e 28 dias.</span></div>
+              <div><b>Seu comparativo aparecerá aqui</b><span>Combine os critérios à esquerda e clique em “Gerar comparativo”. Semanas e períodos podem ser separados por cura térmica e cura normal na mesma análise.</span></div>
             </div>
             <div id="comparativoPersonalizadoConteudo" hidden>
               <div class="comparativo-personalizado-resumo" id="comparativoPersonalizadoResumo"></div>
               <div class="comparativo-personalizado-graficos">
                 <div class="comparativo-personalizado-grafico">
-                  <strong>Compressão axial</strong><small>Média dos CPs de cada seleção · 14 × 28 dias</small>
+                  <strong>Compressão axial</strong><small>Cada linha representa uma combinação selecionada · 14 × 28 dias</small>
                   <div class="comparativo-personalizado-chart"><canvas id="chartPersonalizadoCompressao"></canvas></div>
                 </div>
                 <div class="comparativo-personalizado-grafico">
-                  <strong>Tração</strong><small>Média dos CPs de cada seleção · 14 × 28 dias</small>
+                  <strong>Tração</strong><small>Cada linha representa uma combinação selecionada · 14 × 28 dias</small>
                   <div class="comparativo-personalizado-chart"><canvas id="chartPersonalizadoTracao"></canvas></div>
                 </div>
               </div>
@@ -512,7 +660,7 @@
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260612-ficha-lote-v1"></script>
-  <script src="js/comparativo-cura-termica.js?v=20260717-comparativo-personalizado-v1"></script>
+  <script src="js/comparativo-cura-termica.js?v=20260717-comparativo-combinado-v2"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
