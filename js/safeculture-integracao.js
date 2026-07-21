@@ -62,6 +62,10 @@ const SafetyCultureSync = (() => {
     return invoke({ action: 'sync', origin: 'manual', ...opcoes });
   }
 
+  async function relatoriosRecentes(horas = 24) {
+    return invoke({ action: 'relatorios', window_hours: horas });
+  }
+
   async function carregarStatusTopo() {
     const alvos = document.querySelectorAll('[data-safeculture-status]');
     if (!alvos.length || !ehAdmin()) return;
@@ -116,19 +120,35 @@ const SafetyCultureSync = (() => {
     const statusEl = document.getElementById('safecultureAdminStatus');
     const templatesEl = document.getElementById('safecultureTemplates');
     const historicoEl = document.getElementById('safecultureHistorico');
+    const relatoriosEl = document.getElementById('safecultureRelatorios');
     if (!statusEl || !templatesEl || !historicoEl || !ehAdmin()) return;
 
     statusEl.innerHTML = carregando('Consultando a Edge Function e o banco...');
     templatesEl.innerHTML = '';
     historicoEl.innerHTML = '';
+    if (relatoriosEl) relatoriosEl.innerHTML = carregando('Carregando relatórios das últimas 24 horas...');
     try {
       const data = await status();
       statusEl.innerHTML = statusHtml(data);
       templatesEl.innerHTML = templatesHtml(data.templates || []);
       historicoEl.innerHTML = historicoHtml(data.runs || []);
+      await renderRelatorios();
     } catch (err) {
       statusEl.innerHTML = `<div class="aviso-erro"><strong>Integração indisponível.</strong><br>${esc(mensagemErro(err))}</div>`;
       templatesEl.innerHTML = `<p class="txt-mini txt-cinza">Confirme se a migração e a Edge Function já foram implantadas.</p>`;
+    }
+  }
+
+  // O painel de relatórios é carregado à parte: se ele falhar, o restante da
+  // administração do SafetyCulture continua utilizável.
+  async function renderRelatorios(horas = 24) {
+    const alvo = document.getElementById('safecultureRelatorios');
+    if (!alvo || !ehAdmin()) return;
+    try {
+      alvo.innerHTML = relatoriosHtml(await relatoriosRecentes(horas));
+    } catch (err) {
+      console.error('Erro ao carregar relatórios do SafetyCulture', err);
+      alvo.innerHTML = `<div class="aviso-erro"><strong>Não foi possível carregar os relatórios.</strong><br>${esc(mensagemErro(err))}</div>`;
     }
   }
 
@@ -224,18 +244,116 @@ const SafetyCultureSync = (() => {
     </table></div>`;
   }
 
+  const STATUS_RELATORIO = {
+    processado: ['Sincronizado', 'badge-ok'],
+    ignorado: ['Ignorado', 'badge-amarelo'],
+    pendente: ['Em processamento', 'badge-amarelo'],
+    erro: ['Erro', 'badge-reprovado'],
+  };
+
+  function rotuloLote(relatorio) {
+    const lote = String(relatorio?.lote || '').trim();
+    return lote || 'Lote não identificado';
+  }
+
+  function relatoriosHtml(data) {
+    const lista = Array.isArray(data?.relatorios) ? data.relatorios : [];
+    const horas = Number(data?.janela_horas || 24);
+    if (!lista.length) {
+      return `<div class="vazio compacto">
+        <h3>Nenhum relatório nas últimas ${horas} horas</h3>
+        <p>Assim que a sincronização trouxer um relatório do SafetyCulture, ele aparece aqui.</p>
+      </div>`;
+    }
+
+    const comErro = lista.filter(r => r.status_processamento === 'erro');
+    const sincronizados = lista.filter(r => r.status_processamento === 'processado');
+    const ignorados = lista.filter(r => r.status_processamento === 'ignorado');
+    const errosAbertos = Number(data?.erros_abertos || 0);
+
+    return `
+      <div class="safeculture-resumo-grid">
+        ${resumoItem(`Relatórios em ${horas}h`, String(lista.length))}
+        ${resumoItem('Sincronizados', String(sincronizados.length), sincronizados.length ? 'ok' : '')}
+        ${resumoItem('Ignorados', String(ignorados.length), ignorados.length ? 'aviso' : '')}
+        ${resumoItem('Com erro', String(comErro.length), comErro.length ? 'erro' : 'ok')}
+      </div>
+      ${comErro.length ? blocoErrosHtml(comErro, errosAbertos) : ''}
+      <div class="tabela-wrap" style="margin-top:14px"><table class="tabela">
+        <thead><tr><th>Lote</th><th>Relatório</th><th>Destino</th><th>Status</th><th>Sincronizado em</th><th>Link</th></tr></thead>
+        <tbody>${lista.map(r => {
+          const [rotulo, badge] = STATUS_RELATORIO[r.status_processamento] || [r.status_processamento || '—', 'badge-amarelo'];
+          return `<tr>
+            <td><strong>${esc(rotuloLote(r))}</strong></td>
+            <td>${esc(r.nome || '—')}</td>
+            <td>${esc(r.destino_rotulo || '—')}</td>
+            <td><span class="badge ${badge}">${esc(rotulo)}</span></td>
+            <td>${esc(dataHora(r.atualizado_em))}</td>
+            <td>${r.web_report_url
+              ? `<a href="${esc(r.web_report_url)}" target="_blank" rel="noopener noreferrer">Abrir</a>`
+              : '—'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+  }
+
+  function blocoErrosHtml(comErro, errosAbertos) {
+    const extras = Math.max(0, errosAbertos - comErro.length);
+    return `
+      <div class="safeculture-erros">
+        <div class="safeculture-erros-titulo">
+          ${comErro.length} relatório(s) não entraram no site
+          ${extras ? `<span class="txt-mini txt-cinza"> · mais ${extras} pendente(s) de execuções anteriores</span>` : ''}
+        </div>
+        <p class="txt-mini txt-cinza">
+          Corrija o relatório no SafetyCulture; a próxima sincronização tenta de novo automaticamente.
+        </p>
+        ${comErro.map(r => `
+          <div class="safeculture-erro-item">
+            <div class="safeculture-erro-lote">
+              <span class="badge badge-reprovado">Erro</span>
+              <strong>${esc(rotuloLote(r))}</strong>
+              ${r.destino_rotulo ? `<span class="txt-mini txt-cinza">${esc(r.destino_rotulo)}</span>` : ''}
+            </div>
+            <div class="safeculture-erro-msg">${esc(r.erro_processamento || 'Erro sem detalhe registrado.')}</div>
+            <div class="txt-mini txt-cinza">
+              ${esc(r.nome || 'Relatório sem nome')} · última tentativa ${esc(dataHora(r.atualizado_em))}
+              ${r.web_report_url
+                ? ` · <a href="${esc(r.web_report_url)}" target="_blank" rel="noopener noreferrer">abrir no SafetyCulture</a>`
+                : ''}
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+
   function historicoHtml(runs) {
     if (!runs.length) return '<p class="txt-mini txt-cinza">Nenhuma sincronização registrada.</p>';
     return `<div class="tabela-wrap"><table class="tabela">
-      <thead><tr><th>Início</th><th>Origem</th><th>Status</th><th>Encontrados</th><th>Novos</th><th>Atualizados</th><th>Erros</th><th>Mensagem</th></tr></thead>
+      <thead><tr><th>Início</th><th>Origem</th><th>Status</th><th>Encontrados</th><th>Novos</th><th>Atualizados</th><th>Erros</th><th>Lotes com erro</th><th>Mensagem</th></tr></thead>
       <tbody>${runs.map(r => `<tr>
         <td>${esc(dataHora(r.iniciado_em))}</td>
         <td>${esc(rotuloOrigemExecucao(r.origem))}</td>
         <td><span class="badge ${r.status === 'sucesso' ? 'badge-ok' : r.status === 'erro' ? 'badge-reprovado' : 'badge-amarelo'}">${esc(r.status)}</span></td>
         <td>${Number(r.encontrados || 0)}</td><td>${Number(r.inseridos || 0)}</td><td>${Number(r.atualizados || 0)}</td><td>${Number(r.erros || 0)}</td>
+        <td>${lotesComErroHtml(r)}</td>
         <td>${esc(r.mensagem || '—')}</td>
       </tr>`).join('')}</tbody>
     </table></div>`;
+  }
+
+  // Cada erro gravado em detalhes_erros carrega o lote identificado no relatório.
+  // Execuções anteriores a essa mudança só têm o audit_id, então caem no fallback.
+  function lotesComErroHtml(run) {
+    const detalhes = Array.isArray(run?.detalhes_erros) ? run.detalhes_erros : [];
+    if (!detalhes.length) return '<span class="txt-cinza">—</span>';
+    return `<div class="safeculture-lotes-erro">${detalhes.map(d => {
+      const lote = String(d?.lote || '').trim();
+      const auditId = String(d?.audit_id || '').trim();
+      const rotulo = lote ? `Lote ${lote}` : (auditId ? auditId.replace(/^audit_/, '').slice(0, 8) : 'sem identificação');
+      const titulo = [d?.destino_rotulo, d?.projeto, d?.fornecedor, d?.erro]
+        .map(v => String(v || '').trim()).filter(Boolean).join(' · ');
+      return `<span class="badge badge-reprovado" title="${esc(titulo)}">${esc(rotulo)}</span>`;
+    }).join('')}</div>`;
   }
 
   function origemBadge(registroOuOrigem) {
@@ -311,7 +429,8 @@ const SafetyCultureSync = (() => {
   function mensagemErro(err) {
     const msg = String(err?.message || err || 'Falha na integração SafetyCulture.');
     if (/Failed to send a request|FunctionsFetchError|fetch/i.test(msg)) {
-      return 'Não foi possível chamar a Edge Function. Confirme se safeculture-sync foi implantada no Supabase.';
+      return 'A chamada à Edge Function não completou (rede, tempo limite ou função fora do ar). '
+        + 'Confira o histórico de execuções: a sincronização pode ter rodado mesmo assim.';
     }
     if (/SAFETYCULTURE_API_TOKEN/i.test(msg)) {
       return 'O token ainda não foi cadastrado nas Edge Function Secrets do Supabase.';
@@ -361,6 +480,8 @@ const SafetyCultureSync = (() => {
     carregarStatusTopo,
     sincronizarPagina,
     renderAdmin,
+    renderRelatorios,
+    relatoriosRecentes,
     testarConexao,
     sincronizarAdmin,
     salvarTemplate,

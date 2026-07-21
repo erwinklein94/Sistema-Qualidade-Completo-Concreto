@@ -7856,6 +7856,60 @@ body[data-tema="escuro"] .subir-pagina-icone {
   animation: safeculture-spin .8s linear infinite;
 }
 @keyframes safeculture-spin { to { transform: rotate(360deg); } }
+
+/* Relatórios que não entraram no site: precisam saltar aos olhos, porque
+   dependem de correção manual no SafetyCulture para voltarem a sincronizar. */
+.safeculture-erros {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid #f3c9c9;
+  border-left: 4px solid var(--erro);
+  border-radius: 10px;
+  background: #fff7f7;
+}
+.safeculture-erros-titulo {
+  font-weight: 600;
+  color: var(--erro);
+  margin-bottom: 4px;
+}
+.safeculture-erro-item {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3d6d6;
+}
+.safeculture-erro-lote {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.safeculture-erro-lote strong { font-size: 15px; color: var(--azul-escuro); }
+.safeculture-erro-msg {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8a2020;
+  word-break: break-word;
+  margin-bottom: 5px;
+}
+body[data-tema="escuro"] .safeculture-erros {
+  background: rgba(255,107,107,.09);
+  border-color: rgba(255,107,107,.32);
+}
+body[data-tema="escuro"] .safeculture-erro-item { border-top-color: rgba(255,107,107,.22); }
+body[data-tema="escuro"] .safeculture-erro-lote strong { color: #ffd9d9; }
+body[data-tema="escuro"] .safeculture-erro-msg { color: #ffb3b3; }
+
+/* Lotes que falharam, listados na própria linha da execução. */
+.safeculture-lotes-erro {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-width: 260px;
+}
+.safeculture-lotes-erro .badge { cursor: help; }
+
 @media (max-width: 900px) {
   .safeculture-resumo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .safeculture-status-topo { width: 100%; max-width: none; }

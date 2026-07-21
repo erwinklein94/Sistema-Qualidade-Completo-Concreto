@@ -304,6 +304,44 @@ async function getStatus(supabase: SupabaseClient) {
   };
 }
 
+// Relatórios tocados pela sincronização numa janela recente. Devolve apenas
+// campos de controle: o payload bruto do SafetyCulture nunca sai daqui.
+async function listRecentReports(supabase: SupabaseClient, input: Record<string, unknown>) {
+  const horas = Math.min(720, positiveNumber(input.window_hours) || 24);
+  const desde = new Date(Date.now() - horas * 3600000).toISOString();
+
+  const { data, error } = await supabase
+    .from("safeculture_inspecoes")
+    .select(
+      "audit_id,nome,lote,destino,status_processamento,erro_processamento,web_report_url," +
+        "modificado_em_safeculture,concluido_em_safeculture,processado_em,atualizado_em",
+    )
+    .gte("atualizado_em", desde)
+    .order("atualizado_em", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+
+  const relatorios = (data || []).map((row) => ({
+    ...row,
+    destino_rotulo: row.destino ? DESTINATION_LABELS[row.destino as Destino] || row.destino : null,
+  }));
+
+  // Pendências antigas continuam sendo tentadas a cada execução, então precisam
+  // aparecer mesmo que a última tentativa tenha saído da janela.
+  const { count: errosAbertos } = await supabase
+    .from("safeculture_inspecoes")
+    .select("*", { count: "exact", head: true })
+    .eq("status_processamento", "erro");
+
+  return {
+    janela_horas: horas,
+    desde,
+    total: relatorios.length,
+    erros_abertos: errosAbertos || 0,
+    relatorios,
+  };
+}
+
 async function runSync(
   supabase: SupabaseClient,
   auth: { kind: "cron" | "user"; userId: string | null },
@@ -385,6 +423,8 @@ async function runSync(
     const destinationLots = await loadDestinationLotRegistry(supabase);
 
     let maxModified = checkpoint;
+    const modificadosComSucesso: string[] = [];
+    const modificadosComErro: string[] = [];
     for (let index = 0; index < selected.length; index += 5) {
       const batch = selected.slice(index, index + 5);
       const results = await Promise.all(batch.map(async (audit) => {
@@ -395,7 +435,8 @@ async function runSync(
             error: null,
           };
         } catch (error) {
-          await supabase.from("safeculture_inspecoes").upsert({
+          const contexto = contextoDoErro(error);
+          const registro: Record<string, unknown> = {
             audit_id: audit.audit_id,
             audit_uuid: auditIdToUuid(audit.audit_id),
             template_id: audit.template_id || null,
@@ -403,7 +444,14 @@ async function runSync(
             status_processamento: "erro",
             erro_processamento: errorMessage(error),
             atualizado_em: new Date().toISOString(),
-          }, { onConflict: "audit_id" });
+          };
+          // Só sobrescreve o que foi identificado nesta tentativa; assim um erro
+          // precoce não apaga o destino/nome já descobertos numa execução anterior.
+          if (contexto.destino) registro.destino = contexto.destino;
+          if (contexto.nome) registro.nome = contexto.nome;
+          if (contexto.lote) registro.lote = contexto.lote;
+          if (contexto.relatorio_url) registro.web_report_url = contexto.relatorio_url;
+          await supabase.from("safeculture_inspecoes").upsert(registro, { onConflict: "audit_id" });
           return { audit, result: null, error };
         }
       }));
@@ -414,44 +462,70 @@ async function runSync(
           errorDetails.push({
             audit_id: item.audit.audit_id,
             template_id: item.audit.template_id,
+            modificado_em: item.audit.modified_at || null,
+            ...contextoDoErro(item.error),
             erro: errorMessage(item.error),
           });
+          if (item.audit.modified_at) modificadosComErro.push(item.audit.modified_at);
           continue;
         }
         if (item.result === "inserted") counters.inseridos += 1;
         else if (item.result === "updated") counters.atualizados += 1;
         else counters.ignorados += 1;
-        if (item.audit.modified_at && item.audit.modified_at > maxModified) {
-          maxModified = item.audit.modified_at;
-        }
+        if (item.audit.modified_at) modificadosComSucesso.push(item.audit.modified_at);
       }
     }
 
-    if (audits.length > maxInspections) {
-      counters.erros += 1;
-      errorDetails.push({
-        erro: `A API retornou ${audits.length} inspeções; esta execução processou ${maxInspections}. Execute novamente para continuar.`,
-      });
+    // O checkpoint avança até imediatamente antes do relatório com erro mais
+    // antigo. Assim o que já foi gravado para de ser relido a cada execução, e
+    // nenhum relatório com erro é pulado: ele continua dentro da janela e volta
+    // a ser tentado na próxima execução. Antes, um único relatório quebrado
+    // congelava o checkpoint e travava a sincronização inteira.
+    const erroMaisAntigo = modificadosComErro.length
+      ? modificadosComErro.reduce((a, b) => (a < b ? a : b))
+      : null;
+    for (const modificado of modificadosComSucesso) {
+      if (erroMaisAntigo && modificado >= erroMaisAntigo) continue;
+      if (modificado > maxModified) maxModified = modificado;
     }
 
+    // A busca vem ordenada por modified_at ascendente, então processar as
+    // primeiras e avançar o checkpoint até elas não pula nenhuma inspeção.
+    const continuacao = audits.length > maxInspections
+      ? `A API retornou ${audits.length} inspeções e esta execução processou ${maxInspections}; a próxima continua de onde parou.`
+      : "";
+
     const status = counters.erros ? "parcial" : "sucesso";
-    const checkpointFinal = counters.erros ? null : maxModified;
-    const advancesCheckpoint = status === "sucesso" && origin !== "reprocessamento";
+    const avancou = maxModified > checkpoint;
+    const checkpointFinal = avancou ? maxModified : null;
+    const advancesCheckpoint = avancou && origin !== "reprocessamento";
     const now = new Date().toISOString();
+
+    const mensagens = [
+      status === "sucesso"
+        ? "Sincronização concluída."
+        : `Sincronização concluída com ${counters.erros} relatório(s) com erro.`,
+    ];
+    if (counters.erros && avancou) {
+      mensagens.push(
+        "O checkpoint avançou até o relatório com erro mais antigo; os pendentes serão tentados de novo.",
+      );
+    }
+    if (!avancou) mensagens.push("O checkpoint não avançou.");
+    if (continuacao) mensagens.push(continuacao);
+
     await supabase.from("safeculture_sincronizacoes").update({
       ...counters,
       status,
       finalizado_em: now,
       checkpoint_final: checkpointFinal,
       detalhes_erros: errorDetails,
-      mensagem: status === "sucesso"
-        ? "Sincronização concluída."
-        : "Sincronização concluída com pendências; o checkpoint não avançou.",
+      mensagem: mensagens.join(" "),
     }).eq("id", run.id);
 
     await supabase.from("safeculture_estado_sync").update({
       ultima_execucao_id: run.id,
-      ultima_sincronizacao_ok: status === "sucesso" ? now : state.ultima_sincronizacao_ok,
+      ultima_sincronizacao_ok: status === "sucesso" || avancou ? now : state.ultima_sincronizacao_ok,
       ultima_modificacao_lida: advancesCheckpoint ? maxModified : state.ultima_modificacao_lida,
       atualizado_em: now,
     }).eq("id", true);
@@ -542,8 +616,19 @@ async function processAudit(
 
   const answers = flattenAnswers(inspection);
   const reportLink = await getWebReportLink(audit.audit_id);
-  const mapped = await mapToDestination(supabase, template, audit, inspection, answers, reportLink);
+  const mapped = await mapToDestination(supabase, template, audit, inspection, answers, reportLink)
+    .catch((error) => {
+      throw anotarContextoErro(error, {
+        destino: template.destino,
+        destino_rotulo: DESTINATION_LABELS[template.destino],
+        nome: inspectionName(inspection),
+        relatorio_url: reportLink,
+      });
+    });
   const auditData = rootInspection(inspection);
+  const loteIdentificado = clean(
+    String((mapped as Record<string, unknown>)[LOT_FIELD_BY_DESTINATION[template.destino]] || ""),
+  ) || null;
 
   const { error: pendingRawError } = await supabase.from("safeculture_inspecoes").upsert({
     audit_id: audit.audit_id,
@@ -551,6 +636,7 @@ async function processAudit(
     template_id: templateId,
     destino: template.destino,
     nome: inspectionName(inspection),
+    lote: loteIdentificado,
     status_processamento: "pendente",
     criado_em_safeculture: validDate(auditData?.created_at) || null,
     modificado_em_safeculture: audit.modified_at || inspectionModifiedAt(inspection) || null,
@@ -618,7 +704,14 @@ async function processAudit(
     if (destinationReserved) {
       removeDestinationLotReservation(destinationLots, template.destino, audit.audit_id);
     }
-    throw saveError;
+    throw anotarContextoErro(saveError, {
+      etapa: `gravação em ${DESTINATION_LABELS[template.destino]}`,
+      destino: template.destino,
+      destino_rotulo: DESTINATION_LABELS[template.destino],
+      nome: inspectionName(inspection),
+      lote: clean(String(destinationRecord[LOT_FIELD_BY_DESTINATION[template.destino]] || "")),
+      relatorio_url: reportLink,
+    });
   }
 
   const { error: rawError } = await supabase.from("safeculture_inspecoes").upsert({
@@ -627,6 +720,7 @@ async function processAudit(
     template_id: templateId,
     destino: template.destino,
     nome: inspectionName(inspection),
+    lote: loteIdentificado,
     status_processamento: "processado",
     criado_em_safeculture: validDate(auditData?.created_at) || null,
     modificado_em_safeculture: audit.modified_at || inspectionModifiedAt(inspection) || null,
@@ -968,7 +1062,12 @@ async function createProductionLotFromConcreteInspection(
     const concurrent = await findProductionLot(supabase, input.lote, input.projeto, input.fornecedor);
     if (concurrent) return concurrent;
   }
-  throw error;
+  throw anotarContextoErro(error, {
+    etapa: "cadastro do lote de produção",
+    lote: input.lote,
+    projeto: input.projeto,
+    fornecedor: input.fornecedor,
+  });
 }
 
 async function findProductionLot(
@@ -1544,6 +1643,29 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+type ErroComContexto = { contexto?: Record<string, unknown> };
+
+// Anexa ao erro o que já se sabe sobre o relatório (lote, projeto, destino) para
+// que a tela de Dados do Sistema mostre qual lote falhou, e não só o audit_id.
+function anotarContextoErro(error: unknown, contexto: Record<string, unknown>) {
+  if (!error || typeof error !== "object") return error;
+  const alvo = error as ErroComContexto;
+  const atual = alvo.contexto || {};
+  for (const [chave, valor] of Object.entries(contexto)) {
+    if (atual[chave] === undefined && valor !== undefined && valor !== null && valor !== "") {
+      atual[chave] = valor;
+    }
+  }
+  alvo.contexto = atual;
+  return error;
+}
+
+function contextoDoErro(error: unknown): Record<string, unknown> {
+  if (!error || typeof error !== "object") return {};
+  const contexto = (error as ErroComContexto).contexto;
+  return isRecord(contexto) ? contexto : {};
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
   if (isRecord(error)) {
@@ -1579,7 +1701,8 @@ Deno.serve(async (req) => {
       return json({ templates, total: templates.length });
     }
     if (action === "sync") return json(await runSync(supabase, auth, input));
-    return json({ error: "Ação inválida. Use status, discover ou sync." }, 400);
+    if (action === "relatorios") return json(await listRecentReports(supabase, input));
+    return json({ error: "Ação inválida. Use status, discover, sync ou relatorios." }, 400);
   } catch (error) {
     console.error(error);
     const status = error instanceof HttpError ? error.status : 500;
