@@ -589,8 +589,11 @@ function etapasDoLote(ctx, hoje) {
   const contraAprovados = contra.filter(e => e.resultado === 'Aprovado');
   const contraReprovados = contra.filter(e => e.resultado === 'Reprovado');
 
+  // Em cura térmica os 28 dias são obrigatórios: não dependem de reprova no
+  // ensaio de 14 dias, que ali é só acompanhamento e não libera nada.
+  const termica = !!s.curaTermica;
   const cura14Ok = !!(s.cura14 && hoje >= s.cura14) || !!primeiro14 || !!primeiro28 || s.statusChave === 'liberado' || s.statusChave === 'travado';
-  const cura28Disparada = !!reprovado14;
+  const cura28Disparada = termica || !!reprovado14;
   const cura28Ok = cura28Disparada && (!!(s.cura28 && hoje >= s.cura28) || !!primeiro28 || s.statusChave === 'liberado' || s.statusChave === 'travado');
   const contraDisparado = primeiro28?.resultado === 'Reprovado';
   const contraOk = contraDisparado && contraAprovados.length >= 2 && !contraReprovados.length;
@@ -600,8 +603,8 @@ function etapasDoLote(ctx, hoje) {
   return [
     etapa('produzido', 'Produzido', lote.dataFabricacao ? 'feito' : 'pendente', U.dataBR(lote.dataFabricacao), `${formatNumero(lote.total)} peça(s)`),
     etapa('cura14', 'Cura 14 dias', cura14Ok ? 'feito' : (s.statusChave === 'cura14' || s.statusChave === 'formando' ? 'atual' : 'pendente'), detalheCura(s.cura14, hoje), `Base: último lote ${s.ultimoLote?.lote || '—'}`),
-    etapa('ensaio14', 'Ensaio 14 dias', estadoEnsaio(primeiro14, s.statusChave === 'aguardando14' || s.statusChave === 'pendente'), detalheEnsaio(primeiro14, 'Aguardando ensaio'), resultadoCurto(primeiro14)),
-    etapa('aguardando28', 'Aguardando 28 dias', cura28Disparada ? (s.statusChave === 'cura28' || s.statusChave === 'aguardando28' ? 'atual' : 'feito') : 'pendente', cura28Disparada ? '14d reprovado' : 'Só ativa se reprovar 14d', s.cura28 ? `Ensaio a partir de ${U.dataBR(s.cura28)}` : ''),
+    etapa('ensaio14', termica ? 'Acompanhamento 14 dias' : 'Ensaio 14 dias', estadoEnsaio(primeiro14, s.statusChave === 'aguardando14' || s.statusChave === 'pendente'), detalheEnsaio(primeiro14, termica ? 'Informativo — não libera' : 'Aguardando ensaio'), resultadoCurto(primeiro14)),
+    etapa('aguardando28', 'Aguardando 28 dias', cura28Disparada ? (s.statusChave === 'cura28' || s.statusChave === 'aguardando28' ? 'atual' : 'feito') : 'pendente', termica ? 'Obrigatório na cura térmica' : (reprovado14 ? '14d reprovado' : 'Só ativa se reprovar 14d'), s.cura28 ? `Ensaio a partir de ${U.dataBR(s.cura28)}` : ''),
     etapa('cura28', 'Cura 28 dias', cura28Ok ? 'feito' : (s.statusChave === 'cura28' ? 'atual' : 'pendente'), cura28Disparada ? detalheCura(s.cura28, hoje) : 'Não acionada', `Base: último lote ${s.ultimoLote?.lote || '—'}`),
     etapa('ensaio28', 'Ensaio 28 dias', estadoEnsaio(primeiro28, s.statusChave === 'aguardando28'), detalheEnsaio(primeiro28, cura28Disparada ? 'Aguardando ensaio' : 'Não acionado'), resultadoCurto(primeiro28)),
     etapa('contraensaios', '2 contraensaios', contraReprovados.length ? 'erro' : (contraOk ? 'feito' : (contraDisparado ? 'atual' : 'pendente')), contraDisparado ? `${contraAprovados.length}/2 aprovado(s)` : 'Só ativa se reprovar 28d', contraReprovados.length ? 'Contraensaio reprovado' : (contraOk ? 'Dois aprovados' : '')), 
@@ -728,6 +731,10 @@ function mapProducaoPainel(r) {
     dataFabricacao: dataBanco(r.data_fabricacao),
     serie: r.serie || '',
     status: r.status || '',
+    // Sem este campo o motor trata toda série como cura normal e libera no
+    // ensaio de 14 dias. Em cura térmica os 14 dias são só acompanhamento:
+    // a liberação vem exclusivamente do ensaio de 28 dias.
+    curaTermica: !!r.cura_termica,
     origem: r,
   };
 }

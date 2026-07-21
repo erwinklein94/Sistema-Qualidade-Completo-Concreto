@@ -70,6 +70,11 @@ const STATUS_LOTE = Object.freeze({
   REPROVADO: 'Reprovado',
 });
 
+// Dias que o ensaio de liberação pode ser antecipado em relação à data de cura
+// de 28 dias e ainda valer como ensaio de 28 dias. Deve permanecer igual ao
+// TOLERANCIA_ENSAIO_28 de js/fluxo-liberacao-core.js.
+const TOLERANCIA_ENSAIO_28 = 1;
+
 const CAMPOS_STATUS_AUTOMATICO = [
   'dataFabricacao', 'cura14', 'cura28',
   'comp14Cp1', 'comp14Cp2', 'tracao14Cp1', 'tracao14Cp2',
@@ -249,16 +254,19 @@ function statusAutomaticoDoLote(reg, ensaios = []) {
   const reprovados = inteiroOuZero(reg.reprovados);
   const aAnalisar = inteiroOuZero(reg.aAnalisar);
   // Cura térmica: o ensaio de 14 dias é apenas acompanhamento (informativo) e não
-  // decide o status do lote — só o ensaio de 28 dias (data >= cura28) conta.
+  // decide o status do lote — só o ensaio de 28 dias conta. A tolerância cobre o
+  // ensaio rompido pouco antes da data de cura; precisa bater com a do motor em
+  // js/fluxo-liberacao-core.js, senão Produção e Fluxo voltam a divergir.
+  const cura28Minima = cura28 ? dataISOAdicionarDias(cura28, -TOLERANCIA_ENSAIO_28) : '';
   const ensaiosDecisao = reg.curaTermica
-    ? (ensaios || []).filter(e => e.dataEnsaio && cura28 && e.dataEnsaio >= cura28)
+    ? (ensaios || []).filter(e => e.dataEnsaio && cura28Minima && e.dataEnsaio >= cura28Minima)
     : ensaios;
   const ultimoEnsaio = ultimoEnsaioLiberacao(ensaiosDecisao);
 
   if (ultimoEnsaio?.resultado === 'Aprovado') return STATUS_LOTE.LIBERADO;
   if (ultimoEnsaio?.resultado === 'Pendente') return STATUS_LOTE.ANALISE;
   if (ultimoEnsaio?.resultado === 'Reprovado') {
-    if (cura28 && ultimoEnsaio.dataEnsaio && ultimoEnsaio.dataEnsaio >= cura28) return STATUS_LOTE.REPROVADO;
+    if (cura28Minima && ultimoEnsaio.dataEnsaio && ultimoEnsaio.dataEnsaio >= cura28Minima) return STATUS_LOTE.REPROVADO;
     if (cura28 && hoje < cura28) return STATUS_LOTE.CURA_28;
     return STATUS_LOTE.AGUARDANDO_ENSAIO;
   }

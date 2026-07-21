@@ -8,6 +8,14 @@ const FluxoLiberacao = (() => {
   const ALERTA_PECAS = 1800;
   const ALERTA_LOTES = 9;
 
+  // Idade de cura exigida no ensaio de liberação de 28 dias. A tolerância cobre
+  // o ensaio antecipado em relação à data de cura do último lote da série —
+  // laboratório costuma romper um dia antes. Fora dessa margem o ensaio conta
+  // como de 14 dias e não libera série de cura térmica.
+  const IDADE_ENSAIO_28 = 28;
+  const TOLERANCIA_ENSAIO_28 = 1;
+  const IDADE_MINIMA_ENSAIO_28 = IDADE_ENSAIO_28 - TOLERANCIA_ENSAIO_28;
+
   const STATUS = Object.freeze({
     FORMANDO: 'Série em formação',
     CURA_14: 'Em processo de cura (14 dias)',
@@ -220,7 +228,11 @@ const FluxoLiberacao = (() => {
       return;
     }
 
-    if (serie.cura28 && hoje < serie.cura28) {
+    const ens28ComResultado = serie.ensaios28.filter(e => e.resultado === 'Aprovado' || e.resultado === 'Reprovado').sort(ordemEnsaio);
+
+    // Dentro da tolerância o ensaio pode ser anterior à data de cura da série.
+    // Se ele já existe e tem resultado, quem decide é o ensaio — não o calendário.
+    if (serie.cura28 && hoje < serie.cura28 && !ens28ComResultado.length) {
       serie.status = STATUS.CURA_28;
       serie.statusChave = 'cura28';
       serie.proximaAcao = `Aguardar até ${dataBR(serie.cura28)} para o ensaio de 28 dias do último lote da série.`;
@@ -230,7 +242,6 @@ const FluxoLiberacao = (() => {
       return;
     }
 
-    const ens28ComResultado = serie.ensaios28.filter(e => e.resultado === 'Aprovado' || e.resultado === 'Reprovado').sort(ordemEnsaio);
     if (!ens28ComResultado.length) {
       serie.status = STATUS.AGUARDANDO_28;
       serie.statusChave = 'aguardando28';
@@ -316,7 +327,7 @@ const FluxoLiberacao = (() => {
     if (/(^|\D)14(\D|$)/.test(fase)) return 14;
     const idade = idadeEnsaio(e, loteBase);
     if (idade == null) return 14;
-    return idade >= 28 ? 28 : 14;
+    return idade >= IDADE_MINIMA_ENSAIO_28 ? 28 : 14;
   }
 
   function idadeEnsaio(e, loteBase) {
