@@ -35,6 +35,9 @@ type Answer = {
 type DestinationLotEntry = {
   id: string;
   auditId: string;
+  // Só preenchido para ensaios_liberacao: é o que permite reconhecer o lote
+  // reprovado e liberar a entrada dos contraensaios.
+  resultado?: string;
 };
 type DestinationLotIndex = Map<string, DestinationLotEntry[]>;
 type DestinationLotRegistry = Map<Destino, DestinationLotIndex>;
@@ -1110,9 +1113,12 @@ async function loadDestinationLotRegistry(supabase: SupabaseClient): Promise<Des
   const registry: DestinationLotRegistry = new Map();
   await Promise.all(DESTINOS.map(async (destination) => {
     const lotField = LOT_FIELD_BY_DESTINATION[destination];
+    const colunas = destination === "ensaios_liberacao"
+      ? `id,${lotField},producao_lote_id,safeculture_audit_id,resultado`
+      : `id,${lotField},producao_lote_id,safeculture_audit_id`;
     const { data, error } = await supabase
       .from(destination)
-      .select(`id,${lotField},producao_lote_id,safeculture_audit_id`)
+      .select(colunas)
       .limit(5000);
     if (error) throw error;
 
@@ -1121,6 +1127,7 @@ async function loadDestinationLotRegistry(supabase: SupabaseClient): Promise<Des
       addDestinationLotEntry(index, row as Record<string, unknown>, lotField, {
         id: String(row.id || ""),
         auditId: String(row.safeculture_audit_id || ""),
+        resultado: String((row as Record<string, unknown>).resultado || ""),
       });
     }
     registry.set(destination, index);
@@ -1154,6 +1161,18 @@ function addDestinationLotEntry(
   }
 }
 
+function ehReprovado(resultado: unknown) {
+  return normalize(resultado) === "REPROVADO";
+}
+
+// Reprova em ensaio de liberação abre a janela de contraensaios: o lote precisa
+// de mais 2 dormentes ensaiados para decidir se a série libera ou trava. Só
+// nesse caso o mesmo lote pode entrar mais de uma vez — nos demais destinos, e
+// enquanto não houver reprova, o segundo relatório continua sendo ignorado.
+function aceitaRepeticaoDoLote(destination: Destino, entries: DestinationLotEntry[]) {
+  return destination === "ensaios_liberacao" && entries.some((entry) => ehReprovado(entry.resultado));
+}
+
 function findDuplicateDestinationLot(
   registry: DestinationLotRegistry,
   destination: Destino,
@@ -1163,8 +1182,11 @@ function findDuplicateDestinationLot(
   const index = registry.get(destination) || new Map();
   const lotField = LOT_FIELD_BY_DESTINATION[destination];
   for (const key of destinationLotKeys(record, lotField)) {
-    const duplicate = (index.get(key) || []).find((entry) => entry.auditId !== currentAuditId);
-    if (duplicate) return duplicate;
+    const entries = (index.get(key) as DestinationLotEntry[] | undefined || [])
+      .filter((entry) => entry.auditId !== currentAuditId);
+    if (!entries.length) continue;
+    if (aceitaRepeticaoDoLote(destination, entries)) continue;
+    return entries[0];
   }
   return null;
 }
@@ -1176,7 +1198,14 @@ function reserveDestinationLot(
   auditId: string,
 ) {
   const index = registry.get(destination) || new Map();
-  addDestinationLotEntry(index, record, LOT_FIELD_BY_DESTINATION[destination], { id: "", auditId });
+  // O resultado precisa ir junto: se a reprova e os contraensaios do mesmo lote
+  // chegarem na mesma execução, é esta reserva que abre a janela para os dois
+  // relatórios seguintes — sem ela, eles seriam ignorados como duplicidade.
+  addDestinationLotEntry(index, record, LOT_FIELD_BY_DESTINATION[destination], {
+    id: "",
+    auditId,
+    resultado: String(record.resultado || ""),
+  });
   registry.set(destination, index);
 }
 

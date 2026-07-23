@@ -244,6 +244,25 @@ function ultimoEnsaioLiberacao(ensaios) {
   )[0] || null;
 }
 
+// Reprova no ensaio de liberação exige 2 contraensaios aprovados. Enquanto essa
+// janela está aberta, o último ensaio sozinho não decide nada: um contraensaio
+// reprovado mantém o lote reprovado mesmo que outro, posterior, aprove. Espelha
+// avaliarSerie28 de js/fluxo-liberacao-core.js — se as duas regras divergirem,
+// Produção e Fluxo voltam a mostrar status diferentes para o mesmo lote.
+function decisaoPorContraensaios(ensaios) {
+  const comResultado = (ensaios || [])
+    .filter(e => e.resultado === 'Aprovado' || e.resultado === 'Reprovado')
+    .sort((a, b) =>
+      String(a.dataEnsaio || '').localeCompare(String(b.dataEnsaio || '')) ||
+      String(a.criadoEm || '').localeCompare(String(b.criadoEm || ''))
+    );
+  if (comResultado[0]?.resultado !== 'Reprovado') return '';
+  const contraensaios = comResultado.slice(1);
+  if (contraensaios.some(e => e.resultado === 'Reprovado')) return STATUS_LOTE.REPROVADO;
+  if (contraensaios.filter(e => e.resultado === 'Aprovado').length >= 2) return STATUS_LOTE.LIBERADO;
+  return STATUS_LOTE.ANALISE;
+}
+
 function statusAutomaticoDoLote(reg, ensaios = []) {
   const statusAtual = normalizarStatusProducao(reg.status);
   const cura14 = dataCura(reg, 14);
@@ -262,6 +281,9 @@ function statusAutomaticoDoLote(reg, ensaios = []) {
     ? (ensaios || []).filter(e => e.dataEnsaio && cura28Minima && e.dataEnsaio >= cura28Minima)
     : ensaios;
   const ultimoEnsaio = ultimoEnsaioLiberacao(ensaiosDecisao);
+
+  const decisaoContraensaios = decisaoPorContraensaios(ensaiosDecisao);
+  if (decisaoContraensaios) return decisaoContraensaios;
 
   if (ultimoEnsaio?.resultado === 'Aprovado') return STATUS_LOTE.LIBERADO;
   if (ultimoEnsaio?.resultado === 'Pendente') return STATUS_LOTE.ANALISE;
