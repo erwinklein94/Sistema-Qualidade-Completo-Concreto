@@ -9,9 +9,19 @@ com o mesmo layout do botão **Excel** da página **Produção de Dormentes**.
 2. A ação HTTP chama a Edge Function `power-automate-producao`.
 3. A função lê `producao_lotes` e `ensaios_liberacao`, aplica o mesmo status
    automático da página e devolve as 44 colunas da exportação.
-   Apenas os lotes da **Cavan** são enviados: a constante `FORNECEDOR_FILTRO`
-   aplica `ilike 'cavan%'` sobre `producao_lotes`. Os lotes da Conprem ficam
-   fora da planilha. Para mudar o recorte, altere essa constante e republique.
+   Apenas os lotes da **Cavan** são enviados. Três filtros em série, todos
+   ajustáveis no topo de `index.ts`, seguidos de `supabase functions deploy`:
+
+   | Constante | Efeito |
+   | --- | --- |
+   | `FORNECEDOR_FILTRO` | `ilike 'cavan%'` aplicado no banco |
+   | `LOTE_MINIMO` | descarta lote numérico abaixo de 2000 |
+   | `TIPOS_DORMENTE_EXCLUIDOS` | descarta contratrilho |
+
+   Os dois últimos são rede de segurança: a numeração da Cavan começa acima de
+   2000 e ela não produz contratrilho, então um registro da Conprem salvo com o
+   fornecedor errado ainda assim não chega à planilha. A comparação do lote é
+   numérica, não textual — como texto, `"500"` seria maior que `"2000"`.
 4. O Excel Online executa um Office Script que substitui o conteúdo da tabela
    `tbProducaoSite` na aba `Base_Producao_Site`.
 

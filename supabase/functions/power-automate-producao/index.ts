@@ -11,6 +11,11 @@ const TOLERANCIA_ENSAIO_28 = 1;
 // variações do sufixo da unidade (Cavan SP, Cavan MG...) sem depender de acento.
 const FORNECEDOR_FILTRO = "cavan%";
 
+// Rede de segurança contra lotes da Conprem cadastrados com o fornecedor errado:
+// a numeração da Cavan começa bem acima de 2000 e ela não produz contratrilho.
+const LOTE_MINIMO = 2000;
+const TIPOS_DORMENTE_EXCLUIDOS = ["CONTRATRILHO"];
+
 const STATUS = {
   CURA_14: "Em processo de cura (14 dias)",
   CURA_28: "Em processo de cura (28 dias)",
@@ -236,6 +241,21 @@ function normalize(value: unknown) {
     .toUpperCase();
 }
 
+// "Contra Trilho", "Contra-Trilho" e "CONTRATRILHO" viram a mesma chave.
+function compact(value: unknown) {
+  return normalize(value).replace(/ /g, "");
+}
+
+// O lote é texto no banco, então a comparação precisa ser numérica: como string,
+// "500" seria considerado maior que "2000".
+function loteElegivel(row: DatabaseRow) {
+  const digits = text(row.lote).replace(/\D/g, "");
+  const numero = digits ? Number.parseInt(digits, 10) : Number.NaN;
+  if (!Number.isFinite(numero) || numero < LOTE_MINIMO) return false;
+  const tipo = compact(row.tipo_dormente);
+  return !TIPOS_DORMENTE_EXCLUIDOS.some((excluido) => tipo.includes(excluido));
+}
+
 function normalizeStatus(value: unknown) {
   const map: Record<string, string> = {
     "LIBERADO PARA TRANSPORTE": STATUS.LIBERADO,
@@ -399,7 +419,7 @@ Deno.serve(async (req) => {
 
   try {
     authorize(req);
-    const [production, tests] = await Promise.all([
+    const [lotes, tests] = await Promise.all([
       readAll("producao_lotes", "*", "data_fabricacao", FORNECEDOR_FILTRO),
       readAll(
         "ensaios_liberacao",
@@ -407,10 +427,15 @@ Deno.serve(async (req) => {
         "data_ensaio",
       ),
     ]);
+    const production = lotes.filter(loteElegivel);
     return json({
       generatedAt: new Date().toISOString(),
       source: "Supabase/public.producao_lotes (fornecedor Cavan)",
-      fornecedor: "Cavan",
+      filtros: {
+        fornecedor: "Cavan",
+        loteMinimo: LOTE_MINIMO,
+        tiposExcluidos: TIPOS_DORMENTE_EXCLUIDOS,
+      },
       tableName: "tbProducaoSite",
       columns: COLUMNS,
       total: production.length,
