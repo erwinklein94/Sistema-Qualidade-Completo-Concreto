@@ -167,6 +167,194 @@ const SUB_PADROES = [
   }
 ];
 
+/* =====================================================================
+   CALCULADORA DE AMOSTRAGEM — NBR 5426/1985
+   Parâmetros fixos usados pela Rumo nesta aba:
+     · Tabela 1 — coluna "Níveis gerais de inspeção" → nível I
+     · Tabela 4 — plano de amostragem simples ATENUADA → NQA 2,5%
+   O número máximo de unidades que podem sofrer refugo é o valor da
+   coluna à direita do NQA 2,5% (Re — número de rejeição).
+   ===================================================================== */
+
+// Tabela 1 — letra-código por tamanho do lote (nível geral de inspeção I).
+const NBR_TABELA1_NIVEL_I = [
+  { min: 2,      max: 8,        letra: 'A' },
+  { min: 9,      max: 15,       letra: 'A' },
+  { min: 16,     max: 25,       letra: 'B' },
+  { min: 26,     max: 50,       letra: 'C' },
+  { min: 51,     max: 90,       letra: 'C' },
+  { min: 91,     max: 150,      letra: 'D' },
+  { min: 151,    max: 280,      letra: 'E' },
+  { min: 281,    max: 500,      letra: 'F' },
+  { min: 501,    max: 1200,     letra: 'G' },
+  { min: 1201,   max: 3200,     letra: 'H' },
+  { min: 3201,   max: 10000,    letra: 'J' },
+  { min: 10001,  max: 35000,    letra: 'K' },
+  { min: 35001,  max: 150000,   letra: 'L' },
+  { min: 150001, max: 500000,   letra: 'M' },
+  { min: 500001, max: Infinity, letra: 'N' }
+];
+
+// Tabela 4 — tamanho da amostra por letra-código (plano simples atenuado).
+const NBR_TABELA4_AMOSTRA = {
+  A: 2, B: 2, C: 2, D: 3, E: 5, F: 8, G: 13, H: 20,
+  J: 32, K: 50, L: 80, M: 125, N: 200, P: 315, Q: 500, R: 800
+};
+
+// Tabela 4 — coluna NQA 2,5% (atenuada). "seta" = usar o primeiro plano
+// acima (cima) ou abaixo (baixo) da seta, conforme a norma.
+const NBR_TABELA4_NQA25 = {
+  A: { seta: 'baixo', destino: 'C' },
+  B: { seta: 'baixo', destino: 'C' },
+  C: { ac: 0,  re: 1 },
+  D: { seta: 'cima',  destino: 'C' },
+  E: { seta: 'baixo', destino: 'F' },
+  F: { ac: 0,  re: 2 },
+  G: { ac: 1,  re: 3 },
+  H: { ac: 1,  re: 4 },
+  J: { ac: 2,  re: 5 },
+  K: { ac: 3,  re: 6 },
+  L: { ac: 5,  re: 8 },
+  M: { ac: 7,  re: 10 },
+  N: { ac: 10, re: 13 },
+  P: { seta: 'cima', destino: 'N' },
+  Q: { seta: 'cima', destino: 'N' },
+  R: { seta: 'cima', destino: 'N' }
+};
+
+// Formata inteiro com separador de milhar pt-BR (1200 -> "1.200").
+function numBR(v) { return Number(v).toLocaleString('pt-BR'); }
+
+function letraTabela1(tamanhoLote) {
+  return NBR_TABELA1_NIVEL_I.find(f => tamanhoLote >= f.min && tamanhoLote <= f.max) || null;
+}
+
+/**
+ * Resolve o plano da Tabela 4 (NQA 2,5%, atenuada) a partir da letra-código.
+ * Retorna { letraPlano, amostra, ac, re, seta } — "seta" indica que a letra
+ * original caía sobre uma seta e o plano veio de outra linha.
+ */
+function planoTabela4(letra) {
+  const visitadas = new Set();
+  let atual = letra;
+  let seta = null;
+  while (atual && !visitadas.has(atual)) {
+    visitadas.add(atual);
+    const celula = NBR_TABELA4_NQA25[atual];
+    if (!celula) return null;
+    if (celula.seta) { seta = celula.seta; atual = celula.destino; continue; }
+    return { letraPlano: atual, amostra: NBR_TABELA4_AMOSTRA[atual], ac: celula.ac, re: celula.re, seta };
+  }
+  return null;
+}
+
+function calcularPlanoAmostragem(tamanhoLote) {
+  const faixa = letraTabela1(tamanhoLote);
+  if (!faixa) return null;
+  const plano = planoTabela4(faixa.letra);
+  if (!plano) return null;
+  const amostra = Math.min(plano.amostra, tamanhoLote);
+  return {
+    tamanhoLote,
+    faixa,
+    letraCodigo: faixa.letra,
+    ...plano,
+    amostra,
+    inspecao100: plano.amostra >= tamanhoLote
+  };
+}
+
+function limparAmostragem() {
+  const campo = document.getElementById('calcTamanhoLote');
+  if (campo) { campo.value = ''; campo.focus(); }
+  renderAmostragem();
+}
+
+function calcularAmostragem() {
+  renderAmostragem(true);
+}
+
+function renderAmostragem(comAviso = false) {
+  const cont = document.getElementById('calcAmostragemResultado');
+  if (!cont) return;
+
+  const bruto = valBruto(document.getElementById('calcTamanhoLote')?.value);
+  if (!bruto) {
+    cont.innerHTML = `<p class="calc-amostragem-vazio">Informe o tamanho do lote para ver a letra-código, o tamanho da amostra e o número máximo de unidades que podem sofrer refugo.</p>`;
+    return;
+  }
+
+  const lote = Math.floor(Number(bruto.replace(',', '.')));
+  if (!Number.isFinite(lote) || lote < 1) {
+    cont.innerHTML = `<p class="calc-amostragem-erro">Informe um número inteiro maior que zero.</p>`;
+    return;
+  }
+  if (lote < 2) {
+    cont.innerHTML = `<p class="calc-amostragem-erro">A Tabela 1 da NBR 5426/1985 começa em lotes de <strong>2 peças</strong>. Para lote de 1 peça, inspecione 100%.</p>`;
+    return;
+  }
+
+  const p = calcularPlanoAmostragem(lote);
+  if (!p) {
+    cont.innerHTML = `<p class="calc-amostragem-erro">Não foi possível determinar o plano para este tamanho de lote.</p>`;
+    return;
+  }
+
+  const faixaTxt = p.faixa.max === Infinity
+    ? `${numBR(p.faixa.min)} ou mais`
+    : `${numBR(p.faixa.min)} a ${numBR(p.faixa.max)}`;
+
+  const notaSeta = p.seta
+    ? `<li>Na coluna NQA 2,5% a letra <strong>${U.esc(p.letraCodigo)}</strong> cai sobre uma seta para ${p.seta === 'cima' ? 'cima' : 'baixo'}; conforme a norma, usa-se o primeiro plano ${p.seta === 'cima' ? 'acima' : 'abaixo'} dela — letra <strong>${U.esc(p.letraPlano)}</strong>.</li>`
+    : '';
+
+  const nota100 = p.inspecao100
+    ? `<li class="calc-amostragem-alerta">O tamanho da amostra da Tabela 4 (${numBR(NBR_TABELA4_AMOSTRA[p.letraPlano])}) é igual ou maior que o lote — nesse caso a norma manda inspecionar <strong>100% do lote (${numBR(p.tamanhoLote)} peças)</strong>.</li>`
+    : '';
+
+  cont.innerHTML = `
+    <div class="calc-amostragem-res">
+      <div class="calc-res-box">
+        <span class="calc-res-rot">Letra-código (Tabela 1)</span>
+        <strong class="calc-res-valor calc-res-letra">${U.esc(p.letraCodigo)}</strong>
+        <span class="calc-res-nota">Lote de ${faixaTxt} · nível I</span>
+      </div>
+      <div class="calc-res-box">
+        <span class="calc-res-rot">Tamanho da amostra</span>
+        <strong class="calc-res-valor">${numBR(p.amostra)}</strong>
+        <span class="calc-res-nota">peça(s) a inspecionar${p.letraPlano !== p.letraCodigo ? ` · plano da letra ${U.esc(p.letraPlano)}` : ''}</span>
+      </div>
+      <div class="calc-res-box calc-res-destaque">
+        <span class="calc-res-rot">Máx. de unidades com refugo</span>
+        <strong class="calc-res-valor">${numBR(p.re)}</strong>
+        <span class="calc-res-nota">Re — coluna à direita do NQA 2,5%</span>
+      </div>
+      <div class="calc-res-box">
+        <span class="calc-res-rot">Ac — aceitação</span>
+        <strong class="calc-res-valor">${numBR(p.ac)}</strong>
+        <span class="calc-res-nota">aceita direto com até ${numBR(p.ac)} defeituosa(s)</span>
+      </div>
+    </div>
+    <ul class="calc-amostragem-detalhe">
+      <li>Lote de <strong>${numBR(p.tamanhoLote)}</strong> peça(s) → Tabela 1 (níveis gerais, nível <strong>I</strong>) → letra <strong>${U.esc(p.letraCodigo)}</strong> → Tabela 4 (simples atenuada, NQA <strong>2,5%</strong>) → amostra <strong>${numBR(p.amostra)}</strong>, <strong>Ac ${numBR(p.ac)}</strong> / <strong>Re ${numBR(p.re)}</strong>.</li>
+      ${notaSeta}
+      ${nota100}
+      <li><strong>Δ</strong> — se o número de peças defeituosas exceder o valor de <strong>Ac (${numBR(p.ac)})</strong>, porém for menor do que <strong>Re (${numBR(p.re)})</strong>, o lote é aceito, mas a inspeção normal deve ser reintroduzida nos lotes subsequentes. Com <strong>${numBR(p.re)}</strong> ou mais defeituosas, o lote é rejeitado.</li>
+    </ul>`;
+
+  if (comAviso) App.toast(`Lote ${numBR(p.tamanhoLote)} → letra ${p.letraCodigo} · amostra ${p.amostra} · Re ${p.re}.`);
+}
+
+// A calculadora é só consulta às tabelas da norma: não depende do Supabase nem
+// do carregamento da lista, por isso é ligada em um listener próprio.
+document.addEventListener('DOMContentLoaded', () => {
+  const campo = document.getElementById('calcTamanhoLote');
+  if (!campo) return;
+  campo.addEventListener('input', () => renderAmostragem());
+  campo.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); calcularAmostragem(); } });
+  renderAmostragem();
+});
+
 function ehAdmin() { return !!(window.Auth?.permissoesAtuais?.().admin); }
 
 function padraoId(indice) { return `padrao-sub-${indice}`; }
@@ -444,3 +632,5 @@ window.salvar = salvar;
 window.fecharModal = fecharModal;
 window.carregar = carregar;
 window.aplicarPadraoSubcomponente = aplicarPadraoSubcomponente;
+window.calcularAmostragem = calcularAmostragem;
+window.limparAmostragem = limparAmostragem;

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Medidas e Tolerâncias · Subcomponentes · Rumo</title>
   <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
-  <link rel="stylesheet" href="css/style.css?v=20260703-amostragem-nbr-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260728-calc-amostragem-v1">
 </head>
 <body>
   <div class="app" id="app">
@@ -55,6 +55,22 @@
             </figure>
           </div>
           <p class="txt-mini txt-cinza amostragem-nota">Clique em uma tabela para abrir a imagem maior em uma nova aba.</p>
+
+          <div class="calc-amostragem">
+            <div class="calc-amostragem-cab">
+              <strong>Calculadora de amostragem</strong>
+              <span class="txt-mini txt-cinza">Nível geral de inspeção <b>I</b> (Tabela 1) · Plano simples <b>atenuado</b> com NQA <b>2,5%</b> (Tabela 4)</span>
+            </div>
+            <div class="calc-amostragem-form">
+              <div class="campo">
+                <label for="calcTamanhoLote">Tamanho do lote (peças)</label>
+                <input type="number" id="calcTamanhoLote" min="1" step="1" inputmode="numeric" placeholder="Ex.: 1200" autocomplete="off">
+              </div>
+              <button type="button" class="btn btn-primario" onclick="calcularAmostragem()">Calcular</button>
+              <button type="button" class="btn btn-secundario" onclick="limparAmostragem()">Limpar</button>
+            </div>
+            <div id="calcAmostragemResultado"></div>
+          </div>
         </div>
 
         <div class="card">
@@ -117,7 +133,7 @@
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/glossario-subcomponentes.js?v=20260607-link-relatorio"></script>
-  <script src="js/especificacoes-subcomponentes.js?v=20260703-amostragem-nbr-v1"></script>
+  <script src="js/especificacoes-subcomponentes.js?v=20260728-calc-amostragem-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
