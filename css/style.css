@@ -4000,6 +4000,108 @@ table.tabela tbody td,
   padding: 6px 12px;
   font-size: 11.5px;
 }
+/* Editor de lotes dentro do modal: mais espaco para ler os lotes, sem a
+   moldura tracejada que fazia sentido quando ele ficava dentro do card. */
+.editor-lotes-em-modal {
+  gap: 10px;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  background: none;
+}
+.editor-lotes-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 12px;
+  background: var(--cinza-bg);
+}
+.editor-resumo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.editor-resumo-item span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--cinza-texto);
+}
+.editor-resumo-item strong {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--azul-escuro);
+  overflow-wrap: anywhere;
+}
+.editor-lotes-secao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--cinza-borda);
+}
+.editor-lotes-titulo {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--azul-escuro);
+}
+.editor-lotes-contador {
+  font-size: 11px;
+  color: var(--cinza-texto);
+}
+.editor-lotes-em-modal .editor-lotes-chips {
+  max-height: min(46vh, 400px);
+}
+.editor-lotes-em-modal .editor-lotes-adicionar select {
+  flex-basis: 260px;
+  font-size: 12.5px;
+  padding: 8px 10px;
+}
+.editor-lotes-em-modal .editor-lotes-aviso {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.editor-lotes-em-modal .editor-lotes-acoes {
+  justify-content: flex-end;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--cinza-borda);
+}
+.editor-lotes-em-modal .editor-lotes-acoes .btn {
+  padding: 8px 16px;
+  font-size: 12.5px;
+}
+
+body[data-tema="escuro"] .editor-lotes-em-modal {
+  background: none;
+  border: none;
+}
+body[data-tema="escuro"] .editor-lotes-resumo {
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.16);
+}
+body[data-tema="escuro"] .editor-resumo-item strong,
+body[data-tema="escuro"] .editor-lotes-titulo {
+  color: #fff;
+}
+body[data-tema="escuro"] .editor-resumo-item span,
+body[data-tema="escuro"] .editor-lotes-contador {
+  color: rgba(255,255,255,.7);
+}
+body[data-tema="escuro"] .editor-lotes-secao,
+body[data-tema="escuro"] .editor-lotes-em-modal .editor-lotes-acoes {
+  border-color: rgba(255,255,255,.16);
+}
+
 body[data-tema="escuro"] .btn-editar-lotes {
   background: transparent;
   color: #fff;

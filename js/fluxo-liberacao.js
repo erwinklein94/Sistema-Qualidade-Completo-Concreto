@@ -48,8 +48,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('modalFichaLote')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) fecharFichaLote();
   });
+  document.getElementById('modalEditarLotes')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) cancelarEdicaoLotesSerie();
+  });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') fecharFichaLote();
+    if (e.key === 'Escape') { fecharFichaLote(); cancelarEdicaoLotesSerie(); }
     if ((e.key === 'Enter' || e.key === ' ') && e.target?.classList?.contains('clicavel')) {
       e.preventDefault();
       e.target.click();
@@ -410,18 +413,14 @@ function encParam(v) {
 }
 
 function blocoLotesSerie(s) {
-  const emEdicao = EDICAO_SERIE && EDICAO_SERIE.chave === s.chave;
   const podeEditar = window.Auth?.pode?.('editar');
   const topo = `<div class="fluxo-lotes-topo">
     <strong>Lotes da série</strong>
-    ${podeEditar && !emEdicao ? `<button type="button" class="btn-editar-lotes" onclick="iniciarEdicaoLotesSerie('${encParam(s.chave)}')" title="Editar quais lotes pertencem a esta série">${ICONE_EDITAR_LOTES}Editar lotes</button>` : ''}
+    ${podeEditar ? `<button type="button" class="btn-editar-lotes" onclick="iniciarEdicaoLotesSerie('${encParam(s.chave)}')" title="Editar quais lotes pertencem a esta série">${ICONE_EDITAR_LOTES}Editar lotes</button>` : ''}
   </div>`;
 
-  if (!emEdicao) {
-    const ultimo = s.ultimoLote;
-    return `${topo}<div>${s.lotes.map(l => `<span class="lote-serie-chip clicavel ${ultimo && l.id === ultimo.id ? 'ultimo' : ''}" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Abrir ficha completa do lote" role="button" tabindex="0"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em></span>`).join('')}</div>`;
-  }
-  return topo + editorLotesSerieHtml(s);
+  const ultimo = s.ultimoLote;
+  return `${topo}<div>${s.lotes.map(l => `<span class="lote-serie-chip clicavel ${ultimo && l.id === ultimo.id ? 'ultimo' : ''}" onclick="abrirFichaLote('${U.esc(String(l.id))}')" title="Abrir ficha completa do lote" role="button" tabindex="0"><strong>${U.esc(l.lote || '—')}</strong><em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em></span>`).join('')}</div>`;
 }
 
 function editorLotesSerieHtml(s) {
@@ -432,7 +431,7 @@ function editorLotesSerieHtml(s) {
     return `<span class="lote-serie-chip edicao ${removido ? 'removido' : ''}">
       <strong>${U.esc(l.lote || '—')}</strong>
       <em>${U.dataBR(l.dataFabricacao)} · ${intLocal(l.total).toLocaleString('pt-BR')} peças</em>
-      <button type="button" class="chip-acao-lote ${removido ? 'desfazer' : ''}" onclick="alternarLoteEdicaoSerie('${encParam(id)}')">${removido ? 'Desfazer' : 'Remover'}</button>
+      <button type="button" class="chip-acao-lote ${removido ? 'desfazer' : ''}" onclick="alternarLoteEdicaoSerie('${encParam(id)}')" ${ed.salvando ? 'disabled' : ''}>${removido ? 'Desfazer' : 'Remover'}</button>
     </span>`;
   }).join('');
 
@@ -442,28 +441,54 @@ function editorLotesSerieHtml(s) {
     return `<span class="lote-serie-chip edicao adicionado">
       <strong>${U.esc(c.lote.lote || '—')}</strong>
       <em>${U.dataBR(c.lote.dataFabricacao)} · veio de ${U.esc(c.serieOrigem)}</em>
-      <button type="button" class="chip-acao-lote desfazer" onclick="alternarLoteEdicaoSerie('${encParam(id)}')">Desfazer</button>
+      <button type="button" class="chip-acao-lote desfazer" onclick="alternarLoteEdicaoSerie('${encParam(id)}')" ${ed.salvando ? 'disabled' : ''}>Desfazer</button>
     </span>`;
   }).join('');
 
   const candidatos = lotesCandidatosSerie(s).filter(c => !ed.adicionados.has(String(c.lote.id)));
   const opcoes = candidatos.map(c => `<option value="${encParam(String(c.lote.id))}">Lote ${U.esc(c.lote.lote || '—')} · ${U.dataBR(c.lote.dataFabricacao)} · ${U.esc(c.serieOrigem)}</option>`).join('');
 
-  return `<div class="editor-lotes-serie">
+  // Prévia da composição depois de salvar, para o usuário conferir antes de gravar.
+  const qtdFinal = s.lotes.filter(l => !ed.removidos.has(String(l.id))).length + ed.adicionados.size;
+  const pendencias = [];
+  if (ed.removidos.size) pendencias.push(`${ed.removidos.size} para sair`);
+  if (ed.adicionados.size) pendencias.push(`${ed.adicionados.size} para entrar`);
+
+  return `<div class="editor-lotes-serie editor-lotes-em-modal">
+    <div class="editor-lotes-resumo">
+      ${editorResumoItem('Série', s.serie)}
+      ${editorResumoItem('Projeto', s.projeto)}
+      ${editorResumoItem('Fábrica', s.fornecedor)}
+      ${editorResumoItem('Bitola', s.bitola)}
+    </div>
+
+    <div class="editor-lotes-secao">
+      <span class="editor-lotes-titulo">Lotes desta série</span>
+      <span class="editor-lotes-contador">${qtdFinal} lote(s) após salvar${pendencias.length ? ` · ${pendencias.join(', ')}` : ''}</span>
+    </div>
     <div class="editor-lotes-chips">${chipsAtuais}${chipsAdicionados}</div>
+
+    <div class="editor-lotes-secao">
+      <span class="editor-lotes-titulo">Trazer lote de outra série</span>
+    </div>
     <div class="editor-lotes-adicionar">
-      <select id="selAdicionarLoteSerie" ${candidatos.length ? '' : 'disabled'}>
-        <option value="">${candidatos.length ? 'Trazer lote de outra série...' : 'Nenhum lote disponível neste projeto/fábrica'}</option>
+      <select id="selAdicionarLoteSerie" ${candidatos.length && !ed.salvando ? '' : 'disabled'}>
+        <option value="">${candidatos.length ? 'Selecione um lote...' : 'Nenhum lote disponível neste projeto/fábrica'}</option>
         ${opcoes}
       </select>
-      <button type="button" class="btn btn-secundario btn-mini" onclick="adicionarLoteSelecionadoSerie()" ${candidatos.length ? '' : 'disabled'}>${ICN.add || '+'}Adicionar</button>
+      <button type="button" class="btn btn-secundario btn-mini" onclick="adicionarLoteSelecionadoSerie()" ${candidatos.length && !ed.salvando ? '' : 'disabled'}>${ICN.add || '+'}Adicionar</button>
     </div>
-    <p class="editor-lotes-aviso">Lotes mantidos/adicionados ficam fixados nesta série; lotes removidos voltam ao cálculo automático. A alteração vale para o site inteiro.</p>
+
+    <p class="editor-lotes-aviso">Lotes mantidos/adicionados ficam fixados nesta série; lotes removidos voltam ao cálculo automático. A alteração vale para o site inteiro (produção, ensaios e painéis).</p>
     <div class="editor-lotes-acoes">
       <button type="button" class="btn btn-primario btn-mini" onclick="salvarEdicaoLotesSerie()" ${ed.salvando ? 'disabled' : ''}>${ed.salvando ? 'Salvando...' : `${ICN.check}Salvar alterações`}</button>
       <button type="button" class="btn btn-secundario btn-mini" onclick="cancelarEdicaoLotesSerie()" ${ed.salvando ? 'disabled' : ''}>Cancelar</button>
     </div>
   </div>`;
+}
+
+function editorResumoItem(rotulo, valor) {
+  return `<div class="editor-resumo-item"><span>${U.esc(rotulo)}</span><strong>${U.esc(valor || '—')}</strong></div>`;
 }
 
 function serieDaChave(chave) {
@@ -494,13 +519,37 @@ function iniciarEdicaoLotesSerie(chaveEnc) {
     App.toast(Auth.mensagemSemPermissao('editar os lotes da série'), 'aviso');
     return;
   }
-  EDICAO_SERIE = { chave: decodeURIComponent(chaveEnc), removidos: new Set(), adicionados: new Set(), salvando: false };
-  renderFluxo();
+  const chave = decodeURIComponent(chaveEnc);
+  const s = serieDaChave(chave);
+  if (!s) {
+    App.toast('Série não encontrada no painel atual. Atualize e tente de novo.', 'aviso');
+    return;
+  }
+  EDICAO_SERIE = { chave, removidos: new Set(), adicionados: new Set(), salvando: false };
+  renderEdicaoLotesSerie();
+  document.getElementById('modalEditarLotes')?.classList.add('aberto');
+}
+
+// Redesenha só o corpo do modal: a edição acontece nele, e refazer o painel
+// inteiro a cada clique perderia a rolagem e o foco do usuário.
+function renderEdicaoLotesSerie() {
+  const ed = EDICAO_SERIE;
+  if (!ed) return;
+  const s = serieDaChave(ed.chave);
+  if (!s) { fecharModalEditarLotes(); return; }
+  const titulo = document.getElementById('editarLotesTitulo');
+  if (titulo) titulo.textContent = `Editar lotes — ${s.serie}`;
+  setHtml('editarLotesCorpo', editorLotesSerieHtml(s));
+}
+
+function fecharModalEditarLotes() {
+  EDICAO_SERIE = null;
+  document.getElementById('modalEditarLotes')?.classList.remove('aberto');
 }
 
 function cancelarEdicaoLotesSerie() {
-  EDICAO_SERIE = null;
-  renderFluxo();
+  if (EDICAO_SERIE?.salvando) return;
+  fecharModalEditarLotes();
 }
 
 function alternarLoteEdicaoSerie(idEnc) {
@@ -510,7 +559,7 @@ function alternarLoteEdicaoSerie(idEnc) {
   if (ed.adicionados.has(id)) ed.adicionados.delete(id);
   else if (ed.removidos.has(id)) ed.removidos.delete(id);
   else ed.removidos.add(id);
-  renderFluxo();
+  renderEdicaoLotesSerie();
 }
 
 function adicionarLoteSelecionadoSerie() {
@@ -520,7 +569,7 @@ function adicionarLoteSelecionadoSerie() {
   const id = decodeURIComponent(sel?.value || '');
   if (!id) return;
   ed.adicionados.add(id);
-  renderFluxo();
+  renderEdicaoLotesSerie();
 }
 
 async function salvarEdicaoLotesSerie() {
@@ -529,14 +578,13 @@ async function salvarEdicaoLotesSerie() {
   const s = serieDaChave(ed.chave);
   if (!s) {
     App.toast('Série não encontrada no painel atual. Atualize e tente de novo.', 'aviso');
-    EDICAO_SERIE = null;
+    fecharModalEditarLotes();
     renderFluxo();
     return;
   }
   if (!ed.removidos.size && !ed.adicionados.size) {
     App.toast('Nenhuma alteração nos lotes desta série.', 'aviso');
-    EDICAO_SERIE = null;
-    renderFluxo();
+    fecharModalEditarLotes();
     return;
   }
 
@@ -576,19 +624,21 @@ async function salvarEdicaoLotesSerie() {
   if (!confirm(msg)) return;
 
   ed.salvando = true;
-  renderFluxo();
+  renderEdicaoLotesSerie();
   try {
     for (const alt of alteracoes) {
       await StoreSupabase.salvarProducao({ id: alt.id, serie: alt.serie });
     }
-    EDICAO_SERIE = null;
-    App.toast(`Lotes da ${s.serie} atualizados (${alteracoes.length} registro(s) gravado(s)).`, 'sucesso');
+    const nomeSerie = s.serie;
+    const gravados = alteracoes.length;
+    fecharModalEditarLotes();
+    App.toast(`Lotes da ${nomeSerie} atualizados (${gravados} registro(s) gravado(s)).`, 'sucesso');
     await carregarFluxoLiberacao();
   } catch (err) {
     console.error('Erro ao salvar lotes da série', err);
     ed.salvando = false;
     App.toast(mensagemErroBanco(err, 'Não foi possível salvar os lotes da série.'), 'erro');
-    renderFluxo();
+    renderEdicaoLotesSerie();
   }
 }
 

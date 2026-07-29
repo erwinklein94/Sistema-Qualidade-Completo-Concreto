@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de séries · Controle de Dormentes Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
-  <link rel="stylesheet" href="css/style.css?v=20260708-editar-lotes-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260729-editar-lotes-modal-v1">
 </head>
 <body class="pagina-fluxo">
   <div class="app" id="app">
@@ -78,6 +78,16 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="modalEditarLotes">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="editarLotesTitulo">Editar lotes da série</h2>
+        <button class="fechar-modal" onclick="cancelarEdicaoLotesSerie()" aria-label="Fechar edição de lotes">⨯</button>
+      </div>
+      <div class="modal-corpo" id="editarLotesCorpo"></div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260523-2"></script>
@@ -90,7 +100,7 @@
   <script src="js/comum.js?v=20260708-comparativo-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260721-cura-termica-v1"></script>
-  <script src="js/fluxo-liberacao.js?v=20260708-editar-lotes-v1"></script>
+  <script src="js/fluxo-liberacao.js?v=20260729-editar-lotes-modal-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
