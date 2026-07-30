@@ -6,29 +6,41 @@
   <title>Login · Controle de Qualidade Total Rumo</title>
 <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260702-menu-trem-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-v1">
 </head>
 <body>
   <main class="login-page">
-    <section class="login-card">
-      <div class="login-marca"><img src="assets/brand/rumo-logo-positivo.png" alt="Rumo"></div>
-      <div class="login-kicker">Somos o Brasil em movimento</div>
-      <h1>Controle de Dormentes</h1>
-      <p>Qualidade ferroviária para produção, ensaios, liberações e indicadores de dormentes de concreto.</p>
-
-      <form id="formLogin" class="login-form">
-        <div class="campo">
-          <label for="email">E-mail</label>
-          <input type="email" id="email" autocomplete="email" required placeholder="seu.email@empresa.com">
+    <div class="login-shell">
+      <section class="login-brand" aria-label="Identidade Rumo">
+        <img class="login-brand-logo" src="assets/brand/rumo-logo-negativo.png" alt="Rumo">
+        <div class="login-brand-copy">
+          <span class="login-brand-eyebrow">Qualidade ferroviária</span>
+          <h2>Somos o Brasil em movimento.</h2>
+          <p>Controle integrado da produção, dos ensaios, das liberações e dos indicadores de dormentes de concreto.</p>
         </div>
-        <div class="campo">
-          <label for="senha">Senha</label>
-          <input type="password" id="senha" autocomplete="current-password" required placeholder="Sua senha">
-        </div>
-        <button class="btn btn-primario" id="btnEntrar" type="submit">Entrar</button>
-      </form>
+      </section>
 
-      <div id="loginMensagem" class="login-msg"></div>
-    </section>
+      <section class="login-card">
+        <div class="login-marca"><img src="assets/brand/rumo-logo-positivo.png" alt="Rumo"></div>
+        <div class="login-kicker">Sistema de Qualidade</div>
+        <h1>Acesse sua conta</h1>
+        <p>Entre com suas credenciais para acompanhar a qualidade ferroviária.</p>
+
+        <form id="formLogin" class="login-form">
+          <div class="campo">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" autocomplete="email" required placeholder="seu.email@empresa.com">
+          </div>
+          <div class="campo">
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" autocomplete="current-password" required placeholder="Sua senha">
+          </div>
+          <button class="btn btn-primario" id="btnEntrar" type="submit">Entrar</button>
+        </form>
+
+        <div id="loginMensagem" class="login-msg" aria-live="polite"></div>
+      </section>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

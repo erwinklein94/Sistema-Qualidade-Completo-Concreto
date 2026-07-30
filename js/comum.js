@@ -104,8 +104,8 @@ const App = {
   // Grupos exibidos como botões dropdown no topo direito
   gruposDropdown() {
     return [
-      { grupo: 'concreto', titulo: 'Menu Concreto', ic: ICN.producao },
-      { grupo: 'subcomponentes', titulo: 'Menu Subcomponente', ic: ICN.vazioBox },
+      { grupo: 'concreto', titulo: 'Concreto', ic: ICN.producao },
+      { grupo: 'subcomponentes', titulo: 'Subcomponentes', ic: ICN.vazioBox },
       { grupo: 'ferramentas', titulo: 'Ferramentas', ic: ICN.config },
       { grupo: 'sistema', titulo: 'Administração', ic: ICN.config },
     ];
@@ -205,6 +205,9 @@ const App = {
     const topo = `
       <header class="topo">
         <div class="flex" style="align-items:center;gap:14px;">
+          <a class="topo-marca" href="index.html" aria-label="Rumo — ir para o Dashboard">
+            <img src="assets/brand/rumo-logo-positivo.png" alt="Rumo">
+          </a>
           <div class="topo-identidade">
             <div class="topo-kicker">Rumo · Qualidade Ferroviária</div>
             <h1>${titulo}</h1>

@@ -1,0 +1,892 @@
+/* =====================================================================
+   RUMO BRAND SYSTEM
+   Diretrizes: https://brandbook.rumolog.com/
+   Paleta institucional, tipografia de sistema, grid modular e chanfros.
+   ===================================================================== */
+
+:root {
+  --rumo-azul: #003865;
+  --rumo-azul-claro: #32A6E6;
+  --rumo-verde: #1E9F7F;
+  --rumo-verde-claro: #7FE06C;
+  --rumo-amarelo: #FBD300;
+  --rumo-laranja: #F78344;
+  --rumo-roxo: #9F4BB9;
+  --rumo-cinza: #BDCCD4;
+  --rumo-cinza-050: #F2F5F6;
+  --rumo-cinza-100: #E5EBEE;
+  --rumo-cinza-200: #D7E0E5;
+  --rumo-cinza-300: #CAD6DD;
+
+  --azul-escuro: var(--rumo-azul);
+  --azul-escuro-2: #002D51;
+  --azul-claro: var(--rumo-azul-claro);
+  --verde: var(--rumo-verde);
+  --verde-claro: var(--rumo-verde-claro);
+  --amarelo: var(--rumo-amarelo);
+  --cinza-bg: var(--rumo-cinza-050);
+  --cinza-borda: var(--rumo-cinza-200);
+  --fonte: Verdana, Geneva, sans-serif;
+  --raio: 0;
+  --raio-sm: 0;
+  --sombra: 0 8px 22px rgba(0, 56, 101, .08);
+  --sombra-hover: 0 12px 28px rgba(0, 56, 101, .13);
+}
+
+html {
+  background: var(--rumo-cinza-050);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: Verdana, Geneva, sans-serif !important;
+}
+
+body {
+  background: var(--rumo-cinza-050);
+  color: var(--rumo-azul);
+}
+
+body:not([data-tema="escuro"]) {
+  --cinza-card: #fff;
+  --cinza-texto: #486272;
+  --cinza-texto-claro: #708794;
+}
+
+::selection {
+  color: #fff;
+  background: var(--rumo-verde);
+}
+
+:focus-visible {
+  outline: 3px solid var(--rumo-verde-claro);
+  outline-offset: 2px;
+}
+
+/* Fundo de interface: módulos inspirados em vagões, discretos e funcionais. */
+.app {
+  position: relative;
+  isolation: isolate;
+}
+
+.app::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  right: 0;
+  width: min(46vw, 760px);
+  height: 280px;
+  background: url("../assets/rumo/grafismo-vagoes-azul.png") top right / 760px auto no-repeat;
+  opacity: .035;
+  pointer-events: none;
+}
+
+/* Cabeçalho global */
+.topo {
+  margin: 0 !important;
+  padding: 17px 30px 18px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--rumo-cinza-200) !important;
+  border-radius: 0 !important;
+  background: rgba(255, 255, 255, .97) !important;
+  box-shadow: 0 5px 18px rgba(0, 56, 101, .055) !important;
+  backdrop-filter: none !important;
+}
+
+.topo::after {
+  inset: auto auto 0 0 !important;
+  width: 232px;
+  height: 5px !important;
+  border-radius: 0 !important;
+  background: linear-gradient(
+    90deg,
+    var(--rumo-azul) 0 25%,
+    var(--rumo-azul-claro) 25% 50%,
+    var(--rumo-verde) 50% 75%,
+    var(--rumo-verde-claro) 75% 100%
+  ) !important;
+}
+
+.topo > .flex {
+  display: flex;
+  align-items: center !important;
+  gap: 18px !important;
+  min-width: 270px;
+}
+
+.topo-marca {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 46px;
+  padding-right: 18px;
+  border-right: 1px solid var(--rumo-cinza-200);
+}
+
+.topo-marca img {
+  display: block;
+  width: 92px;
+  height: auto;
+}
+
+.topo-identidade {
+  gap: 3px !important;
+}
+
+.topo-kicker {
+  color: var(--rumo-verde) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: .85px !important;
+}
+
+.topo h1 {
+  color: var(--rumo-azul) !important;
+  font-size: clamp(19px, 1.55vw, 24px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -.45px !important;
+}
+
+.topo .subtitulo {
+  color: #58707F !important;
+}
+
+.pagina {
+  max-width: 1540px;
+  padding-top: 26px !important;
+}
+
+/* Menus */
+.menu-dropdowns,
+.topo-acoes {
+  gap: 8px !important;
+}
+
+.menu-dd-botao,
+.tema-toggle,
+.hub-link {
+  border-color: var(--rumo-cinza-300) !important;
+  background: #fff !important;
+  color: var(--rumo-azul) !important;
+  box-shadow: none !important;
+}
+
+.menu-dd-botao:hover,
+.tema-toggle:hover,
+.hub-link:hover {
+  border-color: var(--rumo-azul-claro) !important;
+  background: var(--rumo-cinza-050) !important;
+  color: var(--rumo-azul) !important;
+}
+
+.menu-dd-botao.ativo {
+  border-color: var(--rumo-verde) !important;
+  box-shadow: inset 0 -3px 0 var(--rumo-verde) !important;
+}
+
+.menu-dd--ferramentas .menu-dd-botao::before {
+  background: var(--rumo-roxo) !important;
+}
+
+.menu-dd--sistema .menu-dd-botao::before {
+  background: var(--rumo-amarelo) !important;
+}
+
+.menu-dd-painel {
+  padding: 8px !important;
+  border: 1px solid var(--rumo-cinza-200) !important;
+  border-top: 5px solid var(--rumo-azul-claro) !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: 0 16px 34px rgba(0, 56, 101, .16) !important;
+}
+
+.menu-dd-link {
+  min-height: 39px;
+  border: 0 !important;
+  border-left: 4px solid transparent !important;
+  border-radius: 0 !important;
+  color: var(--rumo-azul) !important;
+}
+
+.menu-dd-link:hover {
+  border-left-color: var(--rumo-azul-claro) !important;
+  background: var(--rumo-cinza-050) !important;
+}
+
+.menu-dd-link.ativo {
+  border-left-color: var(--rumo-verde) !important;
+  background: #EAF7F3 !important;
+  color: var(--rumo-azul) !important;
+}
+
+/* Botões: desenho técnico e cantos retos do grid Rumo. */
+.btn,
+.btn-sm,
+.icone-btn,
+.fechar-modal {
+  border-radius: 0 !important;
+}
+
+.btn {
+  min-height: 36px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+}
+
+.btn-primario {
+  border: 1px solid var(--rumo-azul) !important;
+  background: var(--rumo-azul) !important;
+  color: #fff !important;
+}
+
+.btn-primario:hover {
+  border-color: #002D51 !important;
+  background: #002D51 !important;
+  transform: translateY(-1px);
+}
+
+.btn-secundario {
+  border: 1px solid var(--rumo-cinza-300) !important;
+  background: #fff !important;
+  color: var(--rumo-azul) !important;
+}
+
+.btn-secundario:hover {
+  border-color: var(--rumo-azul-claro) !important;
+  background: var(--rumo-cinza-050) !important;
+  color: var(--rumo-azul) !important;
+}
+
+.btn-verde {
+  border: 1px solid var(--rumo-verde) !important;
+  background: var(--rumo-verde) !important;
+  color: #fff !important;
+}
+
+.btn-verde:hover {
+  border-color: #177D64 !important;
+  background: #177D64 !important;
+}
+
+.btn-perigo {
+  background: #fff !important;
+}
+
+/* Filtros, campos e formulários */
+.barra-filtros {
+  padding: 18px 18px 16px !important;
+  border: 1px solid var(--rumo-cinza-200) !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.barra-filtros::before {
+  top: -11px !important;
+  border-radius: 0 !important;
+  background: var(--rumo-azul) !important;
+  color: #fff !important;
+}
+
+.campo label {
+  color: var(--rumo-azul) !important;
+  font-weight: 700 !important;
+}
+
+.campo input,
+.campo select,
+.campo textarea,
+.busca-rapida input {
+  border: 1px solid var(--rumo-cinza-300) !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  color: var(--rumo-azul) !important;
+  box-shadow: none !important;
+}
+
+.campo input:hover,
+.campo select:hover,
+.campo textarea:hover {
+  border-color: var(--rumo-azul-claro) !important;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus,
+.busca-rapida input:focus {
+  border-color: var(--rumo-verde) !important;
+  box-shadow: 0 0 0 3px rgba(127, 224, 108, .28) !important;
+}
+
+.form-secao,
+.detalhe-secao {
+  color: var(--rumo-verde) !important;
+  border-top-color: var(--rumo-cinza-200) !important;
+}
+
+/* Cards e KPIs: módulos, sem efeitos arredondados ou gradientes. */
+.card,
+.kpi,
+.modal,
+.serie-card,
+.login-nota,
+.aviso-info,
+.tabela-wrap {
+  border-radius: 0 !important;
+}
+
+.card,
+.kpi,
+.modal,
+.serie-card {
+  border: 1px solid var(--rumo-cinza-200) !important;
+  background: #fff;
+  box-shadow: var(--sombra) !important;
+}
+
+.card {
+  border-top: 5px solid var(--rumo-azul-claro) !important;
+}
+
+.card::before {
+  display: none !important;
+}
+
+.card:hover,
+.kpi:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--sombra-hover) !important;
+}
+
+.card-titulo {
+  color: var(--rumo-azul);
+  border-bottom: 1px solid var(--rumo-cinza-200) !important;
+}
+
+.card-titulo .acento::before {
+  width: 13px !important;
+  height: 13px !important;
+  border-radius: 0 !important;
+  background: var(--rumo-verde-claro) !important;
+  box-shadow: none !important;
+  clip-path: polygon(0 0, 100% 0, 100% 65%, 65% 100%, 0 100%);
+}
+
+.kpi {
+  border-top: 5px solid var(--rumo-azul-claro) !important;
+  border-left: 1px solid var(--rumo-cinza-200) !important;
+}
+
+.kpi.verde {
+  border-top-color: var(--rumo-verde) !important;
+}
+
+.kpi.amarelo {
+  border-top-color: var(--rumo-amarelo) !important;
+}
+
+.kpi.escuro {
+  border-top-color: var(--rumo-azul) !important;
+}
+
+.kpi.vermelho {
+  border-top-color: #D64242 !important;
+}
+
+.kpi::after {
+  right: -18px !important;
+  top: -18px !important;
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 0 !important;
+  background: rgba(50, 166, 230, .09) !important;
+  transform: rotate(45deg);
+}
+
+.kpi .rotulo {
+  color: var(--rumo-verde) !important;
+  font-weight: 700 !important;
+}
+
+.kpi .valor {
+  color: var(--rumo-azul) !important;
+  font-weight: 700 !important;
+}
+
+/* Tabelas */
+.tabela-wrap {
+  border-color: var(--rumo-cinza-200) !important;
+}
+
+table.tabela thead th {
+  border-right: 1px solid rgba(255, 255, 255, .14);
+  background: var(--rumo-azul) !important;
+  color: #fff !important;
+}
+
+table.tabela tbody tr:nth-child(even) {
+  background: var(--rumo-cinza-050) !important;
+}
+
+table.tabela tbody tr:hover {
+  background: #E5F3FA !important;
+}
+
+.badge,
+.status-serie,
+.tag-termica,
+.usuario-pill {
+  border-radius: 2px !important;
+}
+
+.badge-ok,
+.badge-bitola-mista {
+  background: #E3F4EF !important;
+  color: #12644F !important;
+}
+
+.badge-cura,
+.badge-bitola-larga {
+  background: #E1F2FB !important;
+  color: var(--rumo-azul) !important;
+}
+
+/* Modais e mensagens */
+.modal-overlay {
+  background: rgba(0, 45, 81, .62) !important;
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  border-top: 7px solid var(--rumo-azul-claro) !important;
+}
+
+.modal-cab {
+  border-radius: 0 !important;
+}
+
+.toast {
+  border-radius: 0 !important;
+  border-left: 6px solid var(--rumo-verde-claro);
+}
+
+/* Login: composição do brandbook, com blocos e grafismo de vagões. */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 54px) !important;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, var(--rumo-azul) 0 6%, transparent 6% 94%, var(--rumo-verde) 94% 100%),
+    #fff !important;
+  position: relative;
+}
+
+.login-page::before {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    linear-gradient(var(--rumo-verde-claro), var(--rumo-verde-claro)) left top / 6% 18% no-repeat,
+    linear-gradient(var(--rumo-azul-claro), var(--rumo-azul-claro)) right top / 6% 34% no-repeat,
+    linear-gradient(var(--rumo-azul-claro), var(--rumo-azul-claro)) left bottom / 6% 24% no-repeat,
+    linear-gradient(var(--rumo-verde-claro), var(--rumo-verde-claro)) right bottom / 6% 18% no-repeat !important;
+  opacity: 1 !important;
+  transform: none !important;
+  pointer-events: none;
+}
+
+.login-shell {
+  width: min(1160px, 88vw);
+  min-height: min(690px, calc(100vh - 70px));
+  display: grid;
+  grid-template-columns: minmax(320px, 42%) minmax(420px, 58%);
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--rumo-cinza-200);
+  background: #fff;
+  box-shadow: 0 24px 58px rgba(0, 56, 101, .17);
+}
+
+.login-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: clamp(34px, 4vw, 62px);
+  overflow: hidden;
+  position: relative;
+  background:
+    linear-gradient(rgba(50, 166, 230, .84), rgba(0, 56, 101, .93)),
+    url("../assets/rumo/grafismo-vagoes-azul.png") center / cover no-repeat;
+  color: #fff;
+}
+
+.login-brand::after {
+  content: "";
+  position: absolute;
+  right: -82px;
+  bottom: -82px;
+  width: 220px;
+  height: 220px;
+  background: var(--rumo-verde-claro);
+  transform: rotate(45deg);
+  opacity: .98;
+}
+
+.login-brand-logo {
+  width: 142px;
+  height: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.login-brand-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 400px;
+}
+
+.login-brand-eyebrow {
+  display: block;
+  margin-bottom: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.login-brand h2 {
+  max-width: 430px;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(34px, 4vw, 58px);
+  line-height: 1.04;
+  letter-spacing: -2.4px;
+}
+
+.login-brand p {
+  max-width: 390px;
+  margin: 22px 0 0;
+  color: rgba(255, 255, 255, .9);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.login-card {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(42px, 7vw, 92px) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: var(--rumo-azul) !important;
+}
+
+.login-card::before {
+  display: none !important;
+}
+
+.login-marca {
+  margin-bottom: 28px !important;
+}
+
+.login-marca img {
+  width: 146px !important;
+}
+
+.login-kicker {
+  margin-bottom: 13px !important;
+  color: var(--rumo-verde) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+}
+
+.login-kicker::before {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 0 !important;
+  background: var(--rumo-verde-claro) !important;
+  box-shadow: none !important;
+  clip-path: polygon(0 0, 100% 0, 100% 65%, 65% 100%, 0 100%);
+}
+
+.login-card h1 {
+  margin: 0 0 12px !important;
+  color: var(--rumo-azul) !important;
+  font-size: clamp(28px, 3.2vw, 42px) !important;
+  line-height: 1.06 !important;
+  letter-spacing: -1.5px !important;
+}
+
+.login-card > p {
+  max-width: 580px;
+  margin: 0 0 30px !important;
+  color: #58707F !important;
+  line-height: 1.6;
+}
+
+.login-form {
+  gap: 17px !important;
+}
+
+.login-form .campo {
+  gap: 7px;
+}
+
+.login-form .campo input {
+  min-height: 48px !important;
+  padding: 12px 14px !important;
+}
+
+.login-form .btn {
+  min-height: 48px !important;
+  margin-top: 8px !important;
+}
+
+.login-msg {
+  margin-top: 18px !important;
+}
+
+.login-trem {
+  display: none !important;
+}
+
+body:has(.login-page) .subir-pagina-btn {
+  display: none !important;
+}
+
+/* Tema escuro usa exclusivamente combinações aprovadas do brandbook. */
+body[data-tema="escuro"]:not(:has(.login-page)) {
+  --azul-escuro: #fff;
+  --azul-escuro-2: var(--rumo-azul);
+  --azul-claro: var(--rumo-verde-claro);
+  --cinza-bg: #002D51;
+  --cinza-card: var(--rumo-azul);
+  --cinza-borda: rgba(255, 255, 255, .18);
+  --cinza-texto: #E5EBEE;
+  --cinza-texto-claro: var(--rumo-cinza);
+  background: #002D51 !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .topo,
+body[data-tema="escuro"]:not(:has(.login-page)) .card,
+body[data-tema="escuro"]:not(:has(.login-page)) .kpi,
+body[data-tema="escuro"]:not(:has(.login-page)) .barra-filtros,
+body[data-tema="escuro"]:not(:has(.login-page)) .modal,
+body[data-tema="escuro"]:not(:has(.login-page)) .serie-card {
+  border-color: rgba(255, 255, 255, .18) !important;
+  background: var(--rumo-azul) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .topo h1,
+body[data-tema="escuro"]:not(:has(.login-page)) .card-titulo,
+body[data-tema="escuro"]:not(:has(.login-page)) .kpi .valor,
+body[data-tema="escuro"]:not(:has(.login-page)) .campo label {
+  color: #fff !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .topo .subtitulo {
+  color: var(--rumo-cinza) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .topo-marca img {
+  filter: brightness(0) invert(1);
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .menu-dd-botao,
+body[data-tema="escuro"]:not(:has(.login-page)) .tema-toggle,
+body[data-tema="escuro"]:not(:has(.login-page)) .hub-link,
+body[data-tema="escuro"]:not(:has(.login-page)) .btn-secundario {
+  border-color: rgba(255, 255, 255, .25) !important;
+  background: var(--rumo-azul) !important;
+  color: #fff !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .btn-primario {
+  border-color: var(--rumo-verde-claro) !important;
+  background: var(--rumo-verde-claro) !important;
+  color: var(--rumo-azul) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .card {
+  border-top-color: var(--rumo-azul-claro) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .kpi {
+  border-top-color: var(--rumo-azul-claro) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .kpi.verde {
+  border-top-color: var(--rumo-verde) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .kpi.amarelo {
+  border-top-color: var(--rumo-amarelo) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .kpi.escuro {
+  border-top-color: #fff !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .campo input,
+body[data-tema="escuro"]:not(:has(.login-page)) .campo select,
+body[data-tema="escuro"]:not(:has(.login-page)) .campo textarea {
+  border-color: rgba(255, 255, 255, .22) !important;
+  background: #002D51 !important;
+  color: #fff !important;
+}
+
+/* Responsividade */
+@media (max-width: 980px) {
+  .topo {
+    padding: 15px 18px 17px !important;
+  }
+
+  .topo-marca {
+    min-height: 42px;
+    padding-right: 14px;
+  }
+
+  .topo-marca img {
+    width: 80px;
+  }
+
+  .login-shell {
+    width: min(920px, 88vw);
+    grid-template-columns: minmax(280px, 38%) minmax(390px, 62%);
+  }
+}
+
+@media (max-width: 760px) {
+  .app::before {
+    width: 100%;
+    opacity: .025;
+  }
+
+  .topo {
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .topo > .flex {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    gap: 13px !important;
+  }
+
+  .topo-marca {
+    padding-right: 13px;
+  }
+
+  .topo::after {
+    width: 42%;
+  }
+
+  .menu-dd-painel {
+    border-radius: 0 !important;
+  }
+
+  .login-page {
+    align-items: stretch;
+    padding: 0 6% !important;
+  }
+
+  .login-shell {
+    width: 100%;
+    min-height: 100vh;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    border-top: 0;
+    border-bottom: 0;
+    box-shadow: none;
+  }
+
+  .login-brand {
+    min-height: 240px;
+    padding: 30px 28px;
+  }
+
+  .login-brand-logo {
+    width: 106px;
+  }
+
+  .login-brand-copy {
+    margin-top: 42px;
+  }
+
+  .login-brand h2 {
+    max-width: 330px;
+    font-size: clamp(30px, 9vw, 44px);
+    letter-spacing: -1.8px;
+  }
+
+  .login-brand p,
+  .login-brand-eyebrow {
+    display: none;
+  }
+
+  .login-card {
+    padding: 38px 28px 48px !important;
+  }
+}
+
+@media (max-width: 460px) {
+  .topo-marca img {
+    width: 72px;
+  }
+
+  .topo-kicker {
+    font-size: 8px !important;
+  }
+
+  .topo h1 {
+    font-size: 18px !important;
+  }
+
+  .topo .menu-dd-botao {
+    gap: 4px !important;
+    padding-inline: 5px !important;
+    font-size: 10.5px !important;
+  }
+
+  .topo .menu-dd-botao span {
+    min-width: 0;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .menu-dd-botao::before {
+    width: 5px;
+    height: 5px;
+  }
+
+  .menu-dd-botao .ic {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  .login-brand {
+    min-height: 210px;
+  }
+
+  .login-marca {
+    display: none !important;
+  }
+
+  .login-card h1 {
+    font-size: 30px !important;
+  }
+}
