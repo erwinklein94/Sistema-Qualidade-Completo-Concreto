@@ -67,17 +67,27 @@ function init() {
 }
 
 function hydrateTheme() {
-  const storedTheme = localStorage.getItem('rumo_flashcards_theme') || 'light';
-  getFlashcardsRoot().setAttribute('data-flash-theme', storedTheme);
-  if (elements.themeToggle) elements.themeToggle.textContent = storedTheme === 'dark' ? '☀️ Tema claro' : '🌙 Tema escuro';
+  const globalTheme = document.body.getAttribute('data-tema') === 'escuro' ? 'dark' : 'light';
+  applyFlashTheme(globalTheme);
+}
+
+function applyFlashTheme(theme) {
+  const normalized = theme === 'dark' || theme === 'escuro' ? 'dark' : 'light';
+  getFlashcardsRoot().setAttribute('data-flash-theme', normalized);
+  localStorage.setItem('rumo_flashcards_theme', normalized);
+  if (elements.themeToggle) elements.themeToggle.textContent = normalized === 'dark' ? '☀️ Tema claro' : '🌙 Tema escuro';
 }
 
 function toggleTheme() {
-  const current = getFlashcardsRoot().getAttribute('data-flash-theme') || 'light';
+  const current = document.body.getAttribute('data-tema') === 'escuro' ? 'dark' : 'light';
   const next = current === 'dark' ? 'light' : 'dark';
-  getFlashcardsRoot().setAttribute('data-flash-theme', next);
-  localStorage.setItem('rumo_flashcards_theme', next);
-  if (elements.themeToggle) elements.themeToggle.textContent = next === 'dark' ? '☀️ Tema claro' : '🌙 Tema escuro';
+  if (window.App?.aplicarTema) {
+    const appTheme = next === 'dark' ? 'escuro' : 'claro';
+    App.aplicarTema(appTheme, true);
+    window.dispatchEvent(new CustomEvent('temaAlterado', { detail: { tema: appTheme } }));
+  } else {
+    applyFlashTheme(next);
+  }
 }
 
 function renderAreaOptions() {
@@ -112,6 +122,7 @@ function renderStudentAreaOptions() {
 
 function attachEvents() {
   if (elements.themeToggle) elements.themeToggle.addEventListener('click', toggleTheme);
+  window.addEventListener('temaAlterado', (event) => applyFlashTheme(event.detail?.tema));
   elements.registrationForm.addEventListener('submit', handleRegistration);
   elements.flashcard.addEventListener('click', flipCard);
   elements.flipCardBtn.addEventListener('click', flipCard);

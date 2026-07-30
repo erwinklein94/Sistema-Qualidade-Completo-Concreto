@@ -670,8 +670,8 @@ body:has(.login-page) .subir-pagina-btn {
 
 /* Tema escuro usa exclusivamente combinações aprovadas do brandbook. */
 body[data-tema="escuro"]:not(:has(.login-page)) {
-  --azul-escuro: #fff;
-  --azul-escuro-2: var(--rumo-azul);
+  --azul-escuro: var(--rumo-azul);
+  --azul-escuro-2: #002D51;
   --azul-claro: var(--rumo-verde-claro);
   --cinza-bg: #002D51;
   --cinza-card: var(--rumo-azul);
@@ -888,5 +888,429 @@ body[data-tema="escuro"]:not(:has(.login-page)) .campo textarea {
 
   .login-card h1 {
     font-size: 30px !important;
+  }
+}
+
+/* =====================================================================
+   TEMA ESCURO — REVISÃO GLOBAL DE LEGIBILIDADE
+   Superfícies, tabelas e componentes especiais compartilham os mesmos
+   tokens para impedir combinações de fundo claro com texto claro.
+   ===================================================================== */
+body[data-tema="escuro"]:not(:has(.login-page)) {
+  --rumo-dark-page: #002D51;
+  --rumo-dark-surface: #003865;
+  --rumo-dark-surface-alt: #07446F;
+  --rumo-dark-surface-raised: #0A4D7D;
+  --rumo-dark-border: rgba(215, 224, 229, .27);
+  --rumo-dark-text: #F7FBFD;
+  --rumo-dark-muted: #D7E0E5;
+  --rumo-dark-subtle: #BDCCD4;
+
+  --azul-escuro: var(--rumo-azul);
+  --azul-escuro-2: var(--rumo-dark-page);
+  --branco: #fff;
+  --cinza-bg: var(--rumo-dark-page);
+  --cinza-card: var(--rumo-dark-surface);
+  --cinza-borda: var(--rumo-dark-border);
+  --cinza-texto: var(--rumo-dark-muted);
+  --cinza-texto-claro: var(--rumo-dark-subtle);
+  color: var(--rumo-dark-text) !important;
+  background: var(--rumo-dark-page) !important;
+  color-scheme: dark;
+}
+
+/* Superfícies principais e componentes gerados dinamicamente. */
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .topo,
+  .card,
+  .kpi,
+  .barra-filtros,
+  .modal,
+  .modal-cab,
+  .serie-card,
+  .subcard,
+  .mini,
+  .import-box,
+  .weekly-stat,
+  .periodo-dashboard-info,
+  .usuarios-perfil-card,
+  .glossario-painel,
+  .mapa-projeto-card,
+  .fluxo-regra-card,
+  .pedido-card,
+  .iauditor-preview,
+  .iauditor-meta-item,
+  .iauditor-lote-item,
+  .safeculture-execucao,
+  .safeculture-resumo-item
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background: var(--rumo-dark-surface) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(h1, h2, h3, h4, h5, h6),
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .card-titulo,
+  .modal-cab h2,
+  .kpi .valor,
+  .kpi-valor,
+  .detalhe-item .val,
+  .serie-card-topo h3,
+  .serie-lotes-topo strong,
+  .serie-liberacao strong,
+  .motivo-card-topo strong,
+  .motivo-card-numero,
+  .usuarios-kpi strong,
+  .auditoria-grafico-valor,
+  .contador,
+  .chart-label,
+  .chart-value
+) {
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .subtitulo,
+  .card-sub,
+  .txt-cinza,
+  .txt-mini,
+  .kpi .extra,
+  .kpi .sub,
+  .detalhe-item .rot,
+  .serie-card-topo p,
+  .serie-metricas span,
+  .serie-rodape,
+  .legenda-mini,
+  .meta,
+  .muted,
+  .vazio,
+  .vazio p,
+  .usuario-perfil,
+  .safeculture-status-topo,
+  .safeculture-resumo-item span
+) {
+  color: var(--rumo-dark-muted) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .card-titulo,
+  .form-acoes,
+  .form-secao,
+  .detalhe-secao,
+  .modal-cab,
+  .painel-series-topo
+) {
+  border-color: var(--rumo-dark-border) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .topo-kicker,
+  .kpi .rotulo,
+  .kpi-label,
+  .form-secao,
+  .detalhe-secao,
+  .section-kicker
+) {
+  color: var(--rumo-verde-claro) !important;
+}
+
+/* Navegação e menus suspensos. */
+body[data-tema="escuro"]:not(:has(.login-page)) .menu-dd-painel {
+  border-color: var(--rumo-dark-border) !important;
+  border-top-color: var(--rumo-verde-claro) !important;
+  background: var(--rumo-dark-surface-raised) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .menu-dd-link {
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .menu-dd-link:hover {
+  border-left-color: var(--rumo-azul-claro) !important;
+  background: rgba(255, 255, 255, .08) !important;
+  color: #fff !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .menu-dd-link.ativo {
+  border-left-color: var(--rumo-verde-claro) !important;
+  background: rgba(127, 224, 108, .14) !important;
+  color: #fff !important;
+}
+
+/* Botões e controles. */
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .btn-secundario,
+  .btn-perigo,
+  .icone-btn,
+  .fechar-modal,
+  .tema-toggle,
+  .hub-link,
+  .menu-dd-botao
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background: transparent !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .btn-secundario,
+  .icone-btn,
+  .fechar-modal,
+  .tema-toggle,
+  .hub-link,
+  .menu-dd-botao
+):hover {
+  border-color: var(--rumo-verde-claro) !important;
+  background: rgba(127, 224, 108, .11) !important;
+  color: var(--rumo-verde-claro) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .btn-perigo:hover {
+  border-color: #FF8D8D !important;
+  background: rgba(255, 107, 107, .14) !important;
+  color: #FFD6D6 !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .btn-primario {
+  border-color: var(--rumo-verde-claro) !important;
+  background: var(--rumo-verde-claro) !important;
+  color: var(--rumo-azul) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .btn-primario:hover {
+  border-color: var(--rumo-amarelo) !important;
+  background: var(--rumo-amarelo) !important;
+  color: var(--rumo-azul) !important;
+}
+
+/* Formulários e controles nativos. */
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .campo input:not([type="checkbox"]):not([type="radio"]),
+  .campo select,
+  .campo textarea,
+  .busca-rapida input,
+  .file-input
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background: var(--rumo-dark-page) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(input, textarea)::placeholder {
+  color: rgba(215, 224, 229, .62) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) select option {
+  background: var(--rumo-dark-page) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .campo label {
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .campo label .dica {
+  color: var(--rumo-dark-subtle) !important;
+}
+
+/* Tabelas: o zebrado nunca pode voltar ao cinza claro no tema escuro. */
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) {
+  color: var(--rumo-dark-text) !important;
+  background: transparent !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) thead th {
+  border-color: var(--rumo-dark-border) !important;
+  background: #001F38 !important;
+  color: #fff !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody tr {
+  background: var(--rumo-dark-surface) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody tr:nth-child(even) {
+  background: var(--rumo-dark-surface-alt) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody td,
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody .sticky-col {
+  border-color: var(--rumo-dark-border) !important;
+  background: transparent !important;
+  color: var(--rumo-dark-muted) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody td strong {
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody tr:hover {
+  background: rgba(127, 224, 108, .13) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody tr:hover td,
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) tbody tr:hover .sticky-col {
+  background: transparent !important;
+  color: #fff !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app :is(table.tabela, .tabela) a {
+  color: var(--rumo-verde-claro) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app tr.linha-alerta {
+  background: rgba(255, 107, 107, .11) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .app tr.linha-alerta td {
+  background: transparent !important;
+}
+
+/* Blocos secundários, progresso e alertas. */
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .serie-metricas > div,
+  .barra-progresso,
+  .barra-preenchimento,
+  .serie-lotes,
+  .serie-liberacao,
+  .parecer-texto,
+  .motivo-card,
+  .lote-serie-chip,
+  .weekly-bars,
+  .weekly-barbox,
+  .history-chip,
+  .dossie-item
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background: rgba(255, 255, 255, .055) !important;
+  color: var(--rumo-dark-muted) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .aviso-info,
+  .alerta-serie,
+  .alerta-preenchimento-topo,
+  .serie-liberacao.pendente
+) {
+  border-color: rgba(251, 211, 0, .42) !important;
+  background: rgba(251, 211, 0, .10) !important;
+  color: var(--rumo-dark-muted) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) :is(
+  .aviso-info.erro,
+  .alerta-serie.obrigatorio,
+  .safeculture-erros
+) {
+  border-color: rgba(255, 107, 107, .42) !important;
+  background: rgba(255, 107, 107, .10) !important;
+}
+
+/* Leitor iAuditor: converte o aplicativo encapsulado para os mesmos tokens. */
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app {
+  --bg: var(--rumo-dark-page);
+  --surface: var(--rumo-dark-surface);
+  --surface-2: var(--rumo-dark-surface-alt);
+  --line: var(--rumo-dark-border);
+  --line-strong: rgba(215, 224, 229, .38);
+  --text: var(--rumo-dark-text);
+  --muted: var(--rumo-dark-subtle);
+  --green-soft: rgba(127, 224, 108, .14);
+  --red-soft: rgba(255, 107, 107, .14);
+  --blue-soft: rgba(50, 166, 230, .15);
+  --yellow-soft: rgba(251, 211, 0, .15);
+  --purple-soft: rgba(159, 75, 185, .18);
+  color: var(--rumo-dark-text) !important;
+  background: transparent !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app :is(
+  .page-card,
+  .dropzone,
+  .tablewrap,
+  .idcard,
+  .history-card,
+  .history-stat,
+  .history-summary,
+  .history-chip,
+  .notice
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background: var(--rumo-dark-surface) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app :is(
+  input,
+  select,
+  textarea,
+  .btn--ghost,
+  .tab
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background: var(--rumo-dark-page) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app :is(h1, h2, h3, .valor, .notice b) {
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app :is(table, thead, tbody, tr, td) {
+  border-color: var(--rumo-dark-border) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app tbody tr:nth-child(even) {
+  background: var(--rumo-dark-surface-alt) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .iauditor-app tbody tr:hover {
+  background: rgba(127, 224, 108, .13) !important;
+}
+
+/* Flash Cards: acompanha o tema global mesmo antes do JS sincronizar. */
+body[data-tema="escuro"]:not(:has(.login-page)) .flashcards-integrado {
+  --bg: var(--rumo-dark-page);
+  --bg-soft: var(--rumo-dark-surface);
+  --surface: rgba(0, 56, 101, .94);
+  --surface-strong: var(--rumo-dark-surface-alt);
+  --line: var(--rumo-dark-border);
+  --line-strong: rgba(215, 224, 229, .38);
+  --text: var(--rumo-dark-text);
+  --muted: var(--rumo-dark-subtle);
+  --muted-2: #9FB5C1;
+  color: var(--rumo-dark-text) !important;
+  background:
+    linear-gradient(90deg, rgba(50, 166, 230, .05) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(50, 166, 230, .05) 1px, transparent 1px),
+    var(--rumo-dark-page) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .flashcards-integrado :is(
+  .panel,
+  .metric-card,
+  .flashcard-face,
+  .question-card,
+  .result-box,
+  .review-row,
+  .quick-save
+) {
+  border-color: var(--rumo-dark-border) !important;
+  background-color: var(--rumo-dark-surface) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+body[data-tema="escuro"]:not(:has(.login-page)) .flashcards-integrado :is(input, select, textarea, button.outline) {
+  border-color: var(--rumo-dark-border) !important;
+  background: var(--rumo-dark-page) !important;
+  color: var(--rumo-dark-text) !important;
+}
+
+/* Manter o modo de impressão claro, independentemente do tema ativo. */
+@media print {
+  body[data-tema="escuro"] {
+    color-scheme: light;
   }
 }
