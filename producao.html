@@ -127,12 +127,7 @@
             <div class="campo"><label>Total da Produção <span class="obrig">*</span></label><input id="total" type="number" min="0" required></div>
 
             <div class="form-secao">Datas e Cura</div>
-            <div class="campo">
-              <label>Data de Fabricação <span class="obrig">*</span></label>
-              <input id="dataFabricacao" type="date" required>
-              <label for="horaFabricacao" style="margin-top:8px">Horário <span class="obrig">*</span></label>
-              <input id="horaFabricacao" type="time" required>
-            </div>
+            <div class="campo"><label>Data de Fabricação <span class="dica">(data e hora)</span> <span class="obrig">*</span></label><input id="dataFabricacaoEm" type="datetime-local" required></div>
             <div class="campo"><label>Cura 14 dias</label><input id="cura14" type="date"></div>
             <div class="campo"><label>Cura 28 dias</label><input id="cura28" type="date"></div>
             <div class="campo"><label>Desmolde <span class="dica">(data e hora)</span></label><input id="desmoldeEm" type="datetime-local"></div>
@@ -225,7 +220,7 @@
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260721-cura-termica-v1"></script>
   <script src="js/indicadores-qualidade.js?v=20260612-saude-projetos-v3"></script>
-  <script src="js/producao.js?v=20260803-datas-cura-v1"></script>
+  <script src="js/producao.js?v=20260803-fabricacao-data-hora-v2"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

@@ -18,7 +18,7 @@ const GRUPOS_PREENCHIMENTO = [
   {
     nome: 'Datas e Cura',
     campos: [
-      ['dataFabricacao', 'Data de Fabricação'], ['horaFabricacao', 'Horário de Fabricação'],
+      ['dataFabricacaoEm', 'Data e Horário de Fabricação'],
       ['cura14', 'Cura 14 dias'], ['cura28', 'Cura 28 dias'],
       ['desmoldeEm', 'Desmolde'], ['tempoCura', 'Tempo de Cura']
     ]
@@ -54,7 +54,7 @@ const GRUPOS_PREENCHIMENTO = [
   { nome: 'Resultado e Status', campos: [['status', 'Status']] }
 ];
 
-const CAMPOS = ['fornecedor','pista','pedido','lote','projeto','tipo','total','dataFabricacao','horaFabricacao','cura14','cura28',
+const CAMPOS = ['fornecedor','pista','pedido','lote','projeto','tipo','total','dataFabricacaoEm','cura14','cura28',
   'desmoldeEm','tempoCura','comUsp','uspLote','ombreira','loteOmbreira','tempIni','tempMeio','tempFim',
   'slumpIniA','slumpIniE','slumpMeioA','slumpMeioE','slumpFimA','slumpFimE',
   'desproIni','desproMeio','desproFim',
@@ -77,7 +77,7 @@ const STATUS_LOTE = Object.freeze({
 const TOLERANCIA_ENSAIO_28 = 1;
 
 const CAMPOS_STATUS_AUTOMATICO = [
-  'dataFabricacao', 'cura14', 'cura28',
+  'dataFabricacaoEm', 'cura14', 'cura28',
   'comp14Cp1', 'comp14Cp2', 'tracao14Cp1', 'tracao14Cp2',
   'comp28Cp1', 'comp28Cp2', 'tracao28Cp1', 'tracao28Cp2',
   'serie', 'iauditor', 'ensaiados', 'aAnalisar', 'reprovados', 'aprovado', 'status'
@@ -121,8 +121,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.addEventListener('input', () => aplicarStatusAutomaticoFormulario());
     el.addEventListener('change', () => aplicarStatusAutomaticoFormulario());
   });
-  document.getElementById('dataFabricacao')?.addEventListener('change', atualizarCurasPelaFabricacao);
-  ['dataFabricacao', 'horaFabricacao', 'desmoldeEm'].forEach(id => {
+  document.getElementById('dataFabricacaoEm')?.addEventListener('change', atualizarCurasPelaFabricacao);
+  ['dataFabricacaoEm', 'desmoldeEm'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', calcularTempoCuraFormulario);
   });
 
@@ -332,6 +332,8 @@ function registroDoFormulario() {
     const el = document.getElementById(c);
     if (el) reg[c] = el.value;
   });
+  reg.dataFabricacao = String(reg.dataFabricacaoEm || '').slice(0, 10);
+  reg.horaFabricacao = String(reg.dataFabricacaoEm || '').slice(11, 16);
   reg.lotesOmbreira = coletarLotesOmbreira();
   reg.loteOmbreira = U.juntarLotesOmbreira(reg.lotesOmbreira);
   reg.curaTermica = !!document.getElementById('curaTermica')?.checked;
@@ -349,7 +351,7 @@ function aplicarStatusAutomaticoFormulario() {
 }
 
 function atualizarCurasPelaFabricacao() {
-  const data = document.getElementById('dataFabricacao')?.value;
+  const data = document.getElementById('dataFabricacaoEm')?.value?.slice(0, 10);
   if (!data) return aplicarStatusAutomaticoFormulario();
   const cura14 = document.getElementById('cura14');
   const cura28 = document.getElementById('cura28');
@@ -358,9 +360,9 @@ function atualizarCurasPelaFabricacao() {
   return aplicarStatusAutomaticoFormulario();
 }
 
-function calcularTempoCura(dataFabricacao, horaFabricacao, desmoldeEm) {
-  if (!dataFabricacao || !horaFabricacao || !desmoldeEm) return '';
-  const inicio = new Date(`${dataFabricacao}T${horaFabricacao}`);
+function calcularTempoCura(fabricacaoEm, desmoldeEm) {
+  if (!fabricacaoEm || !desmoldeEm) return '';
+  const inicio = new Date(fabricacaoEm);
   const fim = new Date(desmoldeEm);
   const diferencaMs = fim.getTime() - inicio.getTime();
   if (!Number.isFinite(diferencaMs) || diferencaMs < 0) return '';
@@ -371,11 +373,10 @@ function calcularTempoCura(dataFabricacao, horaFabricacao, desmoldeEm) {
 function calcularTempoCuraFormulario() {
   const tempo = document.getElementById('tempoCura');
   if (!tempo) return;
-  const dataFabricacao = document.getElementById('dataFabricacao')?.value;
-  const horaFabricacao = document.getElementById('horaFabricacao')?.value;
+  const fabricacaoEm = document.getElementById('dataFabricacaoEm')?.value;
   const desmoldeEm = document.getElementById('desmoldeEm')?.value;
-  if (!dataFabricacao || !horaFabricacao || !desmoldeEm) return;
-  tempo.value = calcularTempoCura(dataFabricacao, horaFabricacao, desmoldeEm);
+  if (!fabricacaoEm || !desmoldeEm) return;
+  tempo.value = calcularTempoCura(fabricacaoEm, desmoldeEm);
 }
 
 function sugerirSerieAutomaticaProducao(reg) {
@@ -674,10 +675,9 @@ async function salvar() {
   const projeto = document.getElementById('projeto').value;
   const tipo = document.getElementById('tipo').value;
   const total = document.getElementById('total').value;
-  const dataFab = document.getElementById('dataFabricacao').value;
-  const horaFab = document.getElementById('horaFabricacao').value;
+  const fabricacaoEm = document.getElementById('dataFabricacaoEm').value;
   const status = document.getElementById('status').value;
-  if (!lote || !projeto || !tipo || !total || !dataFab || !horaFab || !status) {
+  if (!lote || !projeto || !tipo || !total || !fabricacaoEm || !status) {
     App.toast('Preencha os campos obrigatórios (*).', 'aviso'); return;
   }
 
@@ -867,8 +867,9 @@ function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
     bitola: r.bitola || '',
     tipo: r.tipo_dormente || '',
     total: valorBanco(r.total_produzido),
-    dataFabricacao: dataBanco(r.data_fabricacao),
-    horaFabricacao: String(r.hora_fabricacao || '').slice(0, 5),
+    dataFabricacaoEm: dataHoraFabricacaoDoBanco(r),
+    dataFabricacao: dataBanco(r.fabricacao_em || r.data_fabricacao),
+    horaFabricacao: String(r.fabricacao_em || r.hora_fabricacao || '').slice(r.fabricacao_em ? 11 : 0, r.fabricacao_em ? 16 : 5),
     cura14: dataBanco(r.cura_14),
     cura28: dataBanco(r.cura_28),
     curaTermica: !!r.cura_termica,
@@ -944,6 +945,7 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
     total_produzido: inteiroOuZero(reg.total),
     data_fabricacao: dataOuNull(reg.dataFabricacao),
     hora_fabricacao: textoOuNull(reg.horaFabricacao),
+    fabricacao_em: textoOuNull(reg.dataFabricacaoEm),
     cura_14: dataOuNull(reg.cura14),
     cura_28: dataOuNull(reg.cura28),
     cura_termica: !!reg.curaTermica,
@@ -1018,6 +1020,13 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
 
 function valorBanco(v) { return v == null ? '' : String(v); }
 function dataHoraLocalBanco(v) { return v ? String(v).slice(0, 16) : ''; }
+function dataHoraFabricacaoDoBanco(r) {
+  if (r?.fabricacao_em) return dataHoraLocalBanco(r.fabricacao_em);
+  const data = dataBanco(r?.data_fabricacao);
+  if (!data) return '';
+  const hora = String(r?.hora_fabricacao || '00:00').slice(0, 5);
+  return `${data}T${hora}`;
+}
 
 // Resistências por corpo de prova (CP 1 / CP 2).
 // Gera os campos separados do formulário e mantém o campo combinado
