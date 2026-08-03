@@ -127,10 +127,16 @@
             <div class="campo"><label>Total da Produção <span class="obrig">*</span></label><input id="total" type="number" min="0" required></div>
 
             <div class="form-secao">Datas e Cura</div>
-            <div class="campo"><label>Data de Fabricação <span class="obrig">*</span></label><input id="dataFabricacao" type="date" required></div>
+            <div class="campo">
+              <label>Data de Fabricação <span class="obrig">*</span></label>
+              <input id="dataFabricacao" type="date" required>
+              <label for="horaFabricacao" style="margin-top:8px">Horário <span class="obrig">*</span></label>
+              <input id="horaFabricacao" type="time" required>
+            </div>
             <div class="campo"><label>Cura 14 dias</label><input id="cura14" type="date"></div>
             <div class="campo"><label>Cura 28 dias</label><input id="cura28" type="date"></div>
-            <div class="campo"><label>Tempo de Cura <span class="dica">(horas)</span></label><input id="tempoCura" type="text" placeholder="ex.: 14,5"></div>
+            <div class="campo"><label>Desmolde <span class="dica">(data e hora)</span></label><input id="desmoldeEm" type="datetime-local"></div>
+            <div class="campo"><label>Tempo de Cura <span class="dica">(horas, calculado automaticamente e editável)</span></label><input id="tempoCura" type="text" inputmode="decimal" placeholder="ex.: 14,5"></div>
             <div class="campo full"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500"><input id="curaTermica" type="checkbox" style="width:16px;height:16px;accent-color:var(--azul-claro)"> Cura Térmica <span class="dica">(exige ensaio de acompanhamento de 14 dias; libera só aos 28 dias)</span></label></div>
 
             <div class="form-secao">USP e Ombreiras</div>
@@ -219,7 +225,7 @@
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260721-cura-termica-v1"></script>
   <script src="js/indicadores-qualidade.js?v=20260612-saude-projetos-v3"></script>
-  <script src="js/producao.js?v=20260723-contraensaios-v1"></script>
+  <script src="js/producao.js?v=20260803-datas-cura-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
