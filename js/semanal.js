@@ -36,8 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   atualizarFiltroSemanaSemanal();
 
   ['fFornecedor', 'fProjeto', 'fBitola'].forEach(id => {
-    document.getElementById(id)?.addEventListener('input', render);
-    document.getElementById(id)?.addEventListener('change', render);
+    document.getElementById(id)?.addEventListener('input', aoTrocarFiltroBase);
+    document.getElementById(id)?.addEventListener('change', aoTrocarFiltroBase);
   });
   document.getElementById('fSemana')?.addEventListener('change', () => {
     U.aplicarSemanaSelecionada('fSemana', 'fPeriodoIni', 'fPeriodoFim');
@@ -97,8 +97,9 @@ async function carregarSemanal() {
     Semanal.carregando = false;
 
     atualizarFiltrosComDados();
-    const p = periodoUltimaSemanaDisponivel();
-    atualizarFiltroSemanaSemanal(U.valorSemana(p));
+    const f = filtros();
+    const p = periodoUltimaSemanaDisponivel(f);
+    atualizarFiltroSemanaSemanal(U.valorSemana(p), f);
     if (p) {
       document.getElementById('fPeriodoIni').value = p.ini;
       document.getElementById('fPeriodoFim').value = p.fim;
@@ -148,6 +149,63 @@ function filtros() {
   };
 }
 
+/* Fornecedor, projeto e bitola são comparados sempre normalizados: variações
+   de caixa/acento vindas de importações não podem zerar o indicador. */
+function combinaFiltroBase(r, f) {
+  const filtro = f || {};
+  if (filtro.fornecedor && !mesmoTexto(r.fornecedor, filtro.fornecedor)) return false;
+  if (filtro.projeto && !mesmoTexto(r.projeto, filtro.projeto)) return false;
+  if (filtro.bitola && U.bitolaDe(r) !== filtro.bitola) return false;
+  return true;
+}
+
+/* A página abre na última semana com dados de QUALQUER fornecedor. Ao trocar
+   o fornecedor (ou projeto/bitola) o período ficava parado nessa semana, então
+   quem parou de produzir há algumas semanas aparecia zerado mesmo tendo
+   registros no sistema. Aqui a semana acompanha a seleção. */
+function aoTrocarFiltroBase() {
+  ajustarPeriodoParaFiltro();
+  render();
+}
+
+function ajustarPeriodoParaFiltro() {
+  if (Semanal.carregando || Semanal.erro) return;
+  const f = filtros();
+  const datas = datasSemanaSemanal(f);
+  atualizarFiltroSemanaSemanal(undefined, f);
+  if (!datas.length) return;
+  if (datas.some(d => dentroPeriodoIntervalo('', '', d, f.ini, f.fim))) {
+    sincronizarSemanaSemanal();
+    return;
+  }
+  const p = periodoUltimaSemanaDisponivel(f);
+  if (!p) return;
+  aplicarPeriodoSemanal(p);
+  const info = U.semanaOperacionalInfo(p.ini);
+  App.toast(`${rotuloSelecaoSemanal(f)} sem registros na semana anterior. Exibindo a Sem. ${info.semana}/${info.ano} (${U.dataBR(p.ini)} a ${U.dataBR(p.fim)}).`, 'aviso');
+}
+
+function rotuloSelecaoSemanal(f) {
+  const partes = [f.fornecedor, f.projeto, f.bitola].filter(Boolean);
+  return partes.length ? partes.join(' · ') : 'Seleção atual';
+}
+
+function aplicarPeriodoSemanal(p) {
+  const ini = document.getElementById('fPeriodoIni');
+  const fim = document.getElementById('fPeriodoFim');
+  if (ini) ini.value = p.ini;
+  if (fim) fim.value = p.fim;
+  sincronizarSemanaSemanal();
+}
+
+function irParaUltimaSemanaComDados() {
+  const p = periodoUltimaSemanaDisponivel(filtros());
+  if (!p) return;
+  aplicarPeriodoSemanal(p);
+  render();
+}
+window.irParaUltimaSemanaComDados = irParaUltimaSemanaComDados;
+
 function render() {
   const alvoKpis = document.getElementById('kpis');
   const alvoLista = document.getElementById('lista');
@@ -186,9 +244,7 @@ function render() {
   const f = filtros();
   const todos = Semanal.registros;
   const lista = todos.filter(r => {
-    if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
-    if (f.projeto && !mesmoTexto(r.projeto, f.projeto)) return false;
-    if (f.bitola && U.bitolaDe(r) !== f.bitola) return false;
+    if (!combinaFiltroBase(r, f)) return false;
     if (!dentroPeriodoIntervalo(r.periodoIni, r.periodoFim, r.data, f.ini, f.fim)) return false;
     return true;
   }).sort((a, b) =>
@@ -240,8 +296,7 @@ function render() {
   renderInspecoesConcretagemSemana(listaIConcret);
 
   if (!lista.length) {
-    alvoLista.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Sem indicador no filtro atual</h3>
-      <p>${todos.length ? 'Ajuste os filtros.' : 'Cadastre Produção, Reprovados e Ensaios de Liberação para gerar o indicador automaticamente.'}</p></div>`;
+    alvoLista.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Sem indicador no filtro atual</h3>${vazioIndicadorSemanal(f, todos)}</div>`;
     return;
   }
 
@@ -251,6 +306,22 @@ function render() {
       <th class="right">Produz.</th><th class="right">Refugos</th><th class="right">% Reprova</th>
       <th class="right">Ens. Real.</th><th class="right">Aprov.</th><th class="right">Reprov.</th><th class="right">Pend.</th>
     </tr></thead><tbody>${lista.map(linhaIndicador).join('')}</tbody></table></div>`;
+}
+
+/* Diferencia "não existe dado nenhum" de "existe, mas fora da semana aberta" —
+   sem isso o fornecedor com produção parada parecia não ter registro algum. */
+function vazioIndicadorSemanal(f, todos) {
+  if (!todos.length) {
+    return '<p>Cadastre Produção, Reprovados e Ensaios de Liberação para gerar o indicador automaticamente.</p>';
+  }
+  const p = periodoUltimaSemanaDisponivel(f);
+  if (!p) {
+    return `<p>Nenhum registro no Supabase para <strong>${U.esc(rotuloSelecaoSemanal(f))}</strong>, em qualquer semana.</p>`;
+  }
+  const info = U.semanaOperacionalInfo(p.ini);
+  return `<p>Há registros para esta seleção fora do período filtrado. Último período com dados:
+    <strong>Sem. ${info.semana}/${info.ano} (${U.dataBR(p.ini)} a ${U.dataBR(p.fim)})</strong>.</p>
+    <button class="btn btn-secundario" onclick="irParaUltimaSemanaComDados()">Ir para a última semana com dados</button>`;
 }
 
 function linhaIndicador(r) {
@@ -284,9 +355,7 @@ function definirEspelhoSemanal(idLista, idContador, html) {
 
 function filtrarReprovadosSemana(f) {
   return Semanal.rep.filter(r => {
-    if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
-    if (f.projeto && !mesmoTexto(r.projeto, f.projeto)) return false;
-    if (f.bitola && U.bitolaDe(r) !== f.bitola) return false;
+    if (!combinaFiltroBase(r, f)) return false;
     if (!dentroPeriodoIntervalo(r.periodoIni, r.periodoFim, r.dataProducao, f.ini, f.fim)) return false;
     return true;
   }).sort((a, b) =>
@@ -297,9 +366,7 @@ function filtrarReprovadosSemana(f) {
 
 function filtrarEnsaiosSemana(f) {
   return Semanal.ens.filter(r => {
-    if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
-    if (f.projeto && !mesmoTexto(r.projeto, f.projeto)) return false;
-    if (f.bitola && U.bitolaDe(r) !== f.bitola) return false;
+    if (!combinaFiltroBase(r, f)) return false;
     if (!dentroPeriodoIntervalo('', '', r.dataEnsaio, f.ini, f.fim)) return false;
     return true;
   }).sort((a, b) =>
@@ -413,9 +480,7 @@ function rotuloSemanaEnsaioSemanal(r) {
    --------------------------------------------------------------------- */
 function filtrarAcompanhamentosSemana(f) {
   return Semanal.acomp.filter(r => {
-    if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
-    if (f.projeto && !mesmoTexto(r.projeto, f.projeto)) return false;
-    if (f.bitola && U.bitolaDe(r) !== f.bitola) return false;
+    if (!combinaFiltroBase(r, f)) return false;
     if (!dentroPeriodoIntervalo('', '', r.dataEnsaio, f.ini, f.fim)) return false;
     return true;
   }).sort((a, b) =>
@@ -485,9 +550,7 @@ function diasEntreDatasSemanal(iniIso, fimIso) {
    --------------------------------------------------------------------- */
 function filtrarEspelhoPorData(base, f, campoData) {
   return (base || []).filter(r => {
-    if (f.fornecedor && r.fornecedor !== f.fornecedor) return false;
-    if (f.projeto && !mesmoTexto(r.projeto, f.projeto)) return false;
-    if (f.bitola && U.bitolaDe(r) !== f.bitola) return false;
+    if (!combinaFiltroBase(r, f)) return false;
     if (!dentroPeriodoIntervalo('', '', r[campoData], f.ini, f.fim)) return false;
     return true;
   }).sort((a, b) =>
@@ -723,29 +786,30 @@ function consolidarSemanas(prod, rep, ens) {
   return Object.values(mapa);
 }
 
-function atualizarFiltroSemanaSemanal(selecionado) {
-  U.preencherFiltroSemana('fSemana', datasSemanaSemanal(), selecionado ?? document.getElementById('fSemana')?.value, 'Todas as semanas');
+function atualizarFiltroSemanaSemanal(selecionado, f) {
+  U.preencherFiltroSemana('fSemana', datasSemanaSemanal(f), selecionado ?? document.getElementById('fSemana')?.value, 'Todas as semanas');
 }
 
 function sincronizarSemanaSemanal() {
   U.sincronizarFiltroSemana('fSemana', document.getElementById('fPeriodoIni')?.value || '', document.getElementById('fPeriodoFim')?.value || '');
 }
 
-function datasSemanaSemanal() {
+function datasSemanaSemanal(f) {
   const datas = [];
-  Semanal.prod.forEach(r => { if (r.dataFabricacao) datas.push(r.dataFabricacao); });
-  Semanal.rep.forEach(r => { [r.dataProducao, r.periodoIni, r.periodoFim].forEach(d => { if (d) datas.push(d); }); });
-  Semanal.ens.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
-  Semanal.acomp.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
-  Semanal.arranc.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
-  Semanal.bitolas.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
-  Semanal.inspPista.forEach(r => { if (r.dataInspecao) datas.push(r.dataInspecao); });
-  Semanal.inspConcret.forEach(r => { if (r.dataInspecao) datas.push(r.dataInspecao); });
+  const ok = r => combinaFiltroBase(r, f);
+  Semanal.prod.forEach(r => { if (r.dataFabricacao && ok(r)) datas.push(r.dataFabricacao); });
+  Semanal.rep.forEach(r => { if (ok(r)) [r.dataProducao, r.periodoIni, r.periodoFim].forEach(d => { if (d) datas.push(d); }); });
+  Semanal.ens.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });
+  Semanal.acomp.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });
+  Semanal.arranc.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });
+  Semanal.bitolas.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });
+  Semanal.inspPista.forEach(r => { if (r.dataInspecao && ok(r)) datas.push(r.dataInspecao); });
+  Semanal.inspConcret.forEach(r => { if (r.dataInspecao && ok(r)) datas.push(r.dataInspecao); });
   return datas;
 }
 
-function periodoUltimaSemanaDisponivel() {
-  const datas = datasSemanaSemanal();
+function periodoUltimaSemanaDisponivel(f) {
+  const datas = datasSemanaSemanal(f);
   const ultima = datas.sort(compararData).pop();
   return ultima ? U.periodoSemanaOperacional(ultima) : null;
 }
