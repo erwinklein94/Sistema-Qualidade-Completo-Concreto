@@ -347,7 +347,7 @@ function editar(id) {
   document.getElementById('id').value = r.id;
   popularSelectLotes(r.producaoLoteId || '');
   CAMPOS.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
-  if (r.dataProducao) preencherSemanaEPeriodo(r.dataProducao, false);
+  if (r.dataProducao) preencherSemanaEPeriodo(r.dataProducao, true);
   document.getElementById('modalTitulo').textContent = `Editar reprova — lote ${r.lote}`;
   document.getElementById('modal').classList.add('aberto');
 }
@@ -436,22 +436,12 @@ function preencherSemanaEPeriodo(data, sobrescreverPeriodo = true) {
 }
 
 function periodoRegistro(r) {
-  const data = r.dataProducao || r.periodoIni || r.periodoFim;
-  const info = U.semanaOperacionalInfo(data);
-  const ini = r.periodoIni || info.ini || data || '';
-  const fim = r.periodoFim || info.fim || data || '';
-  return {
-    data,
-    ini,
-    fim,
-    semana: r.semana || info.semana || '',
-    ano: r.ano || info.ano || '',
-  };
+  const p = U.periodoReprova(r);
+  return { data: r.dataProducao || p.ini, ini: p.ini, fim: p.fim, semana: p.semana, ano: p.ano };
 }
 
 function periodoUltimaSemanaDisponivel() {
-  const datas = [];
-  REPROVADOS_REGISTROS.forEach(r => [r.dataProducao, r.periodoFim, r.periodoIni].forEach(d => { if (d) datas.push(d); }));
+  const datas = datasSemanaReprovados();
   const ultima = datas.sort(compararData).pop();
   return ultima ? U.periodoSemanaOperacional(ultima) : null;
 }
@@ -474,7 +464,7 @@ function sincronizarSemanaReprovados() {
 
 function datasSemanaReprovados() {
   const datas = [];
-  REPROVADOS_REGISTROS.forEach(r => [r.dataProducao, r.periodoFim, r.periodoIni].forEach(d => { if (d) datas.push(d); }));
+  REPROVADOS_REGISTROS.forEach(r => { const p = U.periodoReprova(r); if (p.ini) datas.push(p.ini); });
   return datas;
 }
 
@@ -532,8 +522,12 @@ function mapReprovadoParaBanco(reg) {
   const info = U.semanaOperacionalInfo(reg.dataProducao);
   const prod = obterProducao(reg.producaoLoteId) || encontrarProducaoPorLote(reg.lote, reg.fornecedor);
   const bitola = U.bitolaDe({ bitola: reg.bitola || prod?.bitola, tipo: reg.tipo || prod?.tipo, projeto: reg.projeto || prod?.projeto });
-  const periodoIni = dataOuNull(reg.periodoIni) || info.ini || null;
-  const periodoFim = dataOuNull(reg.periodoFim) || info.fim || null;
+  // O período segue a data de produção, como semana/ano logo abaixo e como
+  // fazem Produção e Ensaios. Antes o valor do formulário vencia: se o campo
+  // tivesse ficado com a semana do filtro da tela, a reprova era gravada com
+  // um período que não era o dela e depois aparecia na semana errada.
+  const periodoIni = info.ini || dataOuNull(reg.periodoIni) || null;
+  const periodoFim = info.fim || dataOuNull(reg.periodoFim) || null;
   const payload = {
     producao_lote_id: uuidOuNull(reg.producaoLoteId || prod?.id),
     fornecedor: textoOuNull(reg.fornecedor || prod?.fornecedor),

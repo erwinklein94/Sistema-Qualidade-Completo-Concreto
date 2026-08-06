@@ -356,7 +356,8 @@ function definirEspelhoSemanal(idLista, idContador, html) {
 function filtrarReprovadosSemana(f) {
   return Semanal.rep.filter(r => {
     if (!combinaFiltroBase(r, f)) return false;
-    if (!dentroPeriodoIntervalo(r.periodoIni, r.periodoFim, r.dataProducao, f.ini, f.fim)) return false;
+    const p = U.periodoReprova(r);
+    if (!dentroPeriodoIntervalo(p.ini, p.fim, r.dataProducao, f.ini, f.fim)) return false;
     return true;
   }).sort((a, b) =>
     compararData(b.dataProducao || b.periodoFim, a.dataProducao || a.periodoFim) ||
@@ -418,14 +419,7 @@ function linhaReprovadoSemana(r) {
 }
 
 function periodoReprovaSemanal(r) {
-  const data = r.dataProducao || r.periodoIni || r.periodoFim;
-  const info = U.semanaOperacionalInfo(data);
-  return {
-    ini: r.periodoIni || info.ini || data || '',
-    fim: r.periodoFim || info.fim || data || '',
-    semana: r.semana || info.semana || '',
-    ano: r.ano || info.ano || '',
-  };
+  return U.periodoReprova(r);
 }
 
 function renderEnsaiosSemana(lista) {
@@ -764,9 +758,9 @@ function consolidarSemanas(prod, rep, ens) {
   });
 
   rep.forEach(r => {
-    const data = r.dataProducao || r.periodoIni || r.periodoFim;
-    if (!data) return;
-    const info = U.semanaOperacionalInfo(data);
+    const info = U.periodoReprova(r);
+    if (!info.ini) return;
+    const data = r.dataProducao || info.ini;
     const k = chave(info, r);
     if (!mapa[k]) mapa[k] = novo(info, r, data);
     mapa[k].dormRecusados += U.int(r.totalRefugos || 1);
@@ -798,7 +792,7 @@ function datasSemanaSemanal(f) {
   const datas = [];
   const ok = r => combinaFiltroBase(r, f);
   Semanal.prod.forEach(r => { if (r.dataFabricacao && ok(r)) datas.push(r.dataFabricacao); });
-  Semanal.rep.forEach(r => { if (ok(r)) [r.dataProducao, r.periodoIni, r.periodoFim].forEach(d => { if (d) datas.push(d); }); });
+  Semanal.rep.forEach(r => { if (ok(r)) { const p = U.periodoReprova(r); if (p.ini) datas.push(p.ini); } });
   Semanal.ens.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });
   Semanal.acomp.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });
   Semanal.arranc.forEach(r => { if (r.dataEnsaio && ok(r)) datas.push(r.dataEnsaio); });

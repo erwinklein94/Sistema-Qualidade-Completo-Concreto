@@ -449,6 +449,25 @@ const U = {
     return i.ini ? { ini: i.ini, fim: i.fim } : null;
   },
 
+  // A semana de uma reprova é sempre a da DATA DE PRODUÇÃO do dormente — a
+  // mesma base usada em Produção. Os campos periodo_inicio/periodo_fim
+  // gravados em registros antigos guardaram a semana em que o lançamento foi
+  // digitado, não a do dormente: por isso refugos de julho apareciam listados
+  // numa semana e contados em outra. Só caem no periodo_* gravado quando a
+  // reprova não tem data de produção.
+  periodoReprova(r) {
+    const reg = r || {};
+    const info = this.semanaOperacionalInfo(reg.dataProducao);
+    if (info.ini) return { ini: info.ini, fim: info.fim, semana: info.semana, ano: info.ano };
+    const alt = this.semanaOperacionalInfo(reg.periodoIni || reg.periodoFim);
+    return {
+      ini: alt.ini || reg.periodoIni || '',
+      fim: alt.fim || reg.periodoFim || '',
+      semana: alt.semana || reg.semana || '',
+      ano: alt.ano || reg.ano || '',
+    };
+  },
+
   valorSemana(info) {
     return info && info.ini && info.fim ? `${info.ini}|${info.fim}` : '';
   },

@@ -325,7 +325,11 @@ function dadosFiltrados() {
 
   return {
     prod: Dashboard.prod.filter(r => passaBase(r) && dentroPeriodoData(r.dataFabricacao, f.ini, f.fim)),
-    rep: Dashboard.rep.filter(r => passaBase(r) && dentroPeriodoIntervalo(r.periodoIni, r.periodoFim, r.dataProducao, f.ini, f.fim)),
+    rep: Dashboard.rep.filter(r => {
+      if (!passaBase(r)) return false;
+      const p = U.periodoReprova(r);
+      return dentroPeriodoIntervalo(p.ini, p.fim, r.dataProducao, f.ini, f.fim);
+    }),
     ens: Dashboard.ens.filter(r => passaBase(r) && dentroPeriodoData(r.dataEnsaio, f.ini, f.fim)),
     filtros: f,
   };
@@ -957,8 +961,8 @@ function agregarSemanalProjeto(prod, rep, filtros) {
 
   prod.forEach(r => { if (r.dataFabricacao) add(U.semanaOperacionalInfo(r.dataFabricacao), r, 'prod', r.total); });
   rep.forEach(r => {
-    const data = r.dataProducao || r.periodoIni || r.periodoFim;
-    if (data) add(U.semanaOperacionalInfo(data), r, 'rep', r.totalRefugos || 1);
+    const info = U.periodoReprova(r);
+    if (info.ini) add(info, r, 'rep', r.totalRefugos || 1);
   });
 
   const itens = Object.values(mapa).sort((a, b) =>
@@ -998,7 +1002,7 @@ function agregarMensalProjeto(prod, rep, filtros) {
 
   prod.forEach(r => { if (r.dataFabricacao) add(infoMesDashboard(r.dataFabricacao), r, 'prod', r.total); });
   rep.forEach(r => {
-    const data = r.dataProducao || r.periodoIni || r.periodoFim;
+    const data = r.dataProducao || U.periodoReprova(r).ini;
     if (data) add(infoMesDashboard(data), r, 'rep', r.totalRefugos || 1);
   });
 
@@ -1077,7 +1081,7 @@ function sincronizarSemanaDashboard() {
 function datasSemanaDashboard() {
   const datas = [];
   Dashboard.prod.forEach(r => { if (r.dataFabricacao) datas.push(r.dataFabricacao); });
-  Dashboard.rep.forEach(r => { [r.dataProducao, r.periodoIni, r.periodoFim].forEach(d => { if (d) datas.push(d); }); });
+  Dashboard.rep.forEach(r => { const p = U.periodoReprova(r); if (p.ini) datas.push(p.ini); });
   Dashboard.ens.forEach(r => { if (r.dataEnsaio) datas.push(r.dataEnsaio); });
   return datas;
 }
