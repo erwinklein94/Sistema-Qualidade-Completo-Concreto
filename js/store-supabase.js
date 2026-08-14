@@ -81,61 +81,6 @@ const StoreSupabase = (() => {
     return true;
   }
 
-  /* ---------------------------------------------------------------------
-     Ensaios Estáticos Concreto — formulário Cavan independente da
-     Produção nesta primeira etapa.
-     --------------------------------------------------------------------- */
-  async function listarEnsaiosEstaticosConcreto(filtros = {}) {
-    let q = db()
-      .from('ensaios_estaticos_concreto')
-      .select('*')
-      .order('data_moldagem', { ascending: false, nullsFirst: false })
-      .order('hora_moldagem', { ascending: false, nullsFirst: false })
-      .order('criado_em', { ascending: false, nullsFirst: false })
-      .limit(filtros.limite || 5000);
-
-    if (filtros.id) q = q.eq('id', filtros.id);
-    if (filtros.lote) q = q.eq('lote', filtros.lote);
-    if (filtros.cliente) q = q.eq('cliente', filtros.cliente);
-    if (filtros.projeto) q = q.eq('projeto', filtros.projeto);
-    if (filtros.pista) q = q.eq('pista', filtros.pista);
-    if (filtros.dataIni) q = q.gte('data_moldagem', filtros.dataIni);
-    if (filtros.dataFim) q = q.lte('data_moldagem', filtros.dataFim);
-
-    const { data, error } = await q;
-    if (error) throw error;
-    return data || [];
-  }
-
-  async function salvarEnsaioEstaticoConcreto(registro) {
-    const [acao, descricao] = acaoSalvar(registro);
-    exigirPermissao(acao, descricao);
-    const user = await usuarioAtual();
-    const payload = { ...registro, atualizado_por: user?.id || null };
-    const id = payload.id;
-
-    let query;
-    if (id) {
-      delete payload.id;
-      query = db().from('ensaios_estaticos_concreto').update(payload).eq('id', id);
-    } else {
-      delete payload.id;
-      payload.criado_por = user?.id || null;
-      query = db().from('ensaios_estaticos_concreto').insert(payload);
-    }
-
-    const { data, error } = await query.select().single();
-    if (error) throw error;
-    return data;
-  }
-
-  async function removerEnsaioEstaticoConcreto(id) {
-    exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('ensaios_estaticos_concreto').delete().eq('id', id);
-    if (error) throw error;
-    return true;
-  }
-
   async function listarPedidosDormentes(filtros = {}) {
     let q = db()
       .from('pedidos_dormentes')
@@ -874,9 +819,6 @@ const StoreSupabase = (() => {
     listarProducao,
     salvarProducao,
     removerProducao,
-    listarEnsaiosEstaticosConcreto,
-    salvarEnsaioEstaticoConcreto,
-    removerEnsaioEstaticoConcreto,
     listarPedidosDormentes,
     salvarPedidoDormente,
     removerPedidoDormente,
