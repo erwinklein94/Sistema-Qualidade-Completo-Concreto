@@ -17,6 +17,7 @@ const App = {
       { k: 'fluxoLiberacao', t: 'Painel de Séries', ic: ICN.trem, href: 'fluxo-liberacao.html', group: 'concreto' },
       { k: 'pedidos', t: 'Pedidos', ic: ICN.trem, href: 'pedidos.html', group: 'concreto' },
       { k: 'producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'producao.html', group: 'concreto' },
+      { k: 'ensaioEstaticoConcreto', t: 'Ensaio Estático Concreto', ic: ICN.ensaios, href: 'ensaio-estatico-concreto.html', group: 'concreto' },
       { k: 'reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'reprovados.html', group: 'concreto' },
       { k: 'ensaiosLiberacao', t: 'Ensaios de Liberação', ic: ICN.check, href: 'ensaios-liberacao.html', group: 'concreto' },
       { k: 'ensaiosAcompanhamento', t: 'Ensaios de Acompanhamento', ic: ICN.ensaios, href: 'ensaios-acompanhamento.html', group: 'concreto' },

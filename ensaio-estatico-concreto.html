@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ensaio Estático Concreto · Controle de Dormentes Rumo</title>
+  <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
+  <link rel="stylesheet" href="css/style.css?v=20260814-ensaio-estatico-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+  <link rel="stylesheet" href="css/ensaio-estatico-concreto.css?v=20260814-v1">
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina">
+        <div class="card ensaio-estatico-intro">
+          <div class="card-titulo">
+            <span class="acento">Ensaios Estáticos Concreto</span>
+            <span class="card-sub">Rastreabilidade de slump, desprotensão e resistências aos 7, 14 e 28 dias</span>
+          </div>
+          <p class="txt-cinza">
+            Formulário baseado na planilha da Cavan. Nesta primeira etapa, os registros ficam em um histórico próprio;
+            a integração automática com Produção de Dormentes será feita posteriormente.
+          </p>
+        </div>
+
+        <div class="barra-filtros ensaio-estatico-filtros">
+          <div class="busca-rapida campo">
+            <label>Buscar</label>
+            <input type="search" id="busca" placeholder="Lote, pista, projeto, responsável...">
+          </div>
+          <div class="campo"><label>Cliente</label><select id="fCliente"></select></div>
+          <div class="campo"><label>Projeto</label><select id="fProjeto"></select></div>
+          <div class="campo"><label>Pista</label><select id="fPista"></select></div>
+          <div class="campo"><label>Preenchimento</label><select id="fPreenchimento"></select></div>
+          <div class="campo"><label>Moldagem de</label><input type="date" id="fDataIni"></div>
+          <div class="campo"><label>Moldagem até</label><input type="date" id="fDataFim"></div>
+          <button class="btn btn-secundario btn-sm" type="button" onclick="limparFiltros()">Limpar filtros</button>
+        </div>
+
+        <div class="grid-kpi" id="kpis"></div>
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Registros de ensaio estático</span>
+            <span class="txt-mini txt-cinza" id="contador">0 registros</span>
+          </div>
+          <div id="lista"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal modal-ensaio-estatico">
+      <div class="modal-cab">
+        <div>
+          <h2 id="modalTitulo">Novo ensaio estático concreto</h2>
+          <p>Campos organizados conforme o formulário de rastreabilidade da Cavan.</p>
+        </div>
+        <button class="fechar-modal" type="button" onclick="fecharModal()" aria-label="Fechar">&#10005;</button>
+      </div>
+      <div class="modal-corpo">
+        <form id="form" onsubmit="return false">
+          <input type="hidden" id="id">
+
+          <section class="ensaio-form-bloco">
+            <div class="ensaio-form-titulo"><span>01</span><div><strong>Rastreabilidade</strong><small>Cliente, projeto, lote, pista e moldagem</small></div></div>
+            <div class="form-grid ensaio-form-grid">
+              <div class="campo"><label>Cliente <span class="obrig">*</span></label><input id="cliente" type="text" list="clientesConhecidos" required></div>
+              <div class="campo"><label>Projeto <span class="obrig">*</span></label><select id="projeto" required></select></div>
+              <div class="campo"><label>Lote <span class="obrig">*</span></label><input id="lote" type="text" required placeholder="Identificação do lote"></div>
+              <div class="campo"><label>Pista <span class="obrig">*</span></label><input id="pista" type="text" required placeholder="ex.: Pista 01"></div>
+              <div class="campo"><label>Data da moldagem <span class="obrig">*</span></label><input id="dataMoldagem" type="date" required></div>
+              <div class="campo"><label>Horário da moldagem</label><input id="horaMoldagem" type="time"></div>
+              <div class="campo"><label>Responsável</label><input id="responsavel" type="text" placeholder="Quem executou ou registrou"></div>
+            </div>
+          </section>
+
+          <section class="ensaio-form-bloco">
+            <div class="ensaio-form-titulo"><span>02</span><div><strong>Slump Test</strong><small>Abatimento e espalhamento em milímetros</small></div></div>
+            <div class="ensaio-medicoes-grid">
+              <div class="ensaio-medicao-cab">Medição</div><div class="ensaio-medicao-cab">Abatimento (mm)</div><div class="ensaio-medicao-cab">Espalhamento (mm)</div>
+              <label>01</label><input id="abatimento1" type="text" inputmode="decimal" placeholder="0,00"><input id="espalhamento1" type="text" inputmode="decimal" placeholder="0,00">
+              <label>02</label><input id="abatimento2" type="text" inputmode="decimal" placeholder="0,00"><input id="espalhamento2" type="text" inputmode="decimal" placeholder="0,00">
+              <label>03</label><input id="abatimento3" type="text" inputmode="decimal" placeholder="0,00"><input id="espalhamento3" type="text" inputmode="decimal" placeholder="0,00">
+            </div>
+          </section>
+
+          <section class="ensaio-form-bloco">
+            <div class="ensaio-form-titulo"><span>03</span><div><strong>Desprotensão</strong><small>Data/hora e resistência mínima de referência: 25 MPa</small></div></div>
+            <div class="form-grid ensaio-form-grid">
+              <div class="campo"><label>Data e hora da desprotensão</label><input id="desprotensaoEm" type="datetime-local"></div>
+              <div class="campo"><label>Resistência 01 (MPa)</label><input id="desprotensaoResistencia1" type="text" inputmode="decimal" placeholder="0,00"></div>
+              <div class="campo"><label>Resistência 02 (MPa)</label><input id="desprotensaoResistencia2" type="text" inputmode="decimal" placeholder="0,00"></div>
+              <div class="campo"><label>Resistência 03 (MPa)</label><input id="desprotensaoResistencia3" type="text" inputmode="decimal" placeholder="0,00"></div>
+            </div>
+          </section>
+
+          <section class="ensaio-form-bloco">
+            <div class="ensaio-form-titulo"><span>04</span><div><strong>Resistências por idade</strong><small>Compressão axial e tração na flexão em MPa</small></div></div>
+            <div id="idadesEnsaio" class="ensaio-idades"></div>
+          </section>
+
+          <section class="ensaio-form-bloco">
+            <div class="ensaio-form-titulo"><span>05</span><div><strong>Observações</strong><small>Informações complementares do ensaio</small></div></div>
+            <div class="campo"><textarea id="observacoes" placeholder="Registre ocorrências, condições do ensaio ou outras informações relevantes."></textarea></div>
+          </section>
+
+          <div class="form-acoes ensaio-form-acoes">
+            <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
+            <button type="button" class="btn btn-primario" id="btnSalvar" onclick="salvar()">Salvar ensaio</button>
+          </div>
+        </form>
+        <datalist id="clientesConhecidos"><option value="RUMO"></option></datalist>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalVer">
+    <div class="modal modal-ensaio-estatico">
+      <div class="modal-cab">
+        <h2 id="verTitulo">Detalhe do ensaio estático</h2>
+        <button class="fechar-modal" type="button" onclick="fecharVer()" aria-label="Fechar">&#10005;</button>
+      </div>
+      <div class="modal-corpo" id="verCorpo"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260523-2"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script>Auth.exigirLogin();</script>
+  <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/store-supabase.js?v=20260814-ensaio-estatico-v1"></script>
+  <script src="js/comum.js?v=20260814-ensaio-estatico-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/ensaio-estatico-concreto.js?v=20260814-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>

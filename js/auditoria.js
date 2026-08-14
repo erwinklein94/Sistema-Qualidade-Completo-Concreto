@@ -12,6 +12,7 @@ const AUDITORIA_ACAO_META = {
 
 const AUDITORIA_TABELA_META = {
   producao_lotes: { rotulo: 'Produção', classe: 'auditoria-area-producao' },
+  ensaios_estaticos_concreto: { rotulo: 'Ensaio Estático Concreto', classe: 'auditoria-area-ensaio' },
   pedidos_dormentes: { rotulo: 'Pedidos', classe: 'auditoria-area-producao' },
   reprovados: { rotulo: 'Reprovados', classe: 'auditoria-area-reprovados' },
   ensaios_liberacao: { rotulo: 'Ensaios de Liberação', classe: 'auditoria-area-ensaios' },
