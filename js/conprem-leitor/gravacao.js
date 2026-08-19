@@ -229,52 +229,76 @@ function linhasEnsaiosDormentes(linhas, ctx) {
 }
 
 
-/* Cada tipo de refugo do Resumo Semanal vira uma linha de reprovados, no mesmo
-   vocabulário de motivo que a tela de Dormentes Reprovados já usa. */
-const REFUGOS = [
-  ['fissuras', 'Trincas'],
-  ['vazios', 'Vazios'],
-  ['ombreiras', 'Ombreiras'],
-  ['quebras', 'Quebras'],
-  ['usp', 'USP'],
-  ['falhasFabricacao', 'Falha Operacional'],
-  ['outros', 'Outros'],
+/* As colunas do Resumo Semanal que vão direto para Dormentes Reprovados.
+   A lista espelha CAMPOS_RESUMO de js/reprovados.js — é a mesma tela que exibe
+   e edita esses campos depois. [chave no PDF, coluna no Supabase, conversão] */
+const RESUMO_PARA_REPROVADOS = [
+  ['numeroResumo', 'numero_resumo', 'texto'],
+  ['dataEmissao', 'data_emissao', 'data'],
+  ['unidade', 'unidade', 'texto'],
+  ['produto', 'produto_material', 'texto'],
+  ['pedidoLocal', 'pedido_local', 'texto'],
+  ['qtdFabricada', 'qtd_fabricada', 'inteiro'],
+  ['ensaiosRealizados', 'ensaios_realizados', 'inteiro'],
+  ['fissuras', 'refugo_fissuras', 'inteiro'],
+  ['vazios', 'refugo_vazios', 'inteiro'],
+  ['ombreiras', 'refugo_ombreiras', 'inteiro'],
+  ['quebras', 'refugo_quebras', 'inteiro'],
+  ['usp', 'refugo_usp', 'inteiro'],
+  ['falhasFabricacao', 'refugo_falhas_fabricacao', 'inteiro'],
+  ['outros', 'refugo_outros', 'inteiro'],
+  ['taxaRefugo', 'taxa_refugo', 'numero'],
+  ['ensaiosPorMil', 'ensaios_por_mil', 'numero'],
+  ['planejamentoInicio', 'planejamento_inicio', 'data'],
+  ['planejamentoFim', 'planejamento_fim', 'data'],
+  ['qtdPlanejada', 'qtd_planejada', 'inteiro'],
 ];
 
+/* Zero é resposta do resumo — "0 vazios" não é o mesmo que "não informado" —
+   então zero é gravado, e só o campo em branco vira null. */
+function valorResumo(bruto, tipo) {
+  if (tipo === 'data') return dataIso(bruto);
+  const s = texto(bruto);
+  if (!s) return null;
+  if (tipo === 'inteiro') return inteiro(s);
+  if (tipo === 'numero') { const n = Number(s.replace(',', '.')); return Number.isFinite(n) ? n : null; }
+  return s;
+}
+
+/* Uma linha por Resumo Semanal, não uma por motivo: o quadro é da semana
+   inteira e o refugo já vem repartido por tipo nas colunas. Somar as colunas
+   e as linhas seria contar o mesmo refugo duas vezes. */
 function linhasReprovados(linhas, ctx) {
-  const saida = [];
-  for (const l of linhas) {
+  return linhas.map((l) => {
     const { ano, semana } = semanaAno(l.semana);
     const inicio = dataIso(l.periodoInicio);
     const fim = dataIso(l.periodoFim);
-    // O Resumo Semanal conta refugo da semana inteira, não de um lote — mas a
-    // tabela de reprovados exige lote. Gravamos a semana no lugar, escrito de
-    // forma que ninguém confunda com número de lote de verdade.
+    // A tabela de reprovados exige lote, e o resumo é da semana toda.
+    // Gravamos a semana no lugar, escrita de forma que ninguém confunda com
+    // número de lote de verdade.
     const lote = `Semana ${texto(l.semana) || `${ano}-S${semana}`}`;
+    const colunas = Object.fromEntries(
+      RESUMO_PARA_REPROVADOS.map(([chave, coluna, tipo]) => [coluna, valorResumo(l[chave], tipo)]),
+    );
 
-    for (const [chave, motivo] of REFUGOS) {
-      const qtd = inteiro(l[chave]);
-      if (!qtd || qtd <= 0) continue;
-      saida.push({
-        chave: `${lote}|${motivo}`,
-        registro: {
-          fornecedor: FORNECEDOR,
-          lote,
-          projeto: ctx.projeto,
-          bitola: bitolaDoTexto(l.produto, ctx.projeto),
-          data_producao: fim || inicio,
-          periodo_inicio: inicio,
-          periodo_fim: fim,
-          semana,
-          ano,
-          motivo_indicador: motivo,
-          motivo_detalhado: `Resumo Semanal CONPREM — ${motivo}`,
-          total_refugos: qtd,
-        },
-      });
-    }
-  }
-  return saida;
+    return {
+      chave: lote,
+      registro: {
+        ...colunas,
+        fornecedor: FORNECEDOR,
+        lote,
+        projeto: ctx.projeto,
+        bitola: bitolaDoTexto(l.produto, ctx.projeto),
+        data_producao: fim || inicio,
+        periodo_inicio: inicio,
+        periodo_fim: fim,
+        semana,
+        ano,
+        motivo_detalhado: `Resumo Semanal CONPREM — fechamento da semana`,
+        total_refugos: inteiro(l.totalRefugos) || 0,
+      },
+    };
+  });
 }
 
 /* ------------------------------------------------------------- destinos */
@@ -301,10 +325,10 @@ export const DESTINOS = [
   {
     id: 'resumo',
     titulo: 'Dormentes Reprovados',
-    detalhe: 'Os refugos do Resumo Semanal viram uma linha por motivo, com a quantidade da semana.',
+    detalhe: 'O fechamento da semana vira uma linha: produção, ensaios, refugo por tipo, taxa e planejamento da semana seguinte.',
     mapear: linhasReprovados,
     listar: () => StoreSupabase.listarReprovados({ limite: 10000 }),
-    chaveExistente: (r) => `${texto(r.lote)}|${texto(r.motivo_indicador)}`,
+    chaveExistente: (r) => texto(r.lote),
     salvar: (registro) => StoreSupabase.salvarReprovado(registro),
   },
 ];

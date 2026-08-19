@@ -134,7 +134,7 @@ Depois da prévia, a tela oferece gravar cada aba na área Conprem:
 |---|---|---|
 | Rastreabilidade | Produção de Dormentes | um lote por linha, com as 32 colunas do mapa |
 | Ensaios | Ensaios de Dormentes | um ensaio por lote, com as 45 colunas do relatório |
-| Resumo Semanal | Dormentes Reprovados | uma linha por tipo de refugo com quantidade |
+| Resumo Semanal | Dormentes Reprovados | uma linha por semana, com as 23 colunas do resumo |
 
 ### As colunas do Mapa de Rastreabilidade
 
@@ -175,6 +175,36 @@ Dois campos que as tabelas exigem e os PDFs não trazem:
 - **Lote** (reprovados) — o Resumo Semanal conta refugo da semana inteira, não
   de um lote. Grava-se `Semana 2026-S33`, escrito assim justamente para não se
   confundir com número de lote de verdade.
+
+### O Resumo Semanal em Dormentes Reprovados
+
+A tela ganhou uma seção **Resumo Semanal CONPREM** com as 23 colunas do
+relatório: nº do resumo, data de emissão, unidade, produto/material,
+pedido/local, quantidade fabricada, ensaios realizados, o refugo repartido em
+sete tipos, total, taxa de refugo, ensaios por mil e o planejamento da semana
+seguinte. Semana, período e total de refugos já tinham campo; as outras 18 são
+novas (`supabase/2026-08-19-reprovados-campos-resumo-semanal.sql`).
+
+É **uma linha por semana**, não uma por motivo — o quadro é da semana inteira e
+o refugo já vem repartido em colunas; gravar os dois seria contar o mesmo
+refugo duas vezes. Como a tabela exige lote e o resumo não tem um, o campo
+recebe `Semana 2026-S33`.
+
+Duas consequências tratadas na tela:
+
+- O **ranking de motivos** do indicador abre a linha do resumo nos sete tipos
+  (Fissuras → Trincas, Falhas fabricação → Falha Operacional etc.), em vez de
+  jogar os 17 refugos em "Sem motivo informado". A soma dos tipos é o mesmo
+  `total_refugos` da linha, então nada é contado duas vezes.
+- O **motivo** deixa de ser obrigatório no formulário quando o registro tem
+  dados de resumo — um fechamento de semana não tem motivo único.
+
+Zero é resposta: `0 vazios` é diferente de "não informado", então zero é gravado
+e só o campo em branco vira nulo.
+
+A seção só aparece na ficha quando o registro tem esses dados — a reprova
+avulsa de um lote não ganha 18 linhas vazias, e as reprovas já registradas
+ficam intactas.
 
 A **bitola** é deduzida do produto, que aparece de duas formas nos relatórios:
 por extenso no Resumo (`BIT LARGA`) e em milímetros na Rastreabilidade
