@@ -7,7 +7,7 @@
   <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
   <link rel="stylesheet" href="css/style.css?v=20260819-area-conprem-v1">
   <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
-  <link rel="stylesheet" href="css/conprem-leitor.css?v=20260819-area-conprem-v1">
+  <link rel="stylesheet" href="css/conprem-leitor.css?v=20260819-area-conprem-v3">
 </head>
 <body>
   <div class="app" id="app">
@@ -81,6 +81,13 @@
           </p>
           <div class="gravacao__opcoes" id="opcoes-gravacao"></div>
           <div class="acoes">
+            <label class="campo">
+              <span class="campo__rotulo">Projeto dos lotes importados</span>
+              <select id="campo-projeto"></select>
+            </label>
+            <span class="txt-mini txt-cinza" id="dica-projeto">
+              Obrigatório: os PDFs da CONPREM trazem o produto e o destino, não o projeto.
+            </span>
             <div class="acoes__espaco"></div>
             <button type="button" class="btn btn-primario" id="botao-gravar" disabled>Gravar selecionados</button>
           </div>
@@ -111,7 +118,7 @@
       App.montarLayout('leitor', 'Leitor de Recebidos CONPREM', 'PDFs semanais da CONPREM para Excel — leitura no navegador, gravação opcional');
     });
   </script>
-  <script type="module" src="js/conprem-leitor/main.js?v=20260819-area-conprem-v2"></script>
+  <script type="module" src="js/conprem-leitor/main.js?v=20260819-area-conprem-v3"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

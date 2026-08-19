@@ -14,7 +14,7 @@ import { MODELOS, ORDEM_MODELOS } from './schema.js';
 import { gerarXlsx } from './xlsx/writer.js';
 import { desenharArquivos, iniciarDropzone } from './ui/dropzone.js';
 import { desenharAvisos, desenharResultados } from './ui/resultados.js';
-import { DESTINOS, gravarAba } from './gravacao.js';
+import { DESTINOS, gravarAba, projetoSugerido } from './gravacao.js';
 
 const el = (id) => document.getElementById(id);
 
@@ -32,9 +32,18 @@ const refs = {
   resumo: el('resumo-geral'),
   secaoGravacao: el('secao-gravacao'),
   opcoesGravacao: el('opcoes-gravacao'),
+  projeto: el('campo-projeto'),
   botaoGravar: el('botao-gravar'),
   retornoGravacao: el('retorno-gravacao'),
 };
+
+// Projeto não vem nos PDFs (eles trazem produto e destino) e as três tabelas de
+// destino exigem esse campo, então ele é escolhido aqui. A sugestão automática
+// só preenche quando o nome do projeto aparece escrito em algum relatório.
+refs.projeto.innerHTML = ['<option value="">Selecione o projeto...</option>']
+  .concat(CFG.listas.projetos.map((p) => `<option value="${p}">${p}</option>`))
+  .join('');
+let projetoEscolhidoAMao = false;
 
 const estado = {
   arquivos: [],
@@ -62,7 +71,10 @@ function atualizarBotoes() {
   const ocupado = estado.processando || estado.gravando;
   refs.exportar.disabled = !temAlgumaLinha() || ocupado;
   refs.limpar.disabled = !estado.arquivos.length || ocupado;
-  refs.botaoGravar.disabled = ocupado || !abasMarcadas().length || !podeGravar();
+  refs.botaoGravar.disabled = ocupado || !abasMarcadas().length || !podeGravar() || !refs.projeto.value;
+  refs.botaoGravar.title = !refs.projeto.value && abasMarcadas().length
+    ? 'Escolha o projeto dos lotes importados para liberar a gravação.'
+    : '';
 }
 
 function podeGravar() {
@@ -115,6 +127,11 @@ function desenharGravacao() {
   refs.secaoGravacao.hidden = !temAlgumaLinha();
   refs.opcoesGravacao.replaceChildren();
 
+  if (!projetoEscolhidoAMao) {
+    const sugerido = projetoSugerido(estado.resultados);
+    refs.projeto.value = sugerido && CFG.listas.projetos.includes(sugerido) ? sugerido : '';
+  }
+
   for (const destino of DESTINOS) {
     const linhas = totalLinhas(destino.id);
     const disponivel = linhas > 0 && podeGravar();
@@ -161,9 +178,10 @@ async function gravar() {
   refs.retornoGravacao.replaceChildren(criarCarregando('Gravando na área Conprem…'));
 
   const relatos = [];
+  const opcoes = { projeto: refs.projeto.value };
   for (const id of ids) {
     try {
-      relatos.push(await gravarAba(id, estado.resultados[id]));
+      relatos.push(await gravarAba(id, estado.resultados, opcoes));
     } catch (err) {
       relatos.push({ id, titulo: MODELOS[id].aba, gravados: 0, repetidos: 0, erros: [String(err.message || err)] });
     }
@@ -303,12 +321,17 @@ refs.semana.addEventListener('change', () => {
 refs.limpar.addEventListener('click', () => {
   estado.arquivos = [];
   estado.semanaManual = false;
+  projetoEscolhidoAMao = false;
   refs.semana.value = semanaAtual();
   reprocessar();
 });
 
 refs.exportar.addEventListener('click', exportar);
 refs.botaoGravar.addEventListener('click', gravar);
+refs.projeto.addEventListener('change', () => {
+  projetoEscolhidoAMao = true;
+  atualizarBotoes();
+});
 window.addEventListener('auth:perfilAtualizado', redesenhar);
 
 redesenhar();

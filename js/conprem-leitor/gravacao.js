@@ -39,24 +39,30 @@ function semanaAno(v) {
   return m ? { ano: Number(m[1]), semana: Number(m[2]) } : { ano: null, semana: null };
 }
 
-/* O PDF da CONPREM traz a descrição comercial do produto, não o projeto do
-   sistema. Reconhecemos o que dá; o que não der fica em branco para o usuário
-   completar na tela de Produção — melhor vazio do que projeto errado. */
-function projetoDoProduto(produto) {
+/* O PDF da CONPREM traz a descrição comercial do produto e o destino da carga
+   ("DORMENTE MONOBLOCO PROTENDIDO - BIT 1600 ...", "CHAPADÃO DO SUL MS"), não o
+   nome do projeto como o sistema o conhece. Quando o nome aparece, aproveitamos;
+   quando não, quem diz é o usuário, no campo Projeto da tela — o banco exige
+   projeto e chutar um seria pior do que perguntar. */
+export function projetoDoProduto(produto) {
   const k = texto(produto).toUpperCase();
   if (!k) return '';
   if (k.includes('FERRO NORTE') || /\bFN\b/.test(k)) return 'FERRO NORTE';
   if (k.includes('FMT')) return 'FMT';
   if (k.includes('MALHA CENTRAL')) return 'MALHA CENTRAL';
-  if (k.includes('MISTA')) return 'MALHA PAULISTA BITOLA MISTA';
-  if (k.includes('LARGA')) return 'MALHA PAULISTA BITOLA LARGA';
+  if (k.includes('MALHA PAULISTA') && k.includes('MISTA')) return 'MALHA PAULISTA BITOLA MISTA';
+  if (k.includes('MALHA PAULISTA') && k.includes('LARGA')) return 'MALHA PAULISTA BITOLA LARGA';
   return '';
 }
 
-function bitolaDoTexto(...partes) {
+/* A bitola vem escrita de duas formas nos relatórios: por extenso no Resumo
+   Semanal ("BIT LARGA") e em milímetros na Rastreabilidade ("BIT 1600"). */
+export function bitolaDoTexto(...partes) {
   const k = partes.map(texto).join(' ').toUpperCase();
   if (k.includes('MISTA')) return 'Bitola Mista';
   if (k.includes('LARGA')) return 'Bitola Larga';
+  if (/BIT\.?\s*1[.\s]?600/.test(k)) return 'Bitola Larga';
+  if (/BIT\.?\s*1[.\s]?000/.test(k)) return 'Bitola Mista';
   return 'Sem bitola definida';
 }
 
@@ -69,20 +75,19 @@ function resultadoEnsaio(v) {
 
 /* ------------------------------------------------------- mapeamentos */
 
-function linhasProducao(linhas) {
+function linhasProducao(linhas, ctx) {
   return linhas
     .filter((l) => texto(l.lote))
     .map((l) => {
       const { ano, semana } = semanaAno(l.semana);
-      const projeto = projetoDoProduto(l.produto);
       return {
         chave: `${texto(l.lote)}|${dataIso(l.dataFabricacao) || ''}`,
         registro: {
           fornecedor: FORNECEDOR,
           lote: texto(l.lote),
           pedido: texto(l.pedido) || null,
-          projeto: projeto || null,
-          bitola: bitolaDoTexto(l.produto, projeto),
+          projeto: ctx.projeto,
+          bitola: bitolaDoTexto(l.produto, ctx.projeto),
           tipo_dormente: texto(l.produto) || null,
           total_produzido: inteiro(l.qtdDormentes),
           data_fabricacao: dataIso(l.dataFabricacao),
@@ -95,19 +100,35 @@ function linhasProducao(linhas) {
     });
 }
 
-function linhasEnsaios(linhas) {
+function linhasEnsaios(linhas, ctx) {
+  // A série do lote está no Mapa de Rastreabilidade, não no PDF de ensaio.
+  // Quando os dois vêm no mesmo lote de arquivos, cruzamos pelo número do lote;
+  // sem o mapa, o próprio lote responde pela série — é como a CONPREM trabalha,
+  // um ensaio por lote, sem o agrupamento em séries que a Cavan usa.
+  // A bitola tem o mesmo problema: no PDF de ensaio a coluna vem "-", e quem
+  // diz o produto é o mapa de rastreabilidade.
+  const serieDoLote = new Map();
+  const bitolaDoLote = new Map();
+  for (const r of ctx.rastreabilidade || []) {
+    const lote = texto(r.lote);
+    if (!lote) continue;
+    serieDoLote.set(lote, texto(r.serieConcreto) || lote);
+    bitolaDoLote.set(lote, bitolaDoTexto(r.produto, ctx.projeto));
+  }
+
   return linhas
     .filter((l) => texto(l.lote))
     .map((l) => {
       const { ano, semana } = semanaAno(l.semana);
-      const projeto = projetoDoProduto(l.bitola);
+      const lote = texto(l.lote);
       return {
-        chave: `${texto(l.lote)}|${dataIso(l.dataEnsaio) || ''}`,
+        chave: `${lote}|${dataIso(l.dataEnsaio) || ''}`,
         registro: {
           fornecedor: FORNECEDOR,
-          projeto: projeto || null,
-          bitola: bitolaDoTexto(l.bitola),
-          lote_ensaiado: texto(l.lote),
+          projeto: ctx.projeto,
+          bitola: bitolaDoLote.get(lote) || bitolaDoTexto(l.bitola, ctx.projeto),
+          lote_ensaiado: lote,
+          serie_liberada: serieDoLote.get(lote) || lote,
           data_ensaio: dataIso(l.dataEnsaio),
           resultado: resultadoEnsaio(l.resultadoGeral),
           responsavel: texto(l.executor) || texto(l.fiscalizacao) || null,
@@ -136,23 +157,27 @@ const REFUGOS = [
   ['outros', 'Outros'],
 ];
 
-function linhasReprovados(linhas) {
+function linhasReprovados(linhas, ctx) {
   const saida = [];
   for (const l of linhas) {
     const { ano, semana } = semanaAno(l.semana);
     const inicio = dataIso(l.periodoInicio);
     const fim = dataIso(l.periodoFim);
-    const projeto = projetoDoProduto(l.produto);
+    // O Resumo Semanal conta refugo da semana inteira, não de um lote — mas a
+    // tabela de reprovados exige lote. Gravamos a semana no lugar, escrito de
+    // forma que ninguém confunda com número de lote de verdade.
+    const lote = `Semana ${texto(l.semana) || `${ano}-S${semana}`}`;
 
     for (const [chave, motivo] of REFUGOS) {
       const qtd = inteiro(l[chave]);
       if (!qtd || qtd <= 0) continue;
       saida.push({
-        chave: `${ano}-${semana}|${motivo}`,
+        chave: `${lote}|${motivo}`,
         registro: {
           fornecedor: FORNECEDOR,
-          projeto: projeto || null,
-          bitola: bitolaDoTexto(l.produto, projeto),
+          lote,
+          projeto: ctx.projeto,
+          bitola: bitolaDoTexto(l.produto, ctx.projeto),
           data_producao: fim || inicio,
           periodo_inicio: inicio,
           periodo_fim: fim,
@@ -195,7 +220,7 @@ export const DESTINOS = [
     detalhe: 'Os refugos do Resumo Semanal viram uma linha por motivo, com a quantidade da semana.',
     mapear: linhasReprovados,
     listar: () => StoreSupabase.listarReprovados({ limite: 10000 }),
-    chaveExistente: (r) => `${r.ano}-${r.semana}|${texto(r.motivo_indicador)}`,
+    chaveExistente: (r) => `${texto(r.lote)}|${texto(r.motivo_indicador)}`,
     salvar: (registro) => StoreSupabase.salvarReprovado(registro),
   },
 ];
@@ -209,15 +234,39 @@ export function rotuloAba(id) {
 }
 
 /**
- * Grava uma aba. Devolve o que entrou, o que já existia e o que falhou.
- * @param {string} id            id do modelo (rastreabilidade | ensaios | resumo)
- * @param {Array<Object>} linhas linhas extraídas do PDF
+ * Sugere o projeto a partir do que os PDFs trazem escrito. Vazio quando não dá
+ * para reconhecer — aí quem escolhe é o usuário.
+ * @param {Record<string, Array<Object>>} resultados
  */
-export async function gravarAba(id, linhas) {
+export function projetoSugerido(resultados = {}) {
+  const textos = [
+    ...(resultados.rastreabilidade || []).map((l) => l.produto),
+    ...(resultados.resumo || []).map((l) => `${l.produto} ${l.pedidoLocal}`),
+  ];
+  for (const t of textos) {
+    const p = projetoDoProduto(t);
+    if (p) return p;
+  }
+  return '';
+}
+
+/**
+ * Grava uma aba. Devolve o que entrou, o que já existia e o que falhou.
+ * @param {string} id id do modelo (rastreabilidade | ensaios | resumo)
+ * @param {Record<string, Array<Object>>} resultados todas as abas lidas — a de
+ *        ensaios precisa da de rastreabilidade para achar a série do lote
+ * @param {{projeto: string}} opcoes projeto escolhido na tela (obrigatório: as
+ *        três tabelas de destino exigem projeto e ele não vem nos PDFs)
+ */
+export async function gravarAba(id, resultados = {}, opcoes = {}) {
   const destino = destinoDe(id);
   if (!destino) throw new Error(`Destino desconhecido para "${id}".`);
 
-  const candidatos = destino.mapear(linhas || []);
+  const projeto = texto(opcoes.projeto);
+  if (!projeto) throw new Error('Escolha o projeto antes de gravar: as telas de destino exigem esse campo.');
+
+  const ctx = { projeto, rastreabilidade: resultados.rastreabilidade || [] };
+  const candidatos = destino.mapear(resultados[id] || [], ctx);
   if (!candidatos.length) return { id, titulo: destino.titulo, gravados: 0, repetidos: 0, erros: [] };
 
   const existentes = new Set((await destino.listar()).map(destino.chaveExistente));

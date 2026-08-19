@@ -112,10 +112,28 @@ Depois da prévia, a tela oferece gravar cada aba na área Conprem:
 | Ensaios | Ensaios de Liberação | um ensaio por lote, com o resultado geral |
 | Resumo Semanal | Dormentes Reprovados | uma linha por tipo de refugo com quantidade |
 
-Regras: nada é gravado sem clique; registro que já existe é **mantido**, não
-sobrescrito (reimportar o mesmo PDF não duplica); o projeto só é preenchido
-quando dá para reconhecê-lo na descrição do produto — no resto fica em branco
-para o usuário completar, que é melhor do que projeto errado.
+Nada é gravado sem clique, e registro que já existe é **mantido**, não
+sobrescrito — reimportar o mesmo PDF não duplica.
+
+Três campos que as tabelas exigem e os PDFs não trazem:
+
+- **Projeto** — os relatórios trazem o produto (`DORMENTE MONOBLOCO PROTENDIDO -
+  BIT 1.600 ...`) e o destino da carga (`CHAPADÃO DO SUL MS`), não o nome do
+  projeto. A tela pede que o usuário escolha, e sem essa escolha o botão de
+  gravar fica travado. Quando o nome do projeto aparece escrito em algum
+  relatório, o campo já vem sugerido.
+- **Série liberada** (ensaios) — vem do `Série concreto` do Mapa de
+  Rastreabilidade, cruzando pelo número do lote. Sem o mapa no lote de arquivos,
+  o próprio lote responde pela série: a CONPREM ensaia um lote por vez, sem o
+  agrupamento em séries que a Cavan usa.
+- **Lote** (reprovados) — o Resumo Semanal conta refugo da semana inteira, não
+  de um lote. Grava-se `Semana 2026-S33`, escrito assim justamente para não se
+  confundir com número de lote de verdade.
+
+A **bitola** é deduzida do produto, que aparece de duas formas nos relatórios:
+por extenso no Resumo (`BIT LARGA`) e em milímetros na Rastreabilidade
+(`BIT 1.600`). No PDF de ensaio a coluna vem vazia, então ali a bitola também
+sai do Mapa de Rastreabilidade pelo número do lote.
 
 ## O que ficou de fora
 

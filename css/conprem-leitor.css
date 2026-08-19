@@ -93,7 +93,8 @@
 .leitor-conprem .acoes__espaco { flex: 1 1 40px; }
 .leitor-conprem .campo { display: grid; gap: 4px; }
 .leitor-conprem .campo__rotulo { font-size: 11.5px; font-weight: 700; color: var(--cinza-texto); }
-.leitor-conprem .campo input {
+.leitor-conprem .campo input,
+.leitor-conprem .campo select {
   padding: 8px 10px;
   border: 1px solid var(--cinza-borda);
   border-radius: var(--raio-sm);
@@ -102,6 +103,9 @@
   font: inherit;
   max-width: 170px;
 }
+/* Nome de projeto é longo ("Malha Paulista Bitola Mista") e não pode ficar
+   cortado: é ele que o usuário confere antes de gravar. */
+.leitor-conprem .campo select { max-width: 280px; }
 
 /* -------------------------------------------------------------- avisos */
 .leitor-conprem .avisos { display: grid; gap: 8px; margin-top: 14px; }
