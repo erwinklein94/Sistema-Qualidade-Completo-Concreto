@@ -18,7 +18,7 @@ const CAMPOS = [
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
-  App.montarLayout('reprovados', 'Dormentes Reprovados', 'Registro de refugos por molde, cavidade, motivo e período operacional');
+  App.montarLayout('reprovados', Area.titulo('Dormentes Reprovados'), `Registro de refugos por molde, cavidade, motivo e período operacional — ${Area.fornecedor()}`);
   const btnGlossario = `<button class="btn btn-secundario" onclick="abrirGlossario()">${ICN.olho}Glossário de defeitos</button>`;
   App.acoesTopo(`${btnGlossario}${Auth.pode('criar')
     ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo registro</button>`

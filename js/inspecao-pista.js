@@ -49,7 +49,7 @@ const SINAIS_PISTA = [
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   document.body.classList.add('pagina-ensaios-liberacao');
-  App.montarLayout('inspecaoPista', 'Inspeção de Pista', 'Histórico consultivo de inspeções de pista — abre o relatório pelo link');
+  App.montarLayout('inspecaoPista', Area.titulo('Inspeção de Pista'), `Histórico consultivo de inspeções de pista — ${Area.fornecedor()}`);
   App.acoesTopo(`
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDFs iAuditor</button>
     ${SafetyCultureSync.controlesTopoHtml()}

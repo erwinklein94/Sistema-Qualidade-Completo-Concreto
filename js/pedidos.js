@@ -1,7 +1,10 @@
 /* =====================================================================
    PEDIDOS.JS — Pedidos de lotes de dormentes de concreto
    ===================================================================== */
-const PEDIDOS_FORNECEDORES = ['Cavan', 'Conprem'];
+// Pedidos são por área (ver js/area.js): a página da Cavan só lança pedidos
+// para a Cavan e a da Conprem só para a Conprem — cada uma na sua tabela.
+// Aqui o fornecedor vai sem o estado, como sempre foi gravado nesta tela.
+const PEDIDOS_FORNECEDORES = [window.Area ? Area.nome() : 'Cavan'];
 const PEDIDOS_PROJETOS = ['FERRO NORTE', 'MALHA PAULISTA BITOLA LARGA', 'MALHA PAULISTA BITOLA MISTA', 'FMT', 'MALHA CENTRAL'];
 const PEDIDOS_STATUS = ['Novo', 'Planejado', 'Em produção', 'Atendido'];
 
@@ -27,9 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('pagina-pedidos-body');
   if (!await Auth.exigirLogin()) return;
 
-  App.montarLayout('pedidos', 'Pedidos', 'Pedidos de lotes de dormentes de concreto feitos pela Rumo');
+  App.montarLayout('pedidos', Area.titulo('Pedidos'), `Pedidos de lotes de dormentes de concreto feitos pela Rumo — ${Area.fornecedor()}`);
   App.acoesTopo(`
-    <button class="btn btn-secundario" onclick="location.href='producao.html'">${ICN.producao}Produção</button>
+    <button class="btn btn-secundario" onclick="location.href='${Area.pagina('producao.html')}'">${ICN.producao}Produção</button>
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovoPedido()">${ICN.add}Novo pedido</button>` : App.avisoModoConsulta()}
   `);
 

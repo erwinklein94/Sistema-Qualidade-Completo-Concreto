@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Conprem · Controle de Dormentes Rumo</title>
+<link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
+  <link rel="stylesheet" href="css/style.css?v=20260819-area-conprem-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina">
+
+        <div class="barra-filtros">
+          <div class="campo"><label>Fornecedor</label><select id="fFornecedor"></select></div>
+          <div class="campo"><label>Projeto</label><select id="fProjeto"></select></div>
+          <div class="campo"><label>Bitola</label><select id="fBitola"></select></div>
+          <div class="campo"><label>Semana</label><select id="fSemana"></select></div>
+          <div class="campo"><label>Período inicial</label><input type="date" id="fPeriodoIni"></div>
+          <div class="campo"><label>Período fim</label><input type="date" id="fPeriodoFim"></div>
+          <button class="btn btn-secundario btn-sm" id="btnUltimaSemana" type="button">Última semana</button>
+        </div>
+
+        <div class="grid-kpi" id="kpis"></div>
+
+        <div id="conteudoDash">
+          <div class="grid-graficos">
+            <div class="card">
+              <div class="card-titulo"><span class="acento">Produção por projeto</span></div>
+              <div class="chart-box"><canvas id="chartProjeto"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-titulo"><span class="acento">Motivos de reprova</span></div>
+              <div class="chart-box"><canvas id="chartMotivos"></canvas></div>
+            </div>
+            <div class="card span2">
+              <div class="card-titulo"><span class="acento">Produção × Reprova semanal por projeto</span>
+                <span class="card-sub">Total produzido, refugos e % de reprova por semana operacional, projeto e bitola</span></div>
+              <div class="chart-box alto"><canvas id="chartSemanalProjeto"></canvas></div>
+            </div>
+            <div class="card span2">
+              <div class="card-titulo"><span class="acento">Produção × Reprova mensal por projeto</span>
+                <span class="card-sub">Total produzido, refugos e % de reprova por mês, projeto e bitola</span></div>
+              <div class="chart-box alto"><canvas id="chartMensalProjeto"></canvas></div>
+            </div>
+            <div class="card span2">
+              <div class="card-titulo"><span class="acento">Produção × Reprova por lote</span>
+                <span class="card-sub">Total produzido, refugos e % de reprova de cada lote</span></div>
+              <div class="chart-box alto"><canvas id="chartLote"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-titulo"><span class="acento">Status dos lotes</span></div>
+              <div class="chart-box"><canvas id="chartStatus"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="card-titulo"><span class="acento">Ensaios: aprovados × recusados</span></div>
+              <div class="chart-box"><canvas id="chartEnsaios"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <section id="saudeProjetosDashboard" class="dashboard-indicadores"></section>
+
+        <section id="capabilidadeDashboard" class="dashboard-indicadores"></section>
+
+        <section id="moldesCavidadesDashboard" class="dashboard-indicadores"></section>
+
+        <section id="quadroAvisosDashboard" class="dashboard-avisos" aria-live="polite"></section>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <!-- Área CONPREM: definida antes dos scripts para que store, config e menu
+       apontem para as tabelas conprem_* e para o fornecedor Conprem MG. -->
+  <script>window.AREA_EMPRESA = 'conprem';</script>
+  <script src="js/area.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/supabase-config.js?v=20260523-2"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script>Auth.exigirLogin();</script>
+  <script src="js/config.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/store.js"></script>
+  <script src="js/store-supabase.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/exportacoes.js?v=20260612-dashboard-pdf-cpk-v1"></script>
+  <script src="js/comum.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/indicadores-qualidade.js?v=20260612-saude-projetos-v3"></script>
+  <script src="js/dashboard.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>

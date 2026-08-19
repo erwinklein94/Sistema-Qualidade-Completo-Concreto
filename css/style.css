@@ -8225,3 +8225,35 @@ body[data-tema="escuro"] .safeculture-erro-msg { color: #ffb3b3; }
     text-align: right;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Grupo de menu CONPREM — área própria da Conprem MG, separada da Cavan.
+   Segue o mesmo desenho dos demais grupos, com o laranja Rumo (#F78344)
+   para diferenciar da Cavan (azul claro) na barra e nos dropdowns.
+   --------------------------------------------------------------------- */
+.nav-section-label--conprem {
+  background: linear-gradient(135deg, rgba(247,131,68,.24), rgba(255,255,255,.07));
+  border-color: rgba(247,131,68,.44);
+}
+.nav-section-label--conprem span::before {
+  background: #F78344;
+  box-shadow: 0 0 0 4px rgba(247,131,68,.18);
+}
+.nav a.nav-link--conprem::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  opacity: .72;
+  background: #F78344;
+}
+.nav a.nav-link--conprem.ativo {
+  background: linear-gradient(90deg, rgba(247,131,68,.30), rgba(255,255,255,.09)) !important;
+  border-color: rgba(247,131,68,.52) !important;
+}
+.nav a.nav-link--conprem.ativo::before { background: #F78344 !important; }
+.menu-dd--conprem .menu-dd-botao::before { background: #F78344; }

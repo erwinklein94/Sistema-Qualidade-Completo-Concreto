@@ -20,7 +20,7 @@ const Dashboard = {
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
-  App.montarLayout('dashboard', 'Dashboard', 'Visão geral da produção de dormentes de concreto');
+  App.montarLayout('dashboard', Area.titulo('Dashboard'), `Visão geral da produção de dormentes de concreto — ${Area.fornecedor()}`);
   App.acoesTopo(`<button class="btn btn-secundario" onclick="carregarDashboard();carregarAvisoDashboard()">${ICN.check}Atualizar</button>`);
 
   preencherSelectBase('fFornecedor', CFG.listas.fornecedores, 'Todos');

@@ -7,9 +7,9 @@ const App = {
   menuBase() {
     return [
       {
-        sec: 'DORMENTES DE CONCRETO',
+        sec: 'DORMENTES DE CONCRETO · CAVAN',
         group: 'concreto',
-        desc: 'Produção, cura, ensaios, liberação e reprovas'
+        desc: 'Produção, cura, ensaios, liberação e reprovas da Cavan SP'
       },
       { k: 'dashboard', t: 'Dashboard Concreto', ic: ICN.dashboard, href: 'index.html', group: 'concreto' },
       { k: 'semanal', t: 'Indicador Semanal', ic: ICN.semanal, href: 'semanal.html', group: 'concreto' },
@@ -28,6 +28,19 @@ const App = {
       { k: 'rastreabilidade', t: 'Rastreabilidade', ic: ICN.trem, href: 'rastreabilidade.html', group: 'concreto' },
       { k: 'rncDormentes', t: 'RNC', ic: ICN.alerta, href: 'rnc.html', group: 'concreto' },
       { k: 'especDormentes', t: 'Especificações e Limites', ic: ICN.ensaios, href: 'especificacoes-dormentes.html', group: 'concreto' },
+
+      {
+        sec: 'DORMENTES DE CONCRETO · CONPREM',
+        group: 'conprem',
+        desc: 'Área própria da Conprem MG, com tabelas separadas da Cavan'
+      },
+      { k: 'conprem-dashboard', t: 'Dashboard Conprem', ic: ICN.dashboard, href: 'conprem-dashboard.html', group: 'conprem' },
+      { k: 'conprem-leitor', t: 'Leitor de Recebidos', ic: ICN.upload, href: 'conprem-leitor.html', group: 'conprem' },
+      { k: 'conprem-pedidos', t: 'Pedidos', ic: ICN.trem, href: 'conprem-pedidos.html', group: 'conprem' },
+      { k: 'conprem-producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'conprem-producao.html', group: 'conprem' },
+      { k: 'conprem-reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'conprem-reprovados.html', group: 'conprem' },
+      { k: 'conprem-inspecaoConcretagem', t: 'Inspeção de Concretagem', ic: ICN.ensaios, href: 'conprem-inspecao-concretagem.html', group: 'conprem' },
+      { k: 'conprem-inspecaoPista', t: 'Inspeção de Pista', ic: ICN.ensaios, href: 'conprem-inspecao-pista.html', group: 'conprem' },
 
       {
         sec: 'SUBCOMPONENTES',
@@ -104,7 +117,8 @@ const App = {
   // Grupos exibidos como botões dropdown no topo direito
   gruposDropdown() {
     return [
-      { grupo: 'concreto', titulo: 'Concreto', ic: ICN.producao },
+      { grupo: 'concreto', titulo: 'Cavan', ic: ICN.producao },
+      { grupo: 'conprem', titulo: 'Conprem', ic: ICN.producao },
       { grupo: 'subcomponentes', titulo: 'Subcomponentes', ic: ICN.vazioBox },
       { grupo: 'ferramentas', titulo: 'Ferramentas', ic: ICN.config },
       { grupo: 'sistema', titulo: 'Administração', ic: ICN.config },
@@ -200,16 +214,20 @@ const App = {
 
   // monta topo. paginaAtiva: chave do menu
   montarLayout(paginaAtiva, titulo, subtitulo) {
-    this.paginaAtiva = paginaAtiva;
+    // As telas de dormentes servem Cavan e Conprem com o mesmo JS; a chave do
+    // menu vira conprem-* nas páginas da Conprem para o item certo acender.
+    this.paginaAtiva = window.Area ? Area.chaveMenu(paginaAtiva) : paginaAtiva;
+    const empresa = window.Area ? Area.nome() : '';
+    const home = window.Area ? Area.home() : 'index.html';
 
     const topo = `
       <header class="topo">
         <div class="flex" style="align-items:center;gap:14px;">
-          <a class="topo-marca" href="index.html" aria-label="Rumo — ir para o Dashboard">
+          <a class="topo-marca" href="${home}" aria-label="Rumo — ir para o Dashboard">
             <img src="assets/brand/rumo-logo-positivo.png" alt="Rumo">
           </a>
           <div class="topo-identidade">
-            <div class="topo-kicker">Rumo · Qualidade Ferroviária</div>
+            <div class="topo-kicker">Rumo · Qualidade Ferroviária${empresa ? ` · ${empresa}` : ''}</div>
             <h1>${titulo}</h1>
             ${subtitulo ? `<div class="subtitulo">${subtitulo}</div>` : ''}
           </div>

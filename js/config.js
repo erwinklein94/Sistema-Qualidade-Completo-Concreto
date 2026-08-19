@@ -6,7 +6,12 @@
 const CFG = {
   // Listas (dropdowns) — exatamente as da planilha (aba LISTAS)
   listas: {
-    fornecedores: ['Cavan SP', 'Conprem MG'],
+    // A área de dormentes é por empresa (ver js/area.js): a Cavan só oferece
+    // "Cavan SP" nos formulários e a Conprem só "Conprem MG". Getter porque a
+    // área é definida pela página, depois que este arquivo já foi carregado.
+    get fornecedores() {
+      return window.Area ? Area.fornecedores() : ['Cavan SP', 'Conprem MG'];
+    },
     pedidos: ['N/A', '4501971179', '4501971181', '4501971186', '4501977441', '4501985412', '4920122050', '4920122051', '361'],
     projetos: ['FMT', 'FERRO NORTE', 'MALHA PAULISTA BITOLA MISTA', 'MALHA PAULISTA BITOLA LARGA', 'MALHA CENTRAL'],
     tipos: ['Bitola Larga FMT USP', 'Bitola Larga MP', 'Bitola Mista MP - USP', 'Bitola Larga FN', 'Bitola Mista', 'Contra Trilho', 'PN', 'AMV'],

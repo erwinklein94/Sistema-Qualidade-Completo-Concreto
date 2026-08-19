@@ -1,0 +1,197 @@
+/* =====================================================================
+   CONPREM-LEITOR.CSS — Leitor de Recebidos CONPREM dentro do sistema
+
+   Os módulos de interface vieram do repositório Leitor-Recebidos-Conprem
+   sem alteração, então os nomes de classe são os de lá (dropzone, arquivo,
+   selo, aba, tabela...). Tudo fica sob .leitor-conprem para não colidir com
+   as classes do sistema, e as cores saem dos tokens de css/style.css, para
+   a tela acompanhar o tema claro/escuro como as demais.
+   ===================================================================== */
+
+.leitor-conprem {
+  display: grid;
+  gap: 18px;
+}
+
+/* ------------------------------------------------------------- dropzone */
+.leitor-conprem .dropzone {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 30px 18px;
+  border: 2px dashed var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  background: var(--cinza-bg);
+  color: var(--cinza-texto);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transicao), background var(--transicao);
+}
+.leitor-conprem .dropzone:hover,
+.leitor-conprem .dropzone[data-arrastando='true'] {
+  border-color: var(--azul-claro);
+  background: color-mix(in srgb, var(--azul-claro) 8%, var(--cinza-bg));
+}
+.leitor-conprem .dropzone[aria-busy='true'] { opacity: .6; pointer-events: none; }
+.leitor-conprem .dropzone__icone { width: 34px; height: 34px; color: var(--azul-claro); }
+.leitor-conprem .dropzone__titulo { margin: 0; font-weight: 700; color: var(--azul-escuro); }
+.leitor-conprem .dropzone__dica { margin: 0; font-size: 12.5px; }
+.leitor-conprem .dropzone input[type='file'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* -------------------------------------------------------- lista de PDFs */
+.leitor-conprem .arquivos { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.leitor-conprem .arquivo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  background: var(--cinza-card);
+}
+.leitor-conprem .arquivo > div:first-child { flex: 1; min-width: 0; }
+.leitor-conprem .arquivo__nome { font-weight: 600; font-size: 13px; word-break: break-all; }
+.leitor-conprem .arquivo__meta { font-size: 11.5px; color: var(--cinza-texto-claro); }
+.leitor-conprem .arquivo__remover {
+  border: 0;
+  background: transparent;
+  color: var(--cinza-texto);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.leitor-conprem .arquivo__remover:hover { color: var(--erro); }
+
+.leitor-conprem .selo {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.leitor-conprem .selo--ok   { background: color-mix(in srgb, var(--ok) 16%, transparent);    color: var(--ok); }
+.leitor-conprem .selo--erro { background: color-mix(in srgb, var(--erro) 14%, transparent);  color: var(--erro); }
+.leitor-conprem .selo--info { background: color-mix(in srgb, var(--azul-claro) 16%, transparent); color: var(--azul-escuro); }
+
+/* --------------------------------------------------------------- ações */
+.leitor-conprem .acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+.leitor-conprem .acoes__espaco { flex: 1 1 40px; }
+.leitor-conprem .campo { display: grid; gap: 4px; }
+.leitor-conprem .campo__rotulo { font-size: 11.5px; font-weight: 700; color: var(--cinza-texto); }
+.leitor-conprem .campo input {
+  padding: 8px 10px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  background: var(--cinza-card);
+  color: inherit;
+  font: inherit;
+  max-width: 170px;
+}
+
+/* -------------------------------------------------------------- avisos */
+.leitor-conprem .avisos { display: grid; gap: 8px; margin-top: 14px; }
+.leitor-conprem .aviso {
+  padding: 9px 12px;
+  border-radius: var(--raio-sm);
+  border: 1px solid color-mix(in srgb, var(--amarelo) 55%, var(--cinza-borda));
+  background: color-mix(in srgb, var(--amarelo) 12%, transparent);
+  font-size: 12.5px;
+}
+.leitor-conprem .aviso--erro {
+  border-color: color-mix(in srgb, var(--erro) 45%, var(--cinza-borda));
+  background: color-mix(in srgb, var(--erro) 10%, transparent);
+  color: var(--erro);
+}
+.leitor-conprem .carregando { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.leitor-conprem .girador {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--cinza-borda);
+  border-top-color: var(--azul-claro);
+  border-radius: 50%;
+  animation: leitor-girar .7s linear infinite;
+}
+@keyframes leitor-girar { to { transform: rotate(360deg); } }
+
+/* ---------------------------------------------------------------- abas */
+.leitor-conprem .abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.leitor-conprem .aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: 999px;
+  background: var(--cinza-card);
+  color: var(--cinza-texto);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.leitor-conprem .aba[aria-selected='true'] {
+  background: var(--azul-escuro);
+  border-color: var(--azul-escuro);
+  color: #fff;
+}
+.leitor-conprem .aba__contagem {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  font-size: 11px;
+}
+
+/* -------------------------------------------------------- prévia/tabela */
+.leitor-conprem .tabela-envolve { overflow-x: auto; border: 1px solid var(--cinza-borda); border-radius: var(--raio-sm); }
+.leitor-conprem table.tabela { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; }
+.leitor-conprem table.tabela th,
+.leitor-conprem table.tabela td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--cinza-borda);
+  text-align: left;
+  white-space: nowrap;
+}
+.leitor-conprem table.tabela th {
+  position: sticky;
+  top: 0;
+  background: var(--azul-escuro);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.leitor-conprem table.tabela tbody tr:nth-child(even) { background: var(--cinza-bg); }
+.leitor-conprem .tabela__vazio { color: var(--cinza-texto-claro); }
+.leitor-conprem .resumo-linha { margin: 10px 0 0; font-size: 12px; color: var(--cinza-texto-claro); }
+
+/* ------------------------------------------------- gravação no Supabase */
+.leitor-conprem .gravacao { display: grid; gap: 10px; }
+.leitor-conprem .gravacao__opcoes { display: grid; gap: 8px; }
+.leitor-conprem .gravacao__opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--cinza-borda);
+  border-radius: var(--raio-sm);
+  background: var(--cinza-card);
+  cursor: pointer;
+}
+.leitor-conprem .gravacao__opcao input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--azul-claro); }
+.leitor-conprem .gravacao__opcao[data-indisponivel='true'] { opacity: .55; cursor: not-allowed; }
+.leitor-conprem .gravacao__titulo { font-weight: 700; font-size: 13px; }
+.leitor-conprem .gravacao__detalhe { font-size: 12px; color: var(--cinza-texto-claro); }

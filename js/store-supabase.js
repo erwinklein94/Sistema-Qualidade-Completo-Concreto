@@ -9,6 +9,19 @@ const StoreSupabase = (() => {
     return c;
   }
 
+  /* Tabela da área ativa (ver js/area.js). Na Cavan devolve o nome original;
+     nas telas da Conprem devolve a tabela conprem_*, que tem as mesmas colunas.
+     Tabelas sem par por empresa (usuários, auditoria, especificações,
+     subcomponentes) passam intactas. */
+  function tab(nome) {
+    return window.Area ? Area.tabela(nome) : nome;
+  }
+
+  /* O quadro de avisos do Dashboard é por área: cada empresa tem o seu. */
+  function chaveAviso() {
+    return window.Area ? Area.sufixoChave('dashboard') : 'dashboard';
+  }
+
   async function usuarioAtual() {
     const { data, error } = await db().auth.getUser();
     if (error) throw error;
@@ -32,7 +45,7 @@ const StoreSupabase = (() => {
 
   async function listarProducao(filtros = {}) {
     let q = db()
-      .from('producao_lotes')
+      .from(tab('producao_lotes'))
       .select('*')
       .order('data_fabricacao', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
@@ -62,11 +75,11 @@ const StoreSupabase = (() => {
     let query;
     if (id) {
       delete payload.id;
-      query = db().from('producao_lotes').update(payload).eq('id', id);
+      query = db().from(tab('producao_lotes')).update(payload).eq('id', id);
     } else {
       delete payload.id;
       payload.criado_por = user?.id || null;
-      query = db().from('producao_lotes').insert(payload);
+      query = db().from(tab('producao_lotes')).insert(payload);
     }
 
     const { data, error } = await query.select().single();
@@ -76,14 +89,14 @@ const StoreSupabase = (() => {
 
   async function removerProducao(id) {
     exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('producao_lotes').delete().eq('id', id);
+    const { error } = await db().from(tab('producao_lotes')).delete().eq('id', id);
     if (error) throw error;
     return true;
   }
 
   async function listarPedidosDormentes(filtros = {}) {
     let q = db()
-      .from('pedidos_dormentes')
+      .from(tab('pedidos_dormentes'))
       .select('*')
       .order('criado_em', { ascending: false, nullsFirst: false })
       .order('numero_pedido', { ascending: true, nullsFirst: false })
@@ -109,11 +122,11 @@ const StoreSupabase = (() => {
     let query;
     if (id) {
       delete payload.id;
-      query = db().from('pedidos_dormentes').update(payload).eq('id', id);
+      query = db().from(tab('pedidos_dormentes')).update(payload).eq('id', id);
     } else {
       delete payload.id;
       payload.criado_por = user?.id || null;
-      query = db().from('pedidos_dormentes').insert(payload);
+      query = db().from(tab('pedidos_dormentes')).insert(payload);
     }
 
     const { data, error } = await query.select().single();
@@ -123,14 +136,14 @@ const StoreSupabase = (() => {
 
   async function removerPedidoDormente(id) {
     exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('pedidos_dormentes').delete().eq('id', id);
+    const { error } = await db().from(tab('pedidos_dormentes')).delete().eq('id', id);
     if (error) throw error;
     return true;
   }
 
   async function listarReprovados(filtros = {}) {
     let q = db()
-      .from('reprovados')
+      .from(tab('reprovados'))
       .select('*')
       .order('data_producao', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
@@ -161,11 +174,11 @@ const StoreSupabase = (() => {
     let query;
     if (id) {
       delete payload.id;
-      query = db().from('reprovados').update(payload).eq('id', id);
+      query = db().from(tab('reprovados')).update(payload).eq('id', id);
     } else {
       delete payload.id;
       payload.criado_por = user?.id || null;
-      query = db().from('reprovados').insert(payload);
+      query = db().from(tab('reprovados')).insert(payload);
     }
 
     const { data, error } = await query.select().single();
@@ -175,14 +188,14 @@ const StoreSupabase = (() => {
 
   async function removerReprovado(id) {
     exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('reprovados').delete().eq('id', id);
+    const { error } = await db().from(tab('reprovados')).delete().eq('id', id);
     if (error) throw error;
     return true;
   }
 
   async function listarEnsaiosLiberacao(filtros = {}) {
     let q = db()
-      .from('ensaios_liberacao')
+      .from(tab('ensaios_liberacao'))
       .select('*')
       .order('data_ensaio', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
@@ -213,11 +226,11 @@ const StoreSupabase = (() => {
     let query;
     if (id) {
       delete payload.id;
-      query = db().from('ensaios_liberacao').update(payload).eq('id', id);
+      query = db().from(tab('ensaios_liberacao')).update(payload).eq('id', id);
     } else {
       delete payload.id;
       payload.criado_por = user?.id || null;
-      query = db().from('ensaios_liberacao').insert(payload);
+      query = db().from(tab('ensaios_liberacao')).insert(payload);
     }
 
     const { data, error } = await query.select().single();
@@ -227,7 +240,7 @@ const StoreSupabase = (() => {
 
   async function removerEnsaioLiberacao(id) {
     exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('ensaios_liberacao').delete().eq('id', id);
+    const { error } = await db().from(tab('ensaios_liberacao')).delete().eq('id', id);
     if (error) throw error;
     return true;
   }
@@ -421,7 +434,7 @@ const StoreSupabase = (() => {
      --------------------------------------------------------------------- */
   async function listarInspecoesConcretagem(filtros = {}) {
     let q = db()
-      .from('inspecoes_concretagem')
+      .from(tab('inspecoes_concretagem'))
       .select('*')
       .order('data_inspecao', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
@@ -453,11 +466,11 @@ const StoreSupabase = (() => {
     let query;
     if (id) {
       delete payload.id;
-      query = db().from('inspecoes_concretagem').update(payload).eq('id', id);
+      query = db().from(tab('inspecoes_concretagem')).update(payload).eq('id', id);
     } else {
       delete payload.id;
       payload.criado_por = user?.id || null;
-      query = db().from('inspecoes_concretagem').insert(payload);
+      query = db().from(tab('inspecoes_concretagem')).insert(payload);
     }
 
     const { data, error } = await query.select().single();
@@ -467,7 +480,7 @@ const StoreSupabase = (() => {
 
   async function removerInspecaoConcretagem(id) {
     exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('inspecoes_concretagem').delete().eq('id', id);
+    const { error } = await db().from(tab('inspecoes_concretagem')).delete().eq('id', id);
     if (error) throw error;
     return true;
   }
@@ -478,7 +491,7 @@ const StoreSupabase = (() => {
      --------------------------------------------------------------------- */
   async function listarInspecoesPista(filtros = {}) {
     let q = db()
-      .from('inspecoes_pista')
+      .from(tab('inspecoes_pista'))
       .select('*')
       .order('data_inspecao', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
@@ -510,11 +523,11 @@ const StoreSupabase = (() => {
     let query;
     if (id) {
       delete payload.id;
-      query = db().from('inspecoes_pista').update(payload).eq('id', id);
+      query = db().from(tab('inspecoes_pista')).update(payload).eq('id', id);
     } else {
       delete payload.id;
       payload.criado_por = user?.id || null;
-      query = db().from('inspecoes_pista').insert(payload);
+      query = db().from(tab('inspecoes_pista')).insert(payload);
     }
 
     const { data, error } = await query.select().single();
@@ -524,7 +537,7 @@ const StoreSupabase = (() => {
 
   async function removerInspecaoPista(id) {
     exigirPermissao('excluir', 'excluir registros');
-    const { error } = await db().from('inspecoes_pista').delete().eq('id', id);
+    const { error } = await db().from(tab('inspecoes_pista')).delete().eq('id', id);
     if (error) throw error;
     return true;
   }
@@ -598,7 +611,7 @@ const StoreSupabase = (() => {
     const { data, error } = await db()
       .from('avisos_dashboard')
       .select('*')
-      .eq('chave', 'dashboard')
+      .eq('chave', chaveAviso())
       .maybeSingle();
     if (error) throw error;
     return data || null;
@@ -608,7 +621,7 @@ const StoreSupabase = (() => {
     exigirAdmin('editar o quadro de avisos do Dashboard');
     const user = await usuarioAtual();
     const payload = {
-      chave: 'dashboard',
+      chave: chaveAviso(),
       titulo: String(registro.titulo || 'Avisos do Dashboard').trim() || 'Avisos do Dashboard',
       conteudo: String(registro.conteudo || ''),
       ativo: true,

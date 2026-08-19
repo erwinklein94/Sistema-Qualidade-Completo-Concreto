@@ -32,7 +32,7 @@ const CHAVES_ESTRUTURAIS_NAO_CONCRETAGEM = [
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   document.body.classList.add('pagina-ensaios-liberacao');
-  App.montarLayout('inspecaoConcretagem', 'Inspeção de Concretagem', 'Histórico consultivo de inspeções de concretagem — link do relatório opcional');
+  App.montarLayout('inspecaoConcretagem', Area.titulo('Inspeção de Concretagem'), `Histórico consultivo de inspeções de concretagem — ${Area.fornecedor()}`);
   App.acoesTopo(`
     <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDF iAuditor</button>
     ${SafetyCultureSync.controlesTopoHtml()}

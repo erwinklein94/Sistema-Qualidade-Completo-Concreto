@@ -95,9 +95,9 @@ let PRODUCAO_PEDIDOS = [];
 document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('pagina-producao');
   if (!await Auth.exigirLogin()) return;
-  App.montarLayout('producao', 'Produção de Dormentes', 'Lançamento e controle de fabricação por lote');
+  App.montarLayout('producao', Area.titulo('Produção de Dormentes'), `Lançamento e controle de fabricação por lote — ${Area.fornecedor()}`);
   App.acoesTopo(`
-    <button class="btn btn-secundario" onclick="location.href='fluxo-liberacao.html'">${ICN.trem}Painel de séries</button>
+    ${Area.temPagina('fluxo-liberacao.html') ? `<button class="btn btn-secundario" onclick="location.href='fluxo-liberacao.html'">${ICN.trem}Painel de séries</button>` : ''}
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo lançamento</button>` : App.avisoModoConsulta()}
   `);
 

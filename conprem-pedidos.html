@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos Conprem · Controle de Dormentes Rumo</title>
+  <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
+  <link rel="stylesheet" href="css/style.css?v=20260819-area-conprem-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina pagina-pedidos">
+
+        <div class="barra-filtros">
+          <div class="busca-rapida campo">
+            <label>Buscar pedido, lote ou observação</label>
+            <input type="text" id="busca" placeholder="Digite para filtrar...">
+          </div>
+          <div class="campo">
+            <label>Fornecedor</label>
+            <select id="fFornecedor"></select>
+          </div>
+          <div class="campo">
+            <label>Projeto</label>
+            <select id="fProjeto"></select>
+          </div>
+          <div class="campo">
+            <label>Status</label>
+            <select id="fStatus">
+              <option value="">Todos</option>
+              <option value="Novo">Novo</option>
+              <option value="Planejado">Planejado</option>
+              <option value="Em produção">Em produção</option>
+              <option value="Atendido">Atendido</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid-kpi grid-kpi-compacto" id="kpisPedidos">
+          <div class="kpi escuro"><div class="rotulo">Pedidos</div><div class="valor">0</div><div class="extra">carregando</div></div>
+          <div class="kpi"><div class="rotulo">Dormentes pedidos</div><div class="valor">0</div><div class="extra">carregando</div></div>
+          <div class="kpi verde"><div class="rotulo">Produzidos vinculados</div><div class="valor">0</div><div class="extra">carregando</div></div>
+          <div class="kpi amarelo"><div class="rotulo">Saldo</div><div class="valor">0</div><div class="extra">carregando</div></div>
+        </div>
+
+        <div class="card pedidos-intro-card">
+          <div class="card-titulo">
+            <span class="acento">Pedidos de lotes Rumo</span>
+            <span class="card-sub" id="contadorPedidos">0 pedidos</span>
+          </div>
+          <p class="txt-cinza pedidos-intro-texto">
+            Cada card representa um pedido feito pela Rumo para a Conprem. Os lotes previstos podem ser editados a qualquer momento e os lotes já lançados na aba Produção aparecem automaticamente quando usam o mesmo N° Pedido.
+          </p>
+        </div>
+
+        <div id="listaPedidos" class="pedidos-grid"></div>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modalPedido">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="modalTitulo">Novo pedido</h2>
+        <button class="fechar-modal" onclick="fecharModalPedido()">⨯</button>
+      </div>
+      <div class="modal-corpo">
+        <form id="formPedido" onsubmit="return false">
+          <input type="hidden" id="id">
+          <div class="form-grid">
+            <div class="form-secao">Identificação do pedido</div>
+            <div class="campo">
+              <label>Fornecedor <span class="obrig">*</span></label>
+              <select id="fornecedor" required></select>
+            </div>
+            <div class="campo">
+              <label>Projeto <span class="obrig">*</span></label>
+              <select id="projeto" required></select>
+            </div>
+            <div class="campo">
+              <label>N° Pedido <span class="obrig">*</span></label>
+              <input id="numeroPedido" type="text" required placeholder="ex.: 4501971179">
+            </div>
+            <div class="campo">
+              <label>Quantidade de dormentes <span class="obrig">*</span></label>
+              <input id="quantidade" type="number" min="0" step="1" required>
+            </div>
+
+            <div class="form-secao">Lotes do pedido</div>
+            <div class="campo full">
+              <label>Lotes previstos / vinculados <span class="dica">um lote por linha, editável no futuro</span></label>
+              <textarea id="lotesPlanejados" placeholder="Ex.:\nLote 001\nLote 002\nLote 003"></textarea>
+            </div>
+            <div class="campo full">
+              <label>Observações</label>
+              <textarea id="observacoes" placeholder="Informações complementares do pedido, entregas previstas, restrições etc."></textarea>
+            </div>
+          </div>
+          <div class="form-acoes">
+            <button type="button" class="btn btn-secundario" onclick="fecharModalPedido()">Cancelar</button>
+            <button type="button" class="btn btn-primario" onclick="salvarPedido()">Salvar pedido</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <!-- Área CONPREM: definida antes dos scripts para que store, config e menu
+       apontem para as tabelas conprem_* e para o fornecedor Conprem MG. -->
+  <script>window.AREA_EMPRESA = 'conprem';</script>
+  <script src="js/area.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/supabase-config.js?v=20260523-3"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script>Auth.exigirLogin();</script>
+  <script src="js/config.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/store.js"></script>
+  <script src="js/store-supabase.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
+  <script src="js/comum.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/pedidos.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>

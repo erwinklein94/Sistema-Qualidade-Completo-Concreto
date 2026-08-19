@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leitor de Recebidos Conprem · Controle de Dormentes Rumo</title>
+  <link rel="icon" type="image/png" href="assets/brand/favicon-rumo.png">
+  <link rel="stylesheet" href="css/style.css?v=20260819-area-conprem-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+  <link rel="stylesheet" href="css/conprem-leitor.css?v=20260819-area-conprem-v1">
+</head>
+<body>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina leitor-conprem">
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Do PDF da CONPREM direto para a planilha</span>
+            <span class="card-sub">Mapa de Rastreabilidade · Ensaio de Dormentes · Resumo Semanal</span>
+          </div>
+          <p class="txt-cinza" style="font-size:14px;line-height:1.7">
+            Solte aqui os relatórios que a CONPREM envia toda semana. O site lê os dados e devolve um
+            arquivo <strong>.xlsx</strong> com as colunas na mesma ordem do <em>Controle Semanal</em> — é só
+            copiar e colar. <strong>A leitura acontece inteiramente no seu navegador</strong>: nenhum PDF é
+            enviado para servidor algum. Se quiser, depois de conferir a prévia você pode
+            <strong>gravar as linhas lidas</strong> nas telas da área Conprem — isso é opcional e só acontece
+            quando você clica.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">1. Importar os PDFs</span>
+            <span class="card-sub">Pode soltar os três de uma vez — o leitor identifica qual é qual pelo conteúdo</span>
+          </div>
+
+          <div class="dropzone" id="dropzone" data-arrastando="false">
+            <svg class="dropzone__icone" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 15v2.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <p class="dropzone__titulo">Arraste os PDFs aqui ou clique para escolher</p>
+            <p class="dropzone__dica">Mapa de Rastreabilidade (FR. 98/00) · Ensaio de Dormentes (FR.10/08) · Resumo Semanal</p>
+            <input type="file" id="entrada-arquivos" accept="application/pdf,.pdf" multiple aria-label="Escolher arquivos PDF">
+          </div>
+
+          <ul class="arquivos" id="lista-arquivos"></ul>
+
+          <div class="acoes">
+            <label class="campo">
+              <span class="campo__rotulo">Semana de referência</span>
+              <input type="text" id="campo-semana" inputmode="text" placeholder="2026-S33" aria-describedby="dica-semana">
+            </label>
+            <span class="txt-mini txt-cinza" id="dica-semana">Preenchida pelo Resumo Semanal quando ele está no lote.</span>
+            <div class="acoes__espaco"></div>
+            <button type="button" class="btn btn-secundario" id="botao-limpar" disabled>Limpar</button>
+            <button type="button" class="btn btn-primario" id="botao-exportar" disabled>Baixar Excel (.xlsx)</button>
+          </div>
+
+          <div class="avisos" id="avisos" role="status" aria-live="polite"></div>
+        </div>
+
+        <div class="card" id="secao-resultados" hidden>
+          <div class="card-titulo">
+            <span class="acento">2. Conferir a prévia</span>
+            <span class="card-sub" id="resumo-geral"></span>
+          </div>
+          <div class="abas" role="tablist" id="abas"></div>
+          <div id="painel-resultado"></div>
+        </div>
+
+        <div class="card gravacao" id="secao-gravacao" hidden>
+          <div class="card-titulo">
+            <span class="acento">3. Gravar na área Conprem (opcional)</span>
+            <span class="card-sub">Escolha o que vai para o banco — o Excel continua disponível de qualquer forma</span>
+          </div>
+          <p class="txt-cinza" style="font-size:13.5px;line-height:1.65">
+            Só as linhas já extraídas são gravadas; o PDF nunca é enviado. Registro que já existe é
+            mantido como está — reimportar o mesmo relatório não duplica nada.
+          </p>
+          <div class="gravacao__opcoes" id="opcoes-gravacao"></div>
+          <div class="acoes">
+            <div class="acoes__espaco"></div>
+            <button type="button" class="btn btn-primario" id="botao-gravar" disabled>Gravar selecionados</button>
+          </div>
+          <div class="avisos" id="retorno-gravacao" role="status" aria-live="polite"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <!-- Área CONPREM: definida antes dos scripts para que store, config e menu
+       apontem para as tabelas conprem_* e para o fornecedor Conprem MG. -->
+  <script>window.AREA_EMPRESA = 'conprem';</script>
+  <script src="js/supabase-config.js?v=20260523-2"></script>
+  <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
+  <script>Auth.exigirLogin();</script>
+  <script src="js/area.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/config.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/store.js"></script>
+  <script src="js/store-supabase.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/comum.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!await Auth.exigirLogin()) return;
+      App.montarLayout('leitor', 'Leitor de Recebidos CONPREM', 'PDFs semanais da CONPREM para Excel — leitura no navegador, gravação opcional');
+    });
+  </script>
+  <script type="module" src="js/conprem-leitor/main.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>
