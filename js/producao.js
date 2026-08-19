@@ -60,7 +60,50 @@ const CAMPOS = ['fornecedor','pista','pedido','lote','projeto','tipo','total','d
   'desproIni','desproMeio','desproFim',
   'comp7Cp1','comp7Cp2','comp14Cp1','comp14Cp2','tracao14Cp1','tracao14Cp2',
   'comp28Cp1','comp28Cp2','tracao28Cp1','tracao28Cp2',
-  'serie','iauditor','ensaiados','aAnalisar','reprovados','aprovado','status','motivo'];
+  'serie','iauditor','ensaiados','aAnalisar','reprovados','aprovado','status','motivo',
+  // Mapa de Rastreabilidade (FR. 98/00) da CONPREM — preenchidos pelo Leitor de
+  // Recebidos ou à mão. Ver supabase/2026-08-19-producao-campos-rastreabilidade-conprem.sql.
+  'ordemFabricacao','cliente','produto','serieConcreto',
+  'acoSeqNf','acoCertInterno','acoCertExterno',
+  'cimentoSeqNf','cimentoCertInterno','cimentoCertExterno',
+  'areiaSeqNf','areiaCertInterno','areiaCertExterno',
+  'britaSeqNf','britaCertInterno','britaCertExterno',
+  'aditivoSeqNf','aditivoCertExterno',
+  'adicaoSeqNf','adicaoCertExterno',
+  'grampo','isoladorFrontal','isoladorLateral','palmilhaTrilho','palmilhaUsp',
+  'observacoes'];
+
+/* Os campos do Mapa de Rastreabilidade em um lugar só: a ordem aqui é a ordem
+   do formulário, do detalhe e do PDF, e é a mesma do relatório da CONPREM.
+   [id do campo no formulário, rótulo, coluna no Supabase] */
+const CAMPOS_RASTREABILIDADE = [
+  ['ordemFabricacao', 'Ordem de fabricação', 'ordem_fabricacao'],
+  ['cliente', 'Cliente', 'cliente'],
+  ['produto', 'Produto', 'produto'],
+  ['serieConcreto', 'Série concreto', 'serie_concreto'],
+  ['acoSeqNf', 'Aço — Seq./NF', 'aco_seq_nf'],
+  ['acoCertInterno', 'Aço — Cert. interno', 'aco_cert_interno'],
+  ['acoCertExterno', 'Aço — Cert. externo', 'aco_cert_externo'],
+  ['cimentoSeqNf', 'Cimento — Seq./NF', 'cimento_seq_nf'],
+  ['cimentoCertInterno', 'Cimento — Cert. interno', 'cimento_cert_interno'],
+  ['cimentoCertExterno', 'Cimento — Cert. externo', 'cimento_cert_externo'],
+  ['areiaSeqNf', 'Areia — Seq./NF', 'areia_seq_nf'],
+  ['areiaCertInterno', 'Areia — Cert. interno', 'areia_cert_interno'],
+  ['areiaCertExterno', 'Areia — Cert. externo', 'areia_cert_externo'],
+  ['britaSeqNf', 'Brita — Seq./NF', 'brita_seq_nf'],
+  ['britaCertInterno', 'Brita — Cert. interno', 'brita_cert_interno'],
+  ['britaCertExterno', 'Brita — Cert. externo', 'brita_cert_externo'],
+  ['aditivoSeqNf', 'Aditivo — Seq./NF', 'aditivo_seq_nf'],
+  ['aditivoCertExterno', 'Aditivo — Cert. externo', 'aditivo_cert_externo'],
+  ['adicaoSeqNf', 'Adição — Seq./NF', 'adicao_seq_nf'],
+  ['adicaoCertExterno', 'Adição — Cert. externo', 'adicao_cert_externo'],
+  ['grampo', 'Grampo', 'grampo'],
+  ['isoladorFrontal', 'Isolador frontal', 'isolador_frontal'],
+  ['isoladorLateral', 'Isolador lateral', 'isolador_lateral'],
+  ['palmilhaTrilho', 'Palmilha trilho', 'palmilha_trilho'],
+  ['palmilhaUsp', 'Palmilha USP', 'palmilha_usp'],
+  ['observacoes', 'Observações', 'observacoes'],
+];
 
 const STATUS_LOTE = Object.freeze({
   CURA_14: 'Em processo de cura (14 dias)',
@@ -738,6 +781,13 @@ async function excluir(id) {
   }
 }
 
+/* A seção do Mapa de Rastreabilidade só aparece quando o lote tem esses dados.
+   A maioria dos lotes da Cavan não tem — são 26 campos que viriam todos "—" e
+   só atrapalhariam a leitura da ficha. */
+function temRastreabilidade(r) {
+  return CAMPOS_RASTREABILIDADE.some(([campo]) => String(r?.[campo] || '').trim());
+}
+
 function ver(id) {
   const r = obterProducao(id);
   if (!r) return;
@@ -780,6 +830,13 @@ function ver(id) {
     </div>
     <div class="detalhe-secao">Status</div>
     <div class="detalhe-grid">${item('Status', r.status)}</div>
+    ${temRastreabilidade(r) ? `
+      <div class="detalhe-secao">Rastreabilidade (Mapa CONPREM)</div>
+      <div class="detalhe-grid">
+        ${CAMPOS_RASTREABILIDADE.filter(([campo]) => campo !== 'observacoes').map(([campo, rotulo]) => item(rotulo, r[campo])).join('')}
+      </div>
+      ${r.observacoes ? `<div class="detalhe-secao">Observações</div><p style="font-size:13.5px;color:var(--cinza-texto)">${U.esc(r.observacoes)}</p>` : ''}
+    ` : ''}
     ${r.motivo ? `<div class="detalhe-secao">Motivo / Especificação</div><p style="font-size:13.5px;color:var(--cinza-texto)">${U.esc(r.motivo)}</p>` : ''}
   `;
   document.getElementById('verTitulo').textContent = `Lote ${r.lote} — ${r.projeto}`;
@@ -826,6 +883,10 @@ function exportarLoteVerPDF(id) {
         it('A Analisar', r.aAnalisar), it('Reprovados', r.reprovados), it('Aprovado', r.aprovado),
       ]},
       { titulo: 'Status', itens: [it('Status', r.status)] },
+      ...(temRastreabilidade(r) ? [{
+        titulo: 'Rastreabilidade (Mapa CONPREM)',
+        itens: CAMPOS_RASTREABILIDADE.map(([campo, rotulo]) => it(rotulo, r[campo])),
+      }] : []),
       ...(r.motivo ? [{ titulo: 'Motivo / Especificação', itens: [it('Motivo', r.motivo)] }] : []),
     ],
   });
@@ -917,6 +978,7 @@ function mapProducaoDoBanco(r, ensaios = PRODUCAO_ENSAIOS_LIBERACAO) {
     ano: r.ano || '',
     periodoIni: dataBanco(r.periodo_inicio),
     periodoFim: dataBanco(r.periodo_fim),
+    ...Object.fromEntries(CAMPOS_RASTREABILIDADE.map(([campo, , coluna]) => [campo, r[coluna] || ''])),
   };
   reg.status = statusAutomaticoDoLote(reg, ensaiosDoLoteProducao(reg, ensaios));
   return reg;
@@ -974,6 +1036,7 @@ function mapProducaoParaBanco(reg, { compatibilidade = false } = {}) {
     ano: info.ano || null,
     periodo_inicio: info.ini || null,
     periodo_fim: info.fim || null,
+    ...Object.fromEntries(CAMPOS_RASTREABILIDADE.map(([campo, , coluna]) => [coluna, textoOuNull(reg[campo])])),
   };
   if (reg.id) base.id = reg.id;
 

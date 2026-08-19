@@ -75,23 +75,60 @@ function resultadoEnsaio(v) {
 
 /* ------------------------------------------------------- mapeamentos */
 
+/* Colunas do Mapa de Rastreabilidade que vão direto para a Produção, uma a uma.
+   A lista espelha CAMPOS_RASTREABILIDADE de js/producao.js — é a mesma tela que
+   exibe e edita esses campos depois. [chave no PDF, coluna no Supabase] */
+const RASTREABILIDADE_PARA_PRODUCAO = [
+  ['ordemFabricacao', 'ordem_fabricacao'],
+  ['cliente', 'cliente'],
+  ['produto', 'produto'],
+  ['serieConcreto', 'serie_concreto'],
+  ['acoSeqNf', 'aco_seq_nf'],
+  ['acoCertInterno', 'aco_cert_interno'],
+  ['acoCertExterno', 'aco_cert_externo'],
+  ['cimentoSeqNf', 'cimento_seq_nf'],
+  ['cimentoCertInterno', 'cimento_cert_interno'],
+  ['cimentoCertExterno', 'cimento_cert_externo'],
+  ['areiaSeqNf', 'areia_seq_nf'],
+  ['areiaCertInterno', 'areia_cert_interno'],
+  ['areiaCertExterno', 'areia_cert_externo'],
+  ['britaSeqNf', 'brita_seq_nf'],
+  ['britaCertInterno', 'brita_cert_interno'],
+  ['britaCertExterno', 'brita_cert_externo'],
+  ['aditivoSeqNf', 'aditivo_seq_nf'],
+  ['aditivoCertExterno', 'aditivo_cert_externo'],
+  ['adicaoSeqNf', 'adicao_seq_nf'],
+  ['adicaoCertExterno', 'adicao_cert_externo'],
+  ['grampo', 'grampo'],
+  ['isoladorFrontal', 'isolador_frontal'],
+  ['isoladorLateral', 'isolador_lateral'],
+  ['palmilhaTrilho', 'palmilha_trilho'],
+  ['palmilhaUsp', 'palmilha_usp'],
+  ['observacoes', 'observacoes'],
+];
+
 function linhasProducao(linhas, ctx) {
   return linhas
     .filter((l) => texto(l.lote))
     .map((l) => {
       const { ano, semana } = semanaAno(l.semana);
+      const rastreabilidade = Object.fromEntries(
+        RASTREABILIDADE_PARA_PRODUCAO.map(([chave, coluna]) => [coluna, texto(l[chave]) || null]),
+      );
       return {
         chave: `${texto(l.lote)}|${dataIso(l.dataFabricacao) || ''}`,
         registro: {
+          ...rastreabilidade,
           fornecedor: FORNECEDOR,
           lote: texto(l.lote),
           pedido: texto(l.pedido) || null,
           projeto: ctx.projeto,
           bitola: bitolaDoTexto(l.produto, ctx.projeto),
-          tipo_dormente: texto(l.produto) || null,
+          // A descrição comercial completa fica no campo Produto. "Tipo" é a
+          // lista curta do sistema (Bitola Mista, Contra Trilho...) e não
+          // recebe o texto do PDF para não sujar o filtro da tela.
           total_produzido: inteiro(l.qtdDormentes),
           data_fabricacao: dataIso(l.dataFabricacao),
-          serie: texto(l.serieConcreto) || null,
           lote_ombreira: texto(l.ombreiraLote) || null,
           semana,
           ano,

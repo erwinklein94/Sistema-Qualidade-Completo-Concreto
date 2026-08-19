@@ -108,9 +108,35 @@ Depois da prévia, a tela oferece gravar cada aba na área Conprem:
 
 | Aba do PDF | Vai para | Como |
 |---|---|---|
-| Rastreabilidade | Produção de Dormentes | um lote por linha |
+| Rastreabilidade | Produção de Dormentes | um lote por linha, com as 32 colunas do mapa |
 | Ensaios | Ensaios de Liberação | um ensaio por lote, com o resultado geral |
 | Resumo Semanal | Dormentes Reprovados | uma linha por tipo de refugo com quantidade |
+
+### As colunas do Mapa de Rastreabilidade
+
+A Produção ganhou uma seção **Rastreabilidade — Mapa CONPREM** com os 26 campos
+que o mapa traz e que não tinham lugar antes: ordem de fabricação, cliente,
+produto, série de concreto, os sequenciais e certificados (interno e externo)
+de aço, cimento, areia, brita, aditivo e adição, os itens de fixação (grampo,
+isoladores, palmilhas) e observações. Os outros seis do relatório — semana,
+pedido, lote, data de fabricação, quantidade e lote da ombreira — já tinham
+campo e continuam onde estavam.
+
+Todos são texto, de propósito: o PDF traz NF e certificado com zero à esquerda
+(`031/26`, `00281/2026`) e às vezes mais de um valor na mesma célula, unidos por
+`; `. Guardar como texto preserva os dois casos.
+
+Duas escolhas de mapeamento que valem registro:
+
+- **Série concreto** vai para a coluna `serie_concreto`, não para `serie`. A
+  `serie` é a série de liberação do fluxo da Cavan e significa outra coisa.
+- **Produto** guarda a descrição comercial completa (`DORMENTE MONOBLOCO
+  PROTENDIDO - BIT 1.600 ...`). O campo **Tipo** continua sendo a lista curta do
+  sistema e não recebe esse texto, para não sujar o filtro da tela.
+
+A seção só aparece na ficha do lote quando há dado nela — os lotes antigos, da
+Cavan e da Conprem, não ganham 26 linhas vazias. **Nenhum registro anterior foi
+alterado**: as colunas nasceram vazias no histórico existente.
 
 Nada é gravado sem clique, e registro que já existe é **mantido**, não
 sobrescrito — reimportar o mesmo PDF não duplica.
