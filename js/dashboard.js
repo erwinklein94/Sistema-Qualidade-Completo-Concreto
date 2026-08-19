@@ -257,10 +257,16 @@ async function carregarDashboard() {
 
   try {
     await Auth.exigirLogin();
+    // Na Conprem o ensaio mora em conprem_ensaios_dormentes (o relatório
+    // FR.10/08 completo), não em ensaios_liberacao — é a tela Ensaios de
+    // Dormentes que alimenta o painel. As colunas que o mapEnsaio usa são as
+    // mesmas nas duas tabelas, então só a origem muda.
     const [producao, reprovados, ensaios] = await Promise.all([
       StoreSupabase.listarProducao({ limite: 10000 }),
       StoreSupabase.listarReprovados({ limite: 10000 }),
-      StoreSupabase.listarEnsaiosLiberacao({ limite: 10000 }),
+      Area.ehConprem()
+        ? StoreSupabase.listarEnsaiosDormentesConprem({ limite: 10000 })
+        : StoreSupabase.listarEnsaiosLiberacao({ limite: 10000 }),
     ]);
 
     Dashboard.prod = (producao || []).map(mapProducao);

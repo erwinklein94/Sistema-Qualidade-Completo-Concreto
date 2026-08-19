@@ -18,11 +18,35 @@ partir daqui são duas áreas:
 | Pedidos | `conprem-pedidos.html` | `js/pedidos.js` |
 | Produção de Dormentes | `conprem-producao.html` | `js/producao.js` |
 | Dormentes Reprovados | `conprem-reprovados.html` | `js/reprovados.js` |
+| Ensaios de Dormentes | `conprem-ensaios.html` | `js/conprem-ensaios.js` |
 | Inspeção de Concretagem | `conprem-inspecao-concretagem.html` | `js/inspecao-concretagem.js` |
 | Inspeção de Pista | `conprem-inspecao-pista.html` | `js/inspecao-pista.js` |
 
-Salvo o Leitor, **o JS é o mesmo das telas da Cavan**. Não há cópia de lógica:
-o que muda é a tabela de origem e o fornecedor.
+Salvo o Leitor e os Ensaios de Dormentes, **o JS é o mesmo das telas da Cavan**.
+Não há cópia de lógica: o que muda é a tabela de origem e o fornecedor.
+
+## Ensaios de Dormentes
+
+Tela própria da Conprem, sem equivalente na Cavan, porque o relatório é outro:
+o **FR.10/08** traz um ensaio completo por lote — gabaritos, geometria,
+dimensional em milímetros, momentos, arrancamento, USP, aderência e resultado
+geral — nas suas 45 colunas. Isso não cabia em `ensaios_liberacao`, que guarda
+só a decisão de liberação de uma série.
+
+Tabela: `conprem_ensaios_dormentes`
+(`supabase/2026-08-19-conprem-ensaios-dormentes.sql`). Medida é `numeric`, data é
+`date` e o resto é texto — inclusive as leituras `OK`, `N/A` e `-`, que são
+respostas válidas do formulário da CONPREM.
+
+O formulário, a ficha do ensaio, a tabela e a exportação saem todos da lista
+`CAMPOS` de `js/conprem-ensaios.js`. São 45 campos (mais **Projeto**, que a tela
+usa para filtrar): repetir a lista em quatro lugares seria erro garantido na
+primeira mudança do relatório.
+
+O **Dashboard Conprem** lê os ensaios daqui, e não de `conprem_ensaios_liberacao`
+— as colunas que ele usa têm o mesmo nome nas duas tabelas, então só a origem
+muda. `conprem_ensaios_liberacao` continua existindo e vazia, para o caso de a
+Conprem passar a ter fluxo de liberação por série como a Cavan.
 
 ## Como uma página escolhe a área
 
@@ -109,7 +133,7 @@ Depois da prévia, a tela oferece gravar cada aba na área Conprem:
 | Aba do PDF | Vai para | Como |
 |---|---|---|
 | Rastreabilidade | Produção de Dormentes | um lote por linha, com as 32 colunas do mapa |
-| Ensaios | Ensaios de Liberação | um ensaio por lote, com o resultado geral |
+| Ensaios | Ensaios de Dormentes | um ensaio por lote, com as 45 colunas do relatório |
 | Resumo Semanal | Dormentes Reprovados | uma linha por tipo de refugo com quantidade |
 
 ### As colunas do Mapa de Rastreabilidade
@@ -141,17 +165,13 @@ alterado**: as colunas nasceram vazias no histórico existente.
 Nada é gravado sem clique, e registro que já existe é **mantido**, não
 sobrescrito — reimportar o mesmo PDF não duplica.
 
-Três campos que as tabelas exigem e os PDFs não trazem:
+Dois campos que as tabelas exigem e os PDFs não trazem:
 
 - **Projeto** — os relatórios trazem o produto (`DORMENTE MONOBLOCO PROTENDIDO -
   BIT 1.600 ...`) e o destino da carga (`CHAPADÃO DO SUL MS`), não o nome do
   projeto. A tela pede que o usuário escolha, e sem essa escolha o botão de
   gravar fica travado. Quando o nome do projeto aparece escrito em algum
   relatório, o campo já vem sugerido.
-- **Série liberada** (ensaios) — vem do `Série concreto` do Mapa de
-  Rastreabilidade, cruzando pelo número do lote. Sem o mapa no lote de arquivos,
-  o próprio lote responde pela série: a CONPREM ensaia um lote por vez, sem o
-  agrupamento em séries que a Cavan usa.
 - **Lote** (reprovados) — o Resumo Semanal conta refugo da semana inteira, não
   de um lote. Grava-se `Semana 2026-S33`, escrito assim justamente para não se
   confundir com número de lote de verdade.

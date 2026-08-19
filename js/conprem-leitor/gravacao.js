@@ -137,20 +137,66 @@ function linhasProducao(linhas, ctx) {
     });
 }
 
-function linhasEnsaios(linhas, ctx) {
-  // A série do lote está no Mapa de Rastreabilidade, não no PDF de ensaio.
-  // Quando os dois vêm no mesmo lote de arquivos, cruzamos pelo número do lote;
-  // sem o mapa, o próprio lote responde pela série — é como a CONPREM trabalha,
-  // um ensaio por lote, sem o agrupamento em séries que a Cavan usa.
-  // A bitola tem o mesmo problema: no PDF de ensaio a coluna vem "-", e quem
-  // diz o produto é o mapa de rastreabilidade.
-  const serieDoLote = new Map();
+/* As colunas do Ensaio de Dormentes (FR.10/08) que vão direto para a tabela da
+   tela Ensaios de Dormentes, uma a uma. A lista espelha CAMPOS de
+   js/conprem-ensaios.js — é a mesma tela que exibe e edita esses campos depois.
+   [chave no PDF, coluna no Supabase, numérico?] */
+const ENSAIO_PARA_TABELA = [
+  ['ordemFabricacao', 'ordem_fabricacao'],
+  ['pedido', 'pedido'],
+  ['cliente', 'cliente'],
+  ['turno', 'turno'],
+  ['pista', 'pista', true],
+  ['molde', 'molde', true],
+  ['linha', 'linha', true],
+  ['medExtPassa', 'med_ext_passa'],
+  ['medExtNaoPassa', 'med_ext_nao_passa'],
+  ['medIntPassa', 'med_int_passa'],
+  ['medIntNaoPassa', 'med_int_nao_passa'],
+  ['inclinacao1', 'inclinacao_1'],
+  ['inclinacao2', 'inclinacao_2'],
+  ['torcaoRelativa', 'torcao_relativa', true],
+  ['alturaOmbreira1', 'altura_ombreira_1'],
+  ['alturaOmbreira2', 'altura_ombreira_2'],
+  ['posicaoInsertos', 'posicao_insertos'],
+  ['montagemFixacoes', 'montagem_fixacoes'],
+  ['comprimento', 'comprimento_mm', true],
+  ['larguraApoioSup', 'largura_apoio_sup_mm', true],
+  ['larguraApoioInf', 'largura_apoio_inf_mm', true],
+  ['alturaApoio', 'altura_apoio_mm', true],
+  ['larguraCentroSup', 'largura_centro_sup_mm', true],
+  ['larguraCentroInf', 'largura_centro_inf_mm', true],
+  ['alturaCentro', 'altura_centro_mm', true],
+  ['momentoPosApoio', 'momento_pos_apoio'],
+  ['momentoNegApoio', 'momento_neg_apoio'],
+  ['momentoPosCentro', 'momento_pos_centro'],
+  ['momentoNegCentro', 'momento_neg_centro'],
+  ['arrancamentoOmbreiras', 'arrancamento_ombreiras'],
+  ['precargaUsp', 'precarga_usp_kgf', true],
+  ['cargaMaxUsp', 'carga_max_usp_kgf', true],
+  ['resultadoUsp', 'resultado_usp'],
+  ['torcaoOmbreiras', 'torcao_ombreiras'],
+  ['aderenciaCargaFinal', 'aderencia_carga_final'],
+  ['executor', 'executor'],
+  ['relatorioFotografico', 'relatorio_fotografico'],
+  ['fiscalizacao', 'fiscalizacao'],
+  ['observacoes', 'observacoes'],
+];
+
+function numeroOuNull(v) {
+  const s = texto(v).replace(',', '.');
+  if (!s) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function linhasEnsaiosDormentes(linhas, ctx) {
+  // A bitola do PDF de ensaio costuma vir "-"; quem sabe o produto é o Mapa
+  // de Rastreabilidade, cruzado aqui pelo número do lote.
   const bitolaDoLote = new Map();
   for (const r of ctx.rastreabilidade || []) {
     const lote = texto(r.lote);
-    if (!lote) continue;
-    serieDoLote.set(lote, texto(r.serieConcreto) || lote);
-    bitolaDoLote.set(lote, bitolaDoTexto(r.produto, ctx.projeto));
+    if (lote) bitolaDoLote.set(lote, bitolaDoTexto(r.produto, ctx.projeto));
   }
 
   return linhas
@@ -158,29 +204,30 @@ function linhasEnsaios(linhas, ctx) {
     .map((l) => {
       const { ano, semana } = semanaAno(l.semana);
       const lote = texto(l.lote);
+      const colunas = Object.fromEntries(
+        ENSAIO_PARA_TABELA.map(([chave, coluna, numerico]) => [
+          coluna,
+          numerico ? numeroOuNull(l[chave]) : (texto(l[chave]) || null),
+        ]),
+      );
       return {
         chave: `${lote}|${dataIso(l.dataEnsaio) || ''}`,
         registro: {
+          ...colunas,
           fornecedor: FORNECEDOR,
           projeto: ctx.projeto,
           bitola: bitolaDoLote.get(lote) || bitolaDoTexto(l.bitola, ctx.projeto),
           lote_ensaiado: lote,
-          serie_liberada: serieDoLote.get(lote) || lote,
+          data_fabricacao: dataIso(l.dataFabricacao),
           data_ensaio: dataIso(l.dataEnsaio),
           resultado: resultadoEnsaio(l.resultadoGeral),
-          responsavel: texto(l.executor) || texto(l.fiscalizacao) || null,
           semana,
           ano,
-          observacoes: [
-            'Importado do PDF de Ensaio de Dormentes da CONPREM pelo Leitor de Recebidos.',
-            texto(l.turno) && `Turno: ${texto(l.turno)}`,
-            texto(l.molde) && `Molde: ${texto(l.molde)}`,
-            texto(l.observacoes),
-          ].filter(Boolean).join(' · '),
         },
       };
     });
 }
+
 
 /* Cada tipo de refugo do Resumo Semanal vira uma linha de reprovados, no mesmo
    vocabulário de motivo que a tela de Dormentes Reprovados já usa. */
@@ -244,12 +291,12 @@ export const DESTINOS = [
   },
   {
     id: 'ensaios',
-    titulo: 'Ensaios de Liberação',
-    detalhe: 'Cada lote ensaiado vira um ensaio de liberação com o resultado geral do PDF.',
-    mapear: linhasEnsaios,
-    listar: () => StoreSupabase.listarEnsaiosLiberacao({ limite: 10000 }),
+    titulo: 'Ensaios de Dormentes',
+    detalhe: 'Cada lote ensaiado vira uma linha com as 45 colunas do relatório: gabaritos, dimensional, cargas, USP e resultado geral.',
+    mapear: linhasEnsaiosDormentes,
+    listar: () => StoreSupabase.listarEnsaiosDormentesConprem({ limite: 10000 }),
     chaveExistente: (r) => `${texto(r.lote_ensaiado)}|${texto(r.data_ensaio).slice(0, 10)}`,
-    salvar: (registro) => StoreSupabase.salvarEnsaioLiberacao(registro),
+    salvar: (registro) => StoreSupabase.salvarEnsaioDormenteConprem(registro),
   },
   {
     id: 'resumo',

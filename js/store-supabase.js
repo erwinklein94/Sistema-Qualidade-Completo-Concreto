@@ -246,6 +246,63 @@ const StoreSupabase = (() => {
   }
 
   /* ---------------------------------------------------------------------
+     Ensaio de Dormentes (FR.10/08) da CONPREM — o relatório completo, com
+     dimensional, cargas, USP e resultado geral. Existe só na área Conprem
+     e é alimentado pelo Leitor de Recebidos.
+     --------------------------------------------------------------------- */
+
+  async function listarEnsaiosDormentesConprem(filtros = {}) {
+    let q = db()
+      .from('conprem_ensaios_dormentes')
+      .select('*')
+      .order('data_ensaio', { ascending: false, nullsFirst: false })
+      .order('criado_em', { ascending: false, nullsFirst: false })
+      .limit(filtros.limite || 5000);
+
+    if (filtros.id) q = q.eq('id', filtros.id);
+    if (filtros.lote) q = q.eq('lote_ensaiado', filtros.lote);
+    if (filtros.producaoLoteId) q = q.eq('producao_lote_id', filtros.producaoLoteId);
+    if (filtros.projeto) q = q.eq('projeto', filtros.projeto);
+    if (filtros.bitola) q = q.eq('bitola', filtros.bitola);
+    if (filtros.resultado) q = q.eq('resultado', filtros.resultado);
+    if (filtros.dataIni) q = q.gte('data_ensaio', filtros.dataIni);
+    if (filtros.dataFim) q = q.lte('data_ensaio', filtros.dataFim);
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async function salvarEnsaioDormenteConprem(registro) {
+    const [acao, descricao] = acaoSalvar(registro);
+    exigirPermissao(acao, descricao);
+    const user = await usuarioAtual();
+    const payload = { ...registro, atualizado_por: user?.id || null };
+    const id = payload.id;
+
+    let query;
+    if (id) {
+      delete payload.id;
+      query = db().from('conprem_ensaios_dormentes').update(payload).eq('id', id);
+    } else {
+      delete payload.id;
+      payload.criado_por = user?.id || null;
+      query = db().from('conprem_ensaios_dormentes').insert(payload);
+    }
+
+    const { data, error } = await query.select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async function removerEnsaioDormenteConprem(id) {
+    exigirPermissao('excluir', 'excluir registros');
+    const { error } = await db().from('conprem_ensaios_dormentes').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  }
+
+  /* ---------------------------------------------------------------------
      Ensaios de Acompanhamento (14 dias · cura térmica) — registro sem
      liberação de série. Tabela independente de ensaios_liberacao.
      --------------------------------------------------------------------- */
@@ -841,6 +898,9 @@ const StoreSupabase = (() => {
     listarEnsaiosLiberacao,
     salvarEnsaioLiberacao,
     removerEnsaioLiberacao,
+    listarEnsaiosDormentesConprem,
+    salvarEnsaioDormenteConprem,
+    removerEnsaioDormenteConprem,
     listarEnsaiosAcompanhamento,
     salvarEnsaioAcompanhamento,
     atualizarSerieEnsaioAcompanhamento,

@@ -39,6 +39,7 @@ const App = {
       { k: 'conprem-pedidos', t: 'Pedidos', ic: ICN.trem, href: 'conprem-pedidos.html', group: 'conprem' },
       { k: 'conprem-producao', t: 'Produção de Dormentes', ic: ICN.producao, href: 'conprem-producao.html', group: 'conprem' },
       { k: 'conprem-reprovados', t: 'Dormentes Reprovados', ic: ICN.reprova, href: 'conprem-reprovados.html', group: 'conprem' },
+      { k: 'conprem-ensaios', t: 'Ensaios de Dormentes', ic: ICN.check, href: 'conprem-ensaios.html', group: 'conprem' },
       { k: 'conprem-inspecaoConcretagem', t: 'Inspeção de Concretagem', ic: ICN.ensaios, href: 'conprem-inspecao-concretagem.html', group: 'conprem' },
       { k: 'conprem-inspecaoPista', t: 'Inspeção de Pista', ic: ICN.ensaios, href: 'conprem-inspecao-pista.html', group: 'conprem' },
 
