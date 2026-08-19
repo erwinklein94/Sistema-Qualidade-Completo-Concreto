@@ -210,6 +210,31 @@ Dois campos que as tabelas exigem e os PDFs não trazem:
   de um lote. Grava-se `Semana 2026-S33`, escrito assim justamente para não se
   confundir com número de lote de verdade.
 
+### Os refugos do Resumo Semanal
+
+O bloco **Dormentes Refugados** do PDF é uma tabela sem grade: sete títulos numa
+faixa e os números numa linha abaixo, alinhados por baixo de cada título. A
+ligação entre número e coluna é geométrica, e é onde erra com mais facilidade —
+por isso `js/conprem-leitor/parsers/resumo.js` faz três coisas:
+
+- **Junta título quebrado em duas linhas** (`Falhas de` / `Fabricação`) numa
+  âncora só. Sem isso o centro sai deslocado e o número da coluna vizinha cai
+  na errada.
+- **Só aceita o número que estiver mesmo sob uma coluna**, dentro de metade do
+  vão entre colunas vizinhas. Fora disso, avisa em vez de adivinhar. Dois
+  números sob a mesma coluna também viram aviso.
+- **Confere o detalhamento contra o total.** O formulário declara
+  `Quantidade Refugos` num campo e detalha por tipo em outro; quando os dois não
+  fecham, o Leitor avisa antes de gravar, com os dois números na tela.
+
+A linha de valores é escolhida por ter **mais números**, e não por ser composta
+só de números: antes, um traço no lugar de um zero ou um valor com separador de
+milhar descartava a linha inteira e todos os sete tipos vinham zerados.
+
+Na lista de Dormentes Reprovados os motivos aparecem como chips —
+`Ombreiras 11 · Fissuras 4 · Outros 2` — em ordem de quantidade, e a semana cujo
+total não bate com a soma dos tipos ganha um alerta `total 20 ≠ 8`.
+
 ### O Resumo Semanal em Dormentes Reprovados
 
 A tela ganhou uma seção **Resumo Semanal CONPREM** com as 23 colunas do

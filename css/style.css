@@ -8257,3 +8257,17 @@ body[data-tema="escuro"] .safeculture-erro-msg { color: #ffb3b3; }
 }
 .nav a.nav-link--conprem.ativo::before { background: #F78344 !important; }
 .menu-dd--conprem .menu-dd-botao::before { background: #F78344; }
+
+/* ---------------------------------------------------------------------
+   Motivos de refugo na lista de Dormentes Reprovados da Conprem: um chip
+   por tipo, com a quantidade ao lado. Quebra em várias linhas na célula
+   em vez de esticar a tabela.
+   --------------------------------------------------------------------- */
+.refugo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 340px;
+}
+.refugo-chips .badge { font-size: 10.5px; padding: 2px 8px; }
+.refugo-chips .badge strong { margin-left: 2px; font-weight: 800; }

@@ -107,10 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { campo: 'ensaiosRealizados', rotulo: 'Ensaios', classe: 'right' },
       { campo: 'totalRefugos', rotulo: 'Refugos', classe: 'right', html: r => `<span class="badge badge-reprovado">${U.esc(r.totalRefugos || '0')}</span>` },
       { rotulo: 'Taxa', classe: 'right', html: r => U.esc(formatarTaxa(r.taxaRefugo)) },
-      { rotulo: 'Maior motivo', html: r => {
-        const top = refugosPorTipo([r])[0];
-        return top ? `${U.esc(top[0])} <span class="txt-mini txt-cinza">(${top[1]})</span>` : '—';
-      } },
+      { rotulo: 'Motivos dos refugos', html: r => chipsRefugos(r) },
       { campo: 'qtdPlanejada', rotulo: 'Planejado p/ semana seguinte', classe: 'right' },
     ],
 
@@ -129,6 +126,28 @@ document.addEventListener('DOMContentLoaded', () => {
     },
   });
 });
+
+/* Motivo e quantidade lado a lado na própria lista: é o que se quer ver de
+   relance na semana, sem abrir a ficha. Só os tipos com refugo aparecem. */
+function chipsRefugos(r) {
+  const tipos = refugosPorTipo([r]);
+  if (!tipos.length) return '<span class="txt-mini txt-cinza">Sem refugo na semana</span>';
+  const chips = tipos
+    .map(([nome, qtd]) => `<span class="badge badge-reprovado" title="${U.esc(nome)}: ${qtd} dormente(s)">${U.esc(nome)} <strong>${qtd}</strong></span>`)
+    .join(' ');
+  return `<div class="refugo-chips">${chips}${divergencia(r)}</div>`;
+}
+
+/* O relatório traz o total num campo e o detalhamento em outro. Quando os dois
+   não fecham, quem olha a tela precisa saber — o detalhamento pode ter vindo
+   errado do PDF, ou alguém editou só um dos lados. */
+function divergencia(r) {
+  const declarado = parseInt(r.totalRefugos, 10);
+  if (!Number.isFinite(declarado)) return '';
+  const somaTipos = refugosPorTipo([r]).reduce((n, [, q]) => n + q, 0);
+  if (somaTipos === declarado) return '';
+  return ` <span class="badge badge-amarelo" title="O campo Total refugos diz ${declarado}, mas os tipos somam ${somaTipos}.">total ${declarado} ≠ ${somaTipos}</span>`;
+}
 
 function soma(lista, campo) {
   return lista.reduce((n, r) => n + (parseInt(r[campo], 10) || 0), 0);

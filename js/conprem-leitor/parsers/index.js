@@ -68,6 +68,11 @@ export async function processar(arquivos, opcoes = {}) {
       resultados[parser.id] = (resultados[parser.id] || []).concat(saida.linhas);
       origens[parser.id] = (origens[parser.id] || []).concat(arquivo.name);
 
+      // O parser avisa o que leu com dúvida — número que não ficou sob nenhuma
+      // coluna, total que não fecha com o detalhamento. Some ao mesmo lugar dos
+      // erros de leitura para o usuário ver antes de mandar gravar.
+      for (const aviso of saida.avisos || []) avisos.push(`"${arquivo.name}": ${aviso}`);
+
       if (!saida.linhas.length) {
         avisos.push(`"${arquivo.name}" foi reconhecido, mas nenhuma linha foi extraída.`);
       }
