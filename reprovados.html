@@ -78,32 +78,6 @@
             <div class="campo full"><label>Motivo Detalhado</label><select id="motivoDetalhado"></select></div>
             <div class="campo"><label>Motivo (Indicador) <span class="obrig">*</span></label><select id="motivoIndicador" required></select></div>
             <div class="campo"><label>Total de Refugos <span class="dica">(qtde)</span></label><input id="totalRefugos" type="number" min="0"></div>
-
-            <!-- Resumo Semanal CONPREM - RUMO. Preenchido pelo Leitor de
-                 Recebidos ao importar o PDF, ou à mão aqui. É o fechamento da
-                 SEMANA (produção, ensaios, refugo por tipo, taxa e planejamento
-                 da semana seguinte), não de um lote — por isso vem em uma linha
-                 só, com o refugo por tipo em colunas. -->
-            <div class="form-secao">Resumo Semanal CONPREM</div>
-            <div class="campo"><label>Nº resumo</label><input id="numeroResumo" type="text"></div>
-            <div class="campo"><label>Data emissão</label><input id="dataEmissao" type="date"></div>
-            <div class="campo"><label>Unidade</label><input id="unidade" type="text"></div>
-            <div class="campo"><label>Produto/Material</label><input id="produtoMaterial" type="text"></div>
-            <div class="campo"><label>Pedido/Local</label><input id="pedidoLocal" type="text"></div>
-            <div class="campo"><label>Qtd. fabricada</label><input id="qtdFabricada" type="number" min="0"></div>
-            <div class="campo"><label>Ensaios realizados</label><input id="ensaiosRealizados" type="number" min="0"></div>
-            <div class="campo"><label>Fissuras</label><input id="refugoFissuras" type="number" min="0"></div>
-            <div class="campo"><label>Vazios</label><input id="refugoVazios" type="number" min="0"></div>
-            <div class="campo"><label>Ombreiras</label><input id="refugoOmbreiras" type="number" min="0"></div>
-            <div class="campo"><label>Quebras</label><input id="refugoQuebras" type="number" min="0"></div>
-            <div class="campo"><label>USP</label><input id="refugoUsp" type="number" min="0"></div>
-            <div class="campo"><label>Falhas fabricação</label><input id="refugoFalhasFabricacao" type="number" min="0"></div>
-            <div class="campo"><label>Outros</label><input id="refugoOutros" type="number" min="0"></div>
-            <div class="campo"><label>Taxa de refugo <span class="dica">(fração: 0,0065 = 0,65%)</span></label><input id="taxaRefugo" type="number" step="any"></div>
-            <div class="campo"><label>Ensaios por 1.000</label><input id="ensaiosPorMil" type="number" step="any"></div>
-            <div class="campo"><label>Planejamento início</label><input id="planejamentoInicio" type="date"></div>
-            <div class="campo"><label>Planejamento fim</label><input id="planejamentoFim" type="date"></div>
-            <div class="campo"><label>Qtd. planejada</label><input id="qtdPlanejada" type="number" min="0"></div>
           </div>
           <div class="form-acoes">
             <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
@@ -179,15 +153,15 @@
   <script src="js/supabase-config.js?v=20260523-2"></script>
   <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
   <script>Auth.exigirLogin();</script>
-  <script src="js/area.js?v=20260819-area-conprem-v1"></script>
-  <script src="js/config.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/store.js"></script>
-  <script src="js/store-supabase.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/store-supabase.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
-  <script src="js/comum.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/comum.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/indicadores-qualidade.js?v=20260612-saude-projetos-v3"></script>
-  <script src="js/reprovados.js?v=20260819-resumo-semanal-v1"></script>
+  <script src="js/reprovados.js?v=20260819-area-conprem-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

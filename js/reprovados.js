@@ -16,60 +16,6 @@ const CAMPOS = [
   'lote', 'projeto', 'tipo', 'molde', 'cavidade', 'motivoDetalhado', 'motivoIndicador', 'totalRefugos'
 ];
 
-/* Resumo Semanal CONPREM — o fechamento da semana: produção, ensaios, refugo
-   por tipo, taxa e planejamento da semana seguinte. Preenchido pelo Leitor de
-   Recebidos ao importar o PDF, ou à mão aqui. Uma linha por semana, e não uma
-   por motivo: o quadro é da semana inteira.
-   Ver supabase/2026-08-19-reprovados-campos-resumo-semanal.sql.
-   [id do campo, rótulo, coluna no Supabase, tipo: texto|data|inteiro|numero] */
-const CAMPOS_RESUMO = [
-  ['numeroResumo', 'Nº resumo', 'numero_resumo', 'texto'],
-  ['dataEmissao', 'Data emissão', 'data_emissao', 'data'],
-  ['unidade', 'Unidade', 'unidade', 'texto'],
-  ['produtoMaterial', 'Produto/Material', 'produto_material', 'texto'],
-  ['pedidoLocal', 'Pedido/Local', 'pedido_local', 'texto'],
-  ['qtdFabricada', 'Qtd. fabricada', 'qtd_fabricada', 'inteiro'],
-  ['ensaiosRealizados', 'Ensaios realizados', 'ensaios_realizados', 'inteiro'],
-  ['refugoFissuras', 'Fissuras', 'refugo_fissuras', 'inteiro'],
-  ['refugoVazios', 'Vazios', 'refugo_vazios', 'inteiro'],
-  ['refugoOmbreiras', 'Ombreiras', 'refugo_ombreiras', 'inteiro'],
-  ['refugoQuebras', 'Quebras', 'refugo_quebras', 'inteiro'],
-  ['refugoUsp', 'USP', 'refugo_usp', 'inteiro'],
-  ['refugoFalhasFabricacao', 'Falhas fabricação', 'refugo_falhas_fabricacao', 'inteiro'],
-  ['refugoOutros', 'Outros', 'refugo_outros', 'inteiro'],
-  ['taxaRefugo', 'Taxa de refugo', 'taxa_refugo', 'numero'],
-  ['ensaiosPorMil', 'Ensaios por 1.000', 'ensaios_por_mil', 'numero'],
-  ['planejamentoInicio', 'Planejamento início', 'planejamento_inicio', 'data'],
-  ['planejamentoFim', 'Planejamento fim', 'planejamento_fim', 'data'],
-  ['qtdPlanejada', 'Qtd. planejada', 'qtd_planejada', 'inteiro'],
-];
-
-/* A seção do Resumo só aparece na ficha quando o registro tem esses dados —
-   a reprova avulsa, de um lote só, não ganha 18 linhas vazias. */
-function temResumoSemanal(r) {
-  return CAMPOS_RESUMO.some(([campo]) => String(r?.[campo] ?? '').trim() !== '');
-}
-
-/* Cada coluna de refugo do Resumo Semanal no vocabulário de motivo que o
-   indicador já usa. Devolve vazio para a reprova avulsa, que tem motivo
-   próprio e não precisa ser aberta. */
-const REFUGOS_DO_RESUMO = [
-  ['refugoFissuras', 'Trincas'],
-  ['refugoVazios', 'Vazios'],
-  ['refugoOmbreiras', 'Ombreiras'],
-  ['refugoQuebras', 'Quebras'],
-  ['refugoUsp', 'USP'],
-  ['refugoFalhasFabricacao', 'Falha Operacional'],
-  ['refugoOutros', 'Outros'],
-];
-
-function motivosDoResumo(r) {
-  if (!temResumoSemanal(r)) return [];
-  return REFUGOS_DO_RESUMO
-    .map(([campo, motivo]) => [motivo, parseInt(String(r[campo] ?? ''), 10) || 0])
-    .filter(([, qtd]) => qtd > 0);
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
   if (!await Auth.exigirLogin()) return;
   App.montarLayout('reprovados', Area.titulo('Dormentes Reprovados'), `Registro de refugos por molde, cavidade, motivo e período operacional — ${Area.fornecedor()}`);
@@ -336,19 +282,12 @@ function renderParecerReprovados(lista, f) {
     : 'todos os períodos';
 
   const motivos = new Map();
-  const somar = (nome, refugos) => {
+  lista.forEach(r => {
+    const nome = r.motivoIndicador || 'Sem motivo informado';
     const item = motivos.get(nome) || { nome, registros: 0, refugos: 0 };
     item.registros += 1;
-    item.refugos += refugos;
+    item.refugos += U.int(r.totalRefugos) || 1;
     motivos.set(nome, item);
-  };
-  lista.forEach(r => {
-    // A linha do Resumo Semanal não tem motivo único: ela traz o refugo já
-    // repartido por tipo em colunas. Abrir aqui mantém o ranking honesto —
-    // a soma dos tipos é o mesmo total_refugos da linha, sem contar duas vezes.
-    const porTipo = motivosDoResumo(r);
-    if (porTipo.length) { porTipo.forEach(([nome, qtd]) => somar(nome, qtd)); return; }
-    somar(r.motivoIndicador || 'Sem motivo informado', U.int(r.totalRefugos) || 1);
   });
 
   const ranking = Array.from(motivos.values()).sort((a, b) => b.refugos - a.refugos || a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -408,7 +347,6 @@ function editar(id) {
   document.getElementById('id').value = r.id;
   popularSelectLotes(r.producaoLoteId || '');
   CAMPOS.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
-  CAMPOS_RESUMO.forEach(([campo]) => setValor(campo, r[campo] != null ? r[campo] : ''));
   if (r.dataProducao) preencherSemanaEPeriodo(r.dataProducao, true);
   document.getElementById('modalTitulo').textContent = `Editar reprova — lote ${r.lote}`;
   document.getElementById('modal').classList.add('aberto');
@@ -420,20 +358,17 @@ async function salvar() {
     App.toast(Auth.mensagemSemPermissao(editando ? 'editar registros' : 'criar registros'), 'aviso');
     return;
   }
-  const reg = { id: document.getElementById('id').value || undefined };
-  CAMPOS.forEach(c => { const el = document.getElementById(c); if (el) reg[c] = el.value; });
-  CAMPOS_RESUMO.forEach(([campo]) => { const el = document.getElementById(campo); if (el) reg[campo] = el.value; });
-
-  const lote = String(reg.lote || '').trim();
-  const projeto = reg.projeto;
-  const dataProd = reg.dataProducao;
-  // O Resumo Semanal fecha a semana e não tem motivo único — o refugo vem
-  // repartido por tipo nas colunas. Só a reprova avulsa exige motivo.
-  const motivoInd = temResumoSemanal(reg) ? true : reg.motivoIndicador;
+  const lote = document.getElementById('lote').value.trim();
+  const projeto = document.getElementById('projeto').value;
+  const dataProd = document.getElementById('dataProducao').value;
+  const motivoInd = document.getElementById('motivoIndicador').value;
   if (!lote || !projeto || !dataProd || !motivoInd) {
     App.toast('Preencha os campos obrigatórios (*).', 'aviso');
     return;
   }
+
+  const reg = { id: document.getElementById('id').value || undefined };
+  CAMPOS.forEach(c => { const el = document.getElementById(c); if (el) reg[c] = el.value; });
 
   const prod = obterProducao(reg.producaoLoteId) || encontrarProducaoPorLote(reg.lote, reg.fornecedor);
   if (prod) {
@@ -580,10 +515,6 @@ function mapReprovadoDoBanco(r) {
     motivoDetalhado: r.motivo_detalhado || '',
     motivoIndicador: r.motivo_indicador || '',
     totalRefugos: valorBanco(r.total_refugos || 1),
-    ...Object.fromEntries(CAMPOS_RESUMO.map(([campo, , coluna, tipo]) => [
-      campo,
-      r[coluna] == null ? '' : (tipo === 'data' ? dataBanco(r[coluna]) : String(r[coluna])),
-    ])),
   };
 }
 
@@ -614,24 +545,9 @@ function mapReprovadoParaBanco(reg) {
     motivo_detalhado: textoOuNull(reg.motivoDetalhado),
     motivo_indicador: textoOuNull(reg.motivoIndicador),
     total_refugos: inteiroOuZero(reg.totalRefugos) || 1,
-    ...Object.fromEntries(CAMPOS_RESUMO.map(([campo, , coluna, tipo]) => [
-      coluna, valorResumoParaBanco(reg[campo], tipo),
-    ])),
   };
   if (reg.id) payload.id = reg.id;
   return payload;
-}
-
-/* Zero é resposta válida no resumo — "0 vazios" é diferente de "não informado".
-   Por isso inteiro/número aqui não usam inteiroOuNull, que trataria 0 como
-   vazio e apagaria a informação. */
-function valorResumoParaBanco(bruto, tipo) {
-  const s = String(bruto == null ? '' : bruto).trim();
-  if (!s) return null;
-  if (tipo === 'data') return dataOuNull(s);
-  if (tipo === 'inteiro') { const n = parseInt(s.replace(/[^0-9-]/g, ''), 10); return Number.isNaN(n) ? null : n; }
-  if (tipo === 'numero') { const n = Number(s.replace(',', '.')); return Number.isFinite(n) ? n : null; }
-  return s;
 }
 
 function obterReprovado(id) { return REPROVADOS_REGISTROS.find(r => r.id === id); }

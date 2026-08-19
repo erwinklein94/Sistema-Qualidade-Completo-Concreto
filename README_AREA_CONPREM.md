@@ -11,19 +11,56 @@ partir daqui são duas áreas:
 
 ## As telas da Conprem
 
-| Tela | Arquivo | JS |
-|---|---|---|
-| Dashboard Conprem | `conprem-dashboard.html` | `js/dashboard.js` |
-| Leitor de Recebidos | `conprem-leitor.html` | `js/conprem-leitor/` |
-| Pedidos | `conprem-pedidos.html` | `js/pedidos.js` |
-| Produção de Dormentes | `conprem-producao.html` | `js/producao.js` |
-| Dormentes Reprovados | `conprem-reprovados.html` | `js/reprovados.js` |
-| Ensaios de Dormentes | `conprem-ensaios.html` | `js/conprem-ensaios.js` |
-| Inspeção de Concretagem | `conprem-inspecao-concretagem.html` | `js/inspecao-concretagem.js` |
-| Inspeção de Pista | `conprem-inspecao-pista.html` | `js/inspecao-pista.js` |
+| Tela | Arquivo | JS | Campos |
+|---|---|---|---|
+| Dashboard Conprem | `conprem-dashboard.html` | `js/conprem-dashboard.js` | próprio |
+| Leitor de Recebidos | `conprem-leitor.html` | `js/conprem-leitor/` | próprio |
+| Produção de Dormentes | `conprem-producao.html` | `js/conprem-producao.js` | Mapa de Rastreabilidade |
+| Dormentes Reprovados | `conprem-reprovados.html` | `js/conprem-reprovados.js` | Resumo Semanal |
+| Ensaios de Dormentes | `conprem-ensaios.html` | `js/conprem-ensaios.js` | Ensaio de Dormentes |
+| Pedidos | `conprem-pedidos.html` | `js/pedidos.js` | iguais aos da Cavan |
+| Inspeção de Concretagem | `conprem-inspecao-concretagem.html` | `js/inspecao-concretagem.js` | iguais aos da Cavan |
+| Inspeção de Pista | `conprem-inspecao-pista.html` | `js/inspecao-pista.js` | iguais aos da Cavan |
 
-Salvo o Leitor e os Ensaios de Dormentes, **o JS é o mesmo das telas da Cavan**.
-Não há cópia de lógica: o que muda é a tabela de origem e o fornecedor.
+## A Conprem não preenche os campos da Cavan
+
+Esta é a regra que organiza a área. A Cavan acompanha a produção dia a dia —
+slump, temperatura, desprotensão, corpos de prova, cura de 14 e 28 dias, série
+de liberação. A **CONPREM não reporta nada disso**: ela manda três relatórios
+por semana, cada um com o seu conjunto de colunas.
+
+| Relatório | Tela | Colunas |
+|---|---|---|
+| Mapa de Rastreabilidade (FR. 98/00) | Produção de Dormentes | 32 |
+| Ensaio de Dormentes (FR.10/08) | Ensaios de Dormentes | 45 |
+| Resumo Semanal CONPREM - RUMO | Dormentes Reprovados | 23 |
+
+Por isso Produção, Reprovados e Ensaios da Conprem **não são as telas da Cavan
+com campos a mais** — são telas próprias, com os campos do relatório e só eles.
+Pedidos e as duas Inspeções continuam compartilhando o JS da Cavan: ali os
+campos são os mesmos nas duas empresas.
+
+### Um motor, três telas
+
+As três têm a mesma mecânica — listar, filtrar por semana, ver a ficha, editar,
+exportar — e mudam só na lista de campos. Essa mecânica mora em
+`js/conprem-tela.js`; cada tela declara os seus campos e chama
+`ConpremTela.iniciar()`. Um campo é `[id, rótulo, coluna no Supabase, tipo]`,
+e a mesma lista monta o formulário, a tabela, a ficha e o Excel exportado.
+
+Isso vale para o `tipo` também: `inteiro` e `numero` gravam **zero** quando o
+relatório diz zero, e só o campo em branco vira nulo — `0 vazios` não é o mesmo
+que "não informado". E `semana` é o par `semana`+`ano` do banco mostrado como
+`2026-S33`, que é como o relatório escreve.
+
+### O painel
+
+`js/conprem-dashboard.js` é próprio pelo mesmo motivo: o painel da Cavan fala de
+cura, séries e status de liberação, que não existem aqui. O da Conprem responde
+o que os três relatórios dizem — quanto chegou e em quantos lotes, quantos
+ensaios e quantos aprovados, refugo por tipo e taxa por semana, planejado ×
+recebido — e destaca os **certificados externos pendentes** por insumo, que é o
+que trava o recebimento.
 
 ## Ensaios de Dormentes
 
@@ -38,14 +75,11 @@ Tabela: `conprem_ensaios_dormentes`
 `date` e o resto é texto — inclusive as leituras `OK`, `N/A` e `-`, que são
 respostas válidas do formulário da CONPREM.
 
-O formulário, a ficha do ensaio, a tabela e a exportação saem todos da lista
-`CAMPOS` de `js/conprem-ensaios.js`. São 45 campos (mais **Projeto**, que a tela
-usa para filtrar): repetir a lista em quatro lugares seria erro garantido na
-primeira mudança do relatório.
+O formulário, a ficha, a tabela e a exportação saem da lista
+`CAMPOS_ENSAIOS_CONPREM` de `js/conprem-ensaios.js` — 45 campos, mais
+**Projeto**, que a tela usa para filtrar.
 
-O **Dashboard Conprem** lê os ensaios daqui, e não de `conprem_ensaios_liberacao`
-— as colunas que ele usa têm o mesmo nome nas duas tabelas, então só a origem
-muda. `conprem_ensaios_liberacao` continua existindo e vazia, para o caso de a
+`conprem_ensaios_liberacao` continua existindo e vazia, para o caso de a
 Conprem passar a ter fluxo de liberação por série como a Cavan.
 
 ## Como uma página escolhe a área

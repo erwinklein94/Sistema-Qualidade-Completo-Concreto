@@ -18,13 +18,7 @@
             <span class="acento">Ensaio de Dormentes — relatório FR.10/08</span>
             <span class="card-sub">As 45 colunas do relatório semanal da CONPREM, um ensaio por lote</span>
           </div>
-          <p class="txt-cinza" style="font-size:14px;line-height:1.7">
-            Esta tela guarda o <strong>ensaio completo</strong> que a CONPREM envia: gabaritos, geometria,
-            dimensional em milímetros, momentos, arrancamento, USP, aderência e o resultado geral.
-            A forma normal de preencher é pelo <strong>Leitor de Recebidos</strong> — importe o PDF de
-            Ensaio de Dormentes e mande gravar, que cada lote ensaiado vira uma linha aqui. O lançamento
-            manual continua disponível para corrigir ou completar um registro.
-          </p>
+          <p class="txt-cinza" style="font-size:14px;line-height:1.7">Esta tela guarda o <strong>ensaio completo</strong> que a CONPREM envia: gabaritos, geometria, dimensional em milímetros, momentos, arrancamento, USP, aderência e o resultado geral. Não é o ensaio de liberação da Cavan, que registra a decisão de liberar uma série — é o laudo do dormente. A forma normal de preencher é pelo <strong>Leitor de Recebidos</strong>; o lançamento manual serve para corrigir ou completar.</p>
         </div>
 
         <div class="grid-kpi" id="kpis"></div>
@@ -32,7 +26,7 @@
         <div class="barra-filtros">
           <div class="busca-rapida campo">
             <label>Buscar</label>
-            <input type="text" id="busca" placeholder="Lote, OF, executor, molde, resultado...">
+            <input type="text" id="busca" placeholder="Digite para filtrar...">
           </div>
           <div class="campo"><label>Semana</label><select id="fSemana"></select></div>
           <div class="campo"><label>Projeto</label><select id="fProjeto"></select></div>
@@ -42,7 +36,7 @@
 
         <div class="card">
           <div class="card-titulo">
-            <span class="acento">Ensaios registrados</span>
+            <span class="acento">Registros</span>
             <span class="card-sub" id="contador"></span>
           </div>
           <div id="lista"></div>
@@ -52,21 +46,21 @@
     </main>
   </div>
 
-  <!-- Formulário: os campos são gerados por js/conprem-ensaios.js a partir da
-       lista CAMPOS, que também manda na ficha e na exportação. São 45 campos;
-       repetir a lista no HTML seria erro garantido na primeira mudança. -->
+  <!-- Formulário e ficha são gerados por js/conprem-tela.js a partir da lista
+       de campos que a tela declara. Repetir os campos no HTML seria erro
+       garantido na primeira mudança do relatório da CONPREM. -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <div class="modal-cab">
-        <h2 id="modalTitulo">Novo ensaio de dormente</h2>
-        <button class="fechar-modal" onclick="fecharModal()">⨯</button>
+        <h2 id="modalTitulo">Novo registro</h2>
+        <button class="fechar-modal" onclick="ConpremTela.fecharModal()">⨯</button>
       </div>
       <div class="modal-corpo">
         <input type="hidden" id="id">
         <div class="form-grid" id="formCampos"></div>
         <div class="form-acoes">
-          <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
-          <button type="button" class="btn btn-primario" onclick="salvar()">Salvar ensaio</button>
+          <button type="button" class="btn btn-secundario" onclick="ConpremTela.fecharModal()">Cancelar</button>
+          <button type="button" class="btn btn-primario" onclick="ConpremTela.salvar()">Salvar</button>
         </div>
       </div>
     </div>
@@ -75,8 +69,8 @@
   <div class="modal-overlay" id="modalVer">
     <div class="modal">
       <div class="modal-cab">
-        <h2 id="verTitulo">Detalhe do ensaio</h2>
-        <button class="fechar-modal" onclick="fecharVer()">⨯</button>
+        <h2 id="verTitulo">Detalhe</h2>
+        <button class="fechar-modal" onclick="ConpremTela.fecharVer()">⨯</button>
       </div>
       <div class="modal-corpo" id="verCorpo"></div>
     </div>
@@ -90,14 +84,15 @@
   <script src="js/supabase-config.js?v=20260523-2"></script>
   <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
   <script>Auth.exigirLogin();</script>
-  <script src="js/area.js?v=20260819-area-conprem-v1"></script>
-  <script src="js/config.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/store.js"></script>
-  <script src="js/store-supabase.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/store-supabase.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
-  <script src="js/comum.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/comum.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/conprem-ensaios.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/conprem-tela.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/conprem-ensaios.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

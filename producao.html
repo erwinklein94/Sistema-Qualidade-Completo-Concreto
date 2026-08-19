@@ -186,38 +186,6 @@
             <div class="campo"><label>Status <span class="obrig">*</span></label><select id="status" required></select></div>
             <div class="campo full"><label>Motivo / Especificação <span class="dica">(refugados, observações)</span></label><textarea id="motivo"></textarea></div>
 
-            <!-- Mapa de Rastreabilidade (FR. 98/00) da CONPREM. Preenchido
-                 automaticamente pelo Leitor de Recebidos, ou à mão aqui.
-                 Tudo texto: NF e certificado têm zero à esquerda ("031/26") e
-                 às vezes mais de um valor na mesma célula, unidos por "; ". -->
-            <div class="form-secao">Rastreabilidade — Mapa CONPREM</div>
-            <div class="campo"><label>Ordem de fabricação</label><input id="ordemFabricacao" type="text"></div>
-            <div class="campo"><label>Cliente</label><input id="cliente" type="text"></div>
-            <div class="campo"><label>Produto</label><input id="produto" type="text"></div>
-            <div class="campo"><label>Série concreto</label><input id="serieConcreto" type="text"></div>
-            <div class="campo"><label>Aço — Seq./NF</label><input id="acoSeqNf" type="text"></div>
-            <div class="campo"><label>Aço — Cert. interno</label><input id="acoCertInterno" type="text"></div>
-            <div class="campo"><label>Aço — Cert. externo</label><input id="acoCertExterno" type="text"></div>
-            <div class="campo"><label>Cimento — Seq./NF</label><input id="cimentoSeqNf" type="text"></div>
-            <div class="campo"><label>Cimento — Cert. interno</label><input id="cimentoCertInterno" type="text"></div>
-            <div class="campo"><label>Cimento — Cert. externo</label><input id="cimentoCertExterno" type="text"></div>
-            <div class="campo"><label>Areia — Seq./NF</label><input id="areiaSeqNf" type="text"></div>
-            <div class="campo"><label>Areia — Cert. interno</label><input id="areiaCertInterno" type="text"></div>
-            <div class="campo"><label>Areia — Cert. externo</label><input id="areiaCertExterno" type="text"></div>
-            <div class="campo"><label>Brita — Seq./NF</label><input id="britaSeqNf" type="text"></div>
-            <div class="campo"><label>Brita — Cert. interno</label><input id="britaCertInterno" type="text"></div>
-            <div class="campo"><label>Brita — Cert. externo</label><input id="britaCertExterno" type="text"></div>
-            <div class="campo"><label>Aditivo — Seq./NF</label><input id="aditivoSeqNf" type="text"></div>
-            <div class="campo"><label>Aditivo — Cert. externo</label><input id="aditivoCertExterno" type="text"></div>
-            <div class="campo"><label>Adição — Seq./NF</label><input id="adicaoSeqNf" type="text"></div>
-            <div class="campo"><label>Adição — Cert. externo</label><input id="adicaoCertExterno" type="text"></div>
-            <div class="campo"><label>Grampo</label><input id="grampo" type="text"></div>
-            <div class="campo"><label>Isolador frontal</label><input id="isoladorFrontal" type="text"></div>
-            <div class="campo"><label>Isolador lateral</label><input id="isoladorLateral" type="text"></div>
-            <div class="campo"><label>Palmilha trilho</label><input id="palmilhaTrilho" type="text"></div>
-            <div class="campo"><label>Palmilha USP</label><input id="palmilhaUsp" type="text"></div>
-            <div class="campo full"><label>Observações <span class="dica">(do Mapa de Rastreabilidade)</span></label><textarea id="observacoes"></textarea></div>
-
           </div>
           <div class="form-acoes">
             <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
@@ -244,16 +212,16 @@
   <script src="js/supabase-config.js?v=20260523-2"></script>
   <script src="js/auth.js?v=20260531-topo-limpo-v1"></script>
   <script>Auth.exigirLogin();</script>
-  <script src="js/area.js?v=20260819-area-conprem-v1"></script>
-  <script src="js/config.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/store.js"></script>
-  <script src="js/store-supabase.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/store-supabase.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/exportacoes.js?v=20260708-ficha-pdf-v1"></script>
-  <script src="js/comum.js?v=20260819-ensaios-conprem-v1"></script>
+  <script src="js/comum.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
   <script src="js/fluxo-liberacao-core.js?v=20260819-janela-acomp-v1"></script>
   <script src="js/indicadores-qualidade.js?v=20260612-saude-projetos-v3"></script>
-  <script src="js/producao.js?v=20260819-rastreabilidade-v1"></script>
+  <script src="js/producao.js?v=20260819-area-conprem-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
