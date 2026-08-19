@@ -6,7 +6,7 @@
    da semana × custo unitário configurado em Dados do Sistema) e tabelas
    espelho de Dormentes Reprovados e Ensaios de Liberação da semana.
    20260703-acomp-v1: tabela espelho de Ensaios de Acompanhamento
-   (14 dias · cura térmica) da semana — apenas documental, não entra na
+   (14 dias · Ferro Norte 3231–3257) da semana — apenas documental, não entra na
    consolidação e não libera série.
    ===================================================================== */
 const Semanal = {
@@ -469,7 +469,7 @@ function rotuloSemanaEnsaioSemanal(r) {
 }
 
 /* ---------------------------------------------------------------------
-   Espelho da semana — Ensaios de Acompanhamento (14 dias · cura térmica)
+   Espelho da semana — Ensaios de Acompanhamento (14 dias · Ferro Norte 3231–3257)
    Registro documental: não entra na consolidação nem libera série.
    --------------------------------------------------------------------- */
 function filtrarAcompanhamentosSemana(f) {
@@ -496,7 +496,7 @@ function renderAcompanhamentosSemana(lista) {
   }
 
   if (!lista.length) {
-    alvo.innerHTML = `<div class="vazio compacto">${ICN.vazioBox}<h3>Sem acompanhamentos no recorte</h3><p>Nenhum ensaio de acompanhamento (14 dias, lotes de cura térmica) registrado na semana e filtros selecionados.</p></div>`;
+    alvo.innerHTML = `<div class="vazio compacto">${ICN.vazioBox}<h3>Sem acompanhamentos no recorte</h3><p>Nenhum ensaio de acompanhamento (14 dias, lotes da Ferro Norte 3231–3257) registrado na semana e filtros selecionados.</p></div>`;
     return;
   }
 
@@ -1068,7 +1068,7 @@ function registrarExportacaoSemanal(lista, reps = [], ens = [], acomp = [], arra
         bitolaExport: U.bitolaDe(r)
       }))
     }, {
-      titulo: 'Ensaios de acompanhamento na semana (14 dias · cura térmica)',
+      titulo: 'Ensaios de acompanhamento na semana (14 dias · Ferro Norte 3231–3257)',
       columns: [
         { key: 'dataExport', label: 'Data do ensaio' },
         { key: 'dataProducaoExport', label: 'Data de produção' },

@@ -234,9 +234,9 @@ function popularSelectLotes(selecionado = '') {
   const el = document.getElementById('producaoLoteId');
   if (!el) return;
 
-  // Lotes de cura térmica primeiro: são os que exigem acompanhamento.
+  // Lotes da janela Ferro Norte 3231–3257 primeiro: são os que exigem acompanhamento.
   const ordenados = [...PRODUCAO_LOTES].sort((a, b) =>
-    Number(!!b.curaTermica) - Number(!!a.curaTermica) ||
+    Number(exigeAcompanhamento14(b)) - Number(exigeAcompanhamento14(a)) ||
     String(b.dataFabricacao || '').localeCompare(String(a.dataFabricacao || '')) ||
     String(a.lote || '').localeCompare(String(b.lote || ''), 'pt-BR', { numeric: true })
   );
@@ -268,12 +268,12 @@ function atualizarAvisoCuraTermica(l) {
   if (!box) return;
   if (!l) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
-  if (l.curaTermica) {
+  if (exigeAcompanhamento14(l)) {
     box.innerHTML = `<div style="border:1px solid #b7e4c7;background:#f0fdf4;color:#14532d;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45">`
-      + `<strong>Lote de cura térmica.</strong> Este é o lote certo para registrar o ensaio de <strong>acompanhamento de 14 dias</strong>. Lembre-se: este registro <strong>não libera</strong> a série — a liberação acontece na aba Ensaios de Liberação.</div>`;
+      + `<strong>Lote de cura térmica da janela Ferro Norte 3231–3257.</strong> Este é o lote certo para registrar o ensaio de <strong>acompanhamento de 14 dias</strong>. Lembre-se: este registro <strong>não libera</strong> a série — a liberação acontece na aba Ensaios de Liberação.</div>`;
   } else {
     box.innerHTML = `<div style="border:1px solid #fcd9b6;background:#fff7ed;color:#8a4b0a;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45">`
-      + `<strong>Atenção:</strong> este lote <strong>não está marcado como cura térmica</strong> na Produção. Confirme se o registro é mesmo um ensaio de acompanhamento ou se deveria ser lançado em Ensaios de Liberação.</div>`;
+      + `<strong>Atenção:</strong> este lote está <strong>fora da janela de acompanhamento</strong> (Ferro Norte, lotes 3231 a 3257 com cura térmica)${l.curaTermica ? ' — mesmo sendo de cura térmica' : ''}. Para ele o ensaio de 14 dias é de <strong>liberação</strong> e deve ser lançado em Ensaios de Liberação. Registre aqui só se for mesmo um acompanhamento documental.</div>`;
   }
 }
 
@@ -631,23 +631,27 @@ function classificarRelatorioAcompanhamento(data, textoBruto, prod) {
 
   const marcador14dias = /aposos14dias|ensaioaposos14/.test(nBruto);
   const curaTermica = !!prod?.curaTermica;
+  // Só os lotes da janela Ferro Norte 3231–3257 são acompanhamento por regra.
+  // Fora dela o relatório de 14 dias é ensaio de liberação — só entra aqui se
+  // o próprio relatório trouxer a marcação de "Ensaio após os 14 dias".
+  const janelaAcompanhamento = exigeAcompanhamento14(prod);
   const loteLocalizado = !!prod;
 
-  const acompanhamento = temEnsaioDormente && (marcador14dias || curaTermica);
+  const acompanhamento = temEnsaioDormente && (marcador14dias || janelaAcompanhamento);
 
   let tipoClassificado = 'Relatório sem características de acompanhamento';
-  let motivo = 'Não encontrei a marcação de "Ensaio após os 14 dias de produção" e o lote não está marcado como cura térmica.';
+  let motivo = 'Não encontrei a marcação de "Ensaio após os 14 dias de produção" e o lote não está na janela de acompanhamento (Ferro Norte 3231–3257).';
   if (acompanhamento) {
-    tipoClassificado = 'Ensaio de acompanhamento (14 dias · cura térmica)';
+    tipoClassificado = 'Ensaio de acompanhamento (14 dias)';
     const partes = [];
     if (marcador14dias) partes.push('marcação "Ensaio após os 14 dias de produção" encontrada no relatório');
-    if (curaTermica) partes.push('lote marcado como cura térmica na Produção');
-    if (!curaTermica && loteLocalizado) partes.push('atenção: o lote localizado NÃO está marcado como cura térmica');
+    if (janelaAcompanhamento) partes.push('lote de cura térmica dentro da janela Ferro Norte 3231–3257');
+    if (!janelaAcompanhamento && loteLocalizado) partes.push('atenção: o lote localizado está FORA da janela de acompanhamento (Ferro Norte 3231–3257) — o ensaio de 14 dias dele é de liberação');
     if (!loteLocalizado) partes.push('lote não localizado na Produção — confira o vínculo antes de salvar');
     motivo = 'Relatório de ensaio do dormente reconhecido como acompanhamento: ' + partes.join('; ') + '. Este registro não libera série.';
   } else if (temEnsaioDormente) {
     tipoClassificado = 'Ensaio de dormente sem marcação de acompanhamento';
-    motivo = 'O relatório tem ensaios estruturais/dimensionais, mas sem a marcação de 14 dias e sem lote de cura térmica. Se for ensaio de liberação, registre na aba Ensaios de Liberação.';
+    motivo = 'O relatório tem ensaios estruturais/dimensionais, mas sem a marcação de 14 dias e fora da janela de acompanhamento (Ferro Norte 3231–3257). Se for ensaio de liberação, registre na aba Ensaios de Liberação.';
   } else if (/inspecaodepista/.test(n)) {
     tipoClassificado = 'Inspeção de pista';
     motivo = 'Relatório reconhecido como inspeção; não deve ser registrado como acompanhamento nesta aba.';
@@ -658,7 +662,7 @@ function classificarRelatorioAcompanhamento(data, textoBruto, prod) {
     tipoClassificado = 'Ensaio de bitola';
     motivo = 'Relatório reconhecido como ensaio/medição de bitola; não é ensaio de acompanhamento.';
   }
-  return { acompanhamento, marcador14dias, curaTermica, loteLocalizado, tipoClassificado, motivo };
+  return { acompanhamento, marcador14dias, curaTermica, janelaAcompanhamento, loteLocalizado, tipoClassificado, motivo };
 }
 
 function inferirTipoRelatorio(meta, data) {
@@ -716,6 +720,7 @@ function renderLeituraIauditor(item) {
         ${metaItemIauditor('Data de produção', U.dataBR(r.dataProducao))}
         ${metaItemIauditor('Dias após produção', dias == null ? '—' : `${dias} dia(s)`)}
         ${metaItemIauditor('Cura térmica na Produção', c.loteLocalizado ? (c.curaTermica ? 'Sim' : 'Não') : 'Lote não localizado')}
+        ${metaItemIauditor('Janela de acompanhamento (FN 3231–3257)', c.loteLocalizado ? (c.janelaAcompanhamento ? 'Sim' : 'Não — ensaio de 14 dias é de liberação') : 'Lote não localizado')}
         ${metaItemIauditor('Resultado sugerido', r.resultado)}
       </div>
       ${faltantes.length ? `<p><span class="iauditor-chip erro">Campos pendentes</span> ${U.esc(faltantes.join(', '))}</p>` : ''}
@@ -860,6 +865,12 @@ function normLocal(v) {
   return String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 }
 
+// Regra do acompanhamento de 14 dias — fonte única em js/fluxo-liberacao-core.js
+// (janela Ferro Norte, lotes 3231 a 3257, com cura térmica).
+function exigeAcompanhamento14(lote) {
+  return !!(window.FluxoLiberacao && FluxoLiberacao.exigeAcompanhamento14 && FluxoLiberacao.exigeAcompanhamento14(lote));
+}
+
 function fecharModal() { document.getElementById('modal').classList.remove('aberto'); }
 function fecharVer() { document.getElementById('modalVer').classList.remove('aberto'); }
 
@@ -873,9 +884,9 @@ function preencherSugestoesFormulario() {
     if (bitola && U.bitolaDe(r) !== bitola) return false;
     return true;
   });
-  // Sugere primeiro os lotes de cura térmica: são os que precisam de acompanhamento.
-  const curaTermica = producao.filter(r => r.curaTermica);
-  const base = curaTermica.length ? curaTermica : producao;
+  // Sugere primeiro os lotes da janela Ferro Norte 3231–3257: são os que precisam de acompanhamento.
+  const naJanela = producao.filter(r => exigeAcompanhamento14(r));
+  const base = naJanela.length ? naJanela : producao;
   const lotes = [...new Set(base.map(r => r.lote).filter(Boolean))].sort(ordemLote);
   const series = [...new Set(producao.map(r => r.serie).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
   document.getElementById('listaLotes').innerHTML = lotes.map(l => `<option value="${U.esc(l)}"></option>`).join('');

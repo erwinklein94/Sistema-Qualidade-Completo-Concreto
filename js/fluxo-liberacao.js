@@ -380,7 +380,7 @@ function cardFluxo(s) {
   return `<article class="fluxo-card ${s.statusChave}">
     <div class="fluxo-card-topo">
       <div>
-        <h3>${U.esc(s.serie)}${s.curaTermica ? ' <span class="tag-termica" title="Série de cura térmica — libera só no ensaio de 28 dias">cura térmica</span>' : ''}</h3>
+        <h3>${U.esc(s.serie)}${s.curaTermica ? ` <span class="tag-termica" title="${s.acompanhamento14 ? 'Cura térmica na janela Ferro Norte 3231–3257 — o ensaio de 14 dias é só acompanhamento; libera no ensaio de 28 dias' : 'Cura térmica — informativo; a série libera no ensaio de liberação de 14 dias'}">cura térmica</span>` : ''}</h3>
         <p>${U.esc(s.fornecedor)} · ${U.esc(s.grupo)}</p>
       </div>
       <span class="status-fluxo ${s.statusChave}">${U.esc(s.status)}</span>

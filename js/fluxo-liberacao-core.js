@@ -11,10 +11,45 @@ const FluxoLiberacao = (() => {
   // Idade de cura exigida no ensaio de liberação de 28 dias. A tolerância cobre
   // o ensaio antecipado em relação à data de cura do último lote da série —
   // laboratório costuma romper um dia antes. Fora dessa margem o ensaio conta
-  // como de 14 dias e não libera série de cura térmica.
+  // como de 14 dias e não libera série na janela de acompanhamento.
   const IDADE_ENSAIO_28 = 28;
   const TOLERANCIA_ENSAIO_28 = 1;
   const IDADE_MINIMA_ENSAIO_28 = IDADE_ENSAIO_28 - TOLERANCIA_ENSAIO_28;
+
+  // Janela histórica do ensaio de ACOMPANHAMENTO de 14 dias.
+  // Só os lotes de cura térmica da Ferro Norte de 3231 a 3257 seguem a regra em
+  // que o ensaio de 14 dias é apenas informativo (não libera) e a liberação vem
+  // do ensaio de 28 dias. Do lote 3258 em diante — e em qualquer outro projeto,
+  // marcado ou não como cura térmica — vale o fluxo normal: o ensaio de
+  // liberação de 14 dias libera a série inteira. A marcação de cura térmica
+  // continua sendo registrada na Produção, mas deixou de decidir a liberação.
+  const JANELA_ACOMPANHAMENTO14 = Object.freeze({
+    projeto: 'FERRO NORTE',
+    loteInicial: 3231,
+    loteFinal: 3257,
+  });
+
+  function numeroLote(valor) {
+    const m = String(valor == null ? '' : valor).match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  // Regra por LOTE: cura térmica + projeto Ferro Norte + número dentro da janela.
+  function exigeAcompanhamento14(lote) {
+    if (!lote) return false;
+    if (!(lote.curaTermica ?? lote.cura_termica)) return false;
+    if (projetoCanonico(lote) !== JANELA_ACOMPANHAMENTO14.projeto) return false;
+    const n = numeroLote(lote.lote);
+    return n != null && n >= JANELA_ACOMPANHAMENTO14.loteInicial && n <= JANELA_ACOMPANHAMENTO14.loteFinal;
+  }
+
+  // Regra por SÉRIE: segue o último lote da série — o mesmo que define as datas
+  // de cura 14/28 e de onde sai o dormente ensaiado.
+  function serieExigeAcompanhamento14(serie) {
+    if (!serie) return false;
+    const base = serie.ultimoLote || (serie.lotes || [])[(serie.lotes || []).length - 1] || null;
+    return exigeAcompanhamento14(base);
+  }
 
   const STATUS = Object.freeze({
     FORMANDO: 'Série em formação',
@@ -113,6 +148,8 @@ const FluxoLiberacao = (() => {
       ensaios: [],
       ensaios14: [],
       ensaios28: [],
+      curaTermica: false,
+      acompanhamento14: false,
       status: STATUS.FORMANDO,
       statusChave: 'formando',
       proximaAcao: 'Acompanhar produção até completar 2.000 dormentes ou 10 lotes, salvo liberação sob demanda.',
@@ -163,17 +200,21 @@ const FluxoLiberacao = (() => {
     });
     serie.ensaios14 = serie.ensaios.filter(e => e.fase === 14);
     serie.ensaios28 = serie.ensaios.filter(e => e.fase === 28);
+    // curaTermica é informativo (tag/histórico); quem manda na liberação é
+    // acompanhamento14, restrito à janela Ferro Norte 3231–3257.
     serie.curaTermica = serie.lotes.some(l => !!l.curaTermica);
+    serie.acompanhamento14 = serieExigeAcompanhamento14(serie);
     aplicarDecisao(serie, hoje);
     return serie;
   }
 
   function aplicarDecisao(serie, hoje) {
-    const termica = !!serie.curaTermica;
+    const termica = !!serie.acompanhamento14;
     const aprovado14 = serie.ensaios14.find(e => e.resultado === 'Aprovado');
     const reprovado14 = serie.ensaios14.find(e => e.resultado === 'Reprovado');
-    // Cura térmica: o ensaio de 14 dias é apenas ACOMPANHAMENTO (informativo).
-    // Não libera, não reprova e não trava — a decisão vem sempre do ensaio de 28 dias.
+    // Janela de acompanhamento (Ferro Norte 3231–3257): o ensaio de 14 dias é
+    // apenas ACOMPANHAMENTO (informativo). Não libera, não reprova e não trava —
+    // a decisão vem sempre do ensaio de 28 dias.
     const pendente = (termica ? serie.ensaios28 : serie.ensaios).find(e => e.resultado === 'Pendente');
     const aprovado28SemReprova14 = !termica && !reprovado14 && serie.ensaios28.find(e => e.resultado === 'Aprovado');
 
@@ -211,12 +252,12 @@ const FluxoLiberacao = (() => {
 
     // Daqui pra baixo a liberação depende do ensaio de 28 dias:
     //  - série não-térmica que reprovou no ensaio de 14 dias (fluxo original), ou
-    //  - qualquer série de cura térmica (28 dias é a única porta de liberação).
+    //  - série na janela de acompanhamento Ferro Norte 3231–3257 (28 dias é a única porta de liberação).
     if (termica && !serie.prontaParaEnsaio && !serie.ensaios.length) {
       serie.status = STATUS.FORMANDO;
       serie.statusChave = 'formando';
       serie.proximaAcao = 'Continuar acumulando produção até 2.000 dormentes ou 10 lotes, ou liberar sob demanda com ensaio informado.';
-      serie.detalheFluxo = 'Série de cura térmica ainda não atingiu o gatilho padrão.';
+      serie.detalheFluxo = 'Série na janela de acompanhamento (Ferro Norte 3231–3257) ainda não atingiu o gatilho padrão.';
       return;
     }
 
@@ -224,7 +265,7 @@ const FluxoLiberacao = (() => {
       serie.status = STATUS.CURA_14;
       serie.statusChave = 'cura14';
       serie.proximaAcao = `Aguardar até ${dataBR(serie.cura14)} para o ensaio de acompanhamento de 14 dias (não libera) do último lote da série.`;
-      serie.detalheFluxo = 'Série de cura térmica: primeiro o acompanhamento de 14 dias; a liberação ocorre no ensaio de 28 dias.';
+      serie.detalheFluxo = 'Série na janela de acompanhamento (Ferro Norte 3231–3257): primeiro o acompanhamento de 14 dias; a liberação ocorre no ensaio de 28 dias.';
       return;
     }
 
@@ -237,7 +278,7 @@ const FluxoLiberacao = (() => {
       serie.statusChave = 'cura28';
       serie.proximaAcao = `Aguardar até ${dataBR(serie.cura28)} para o ensaio de 28 dias do último lote da série.`;
       serie.detalheFluxo = termica
-        ? 'Série de cura térmica: após o acompanhamento de 14 dias, segue em cura para o ensaio de liberação de 28 dias.'
+        ? 'Série na janela de acompanhamento (Ferro Norte 3231–3257): após o acompanhamento de 14 dias, segue em cura para o ensaio de liberação de 28 dias.'
         : 'O ensaio de 14 dias foi reprovado; a série segue para cura de 28 dias.';
       return;
     }
@@ -247,14 +288,14 @@ const FluxoLiberacao = (() => {
       serie.statusChave = 'aguardando28';
       serie.proximaAcao = 'Executar e registrar o primeiro ensaio de liberação de 28 dias.';
       serie.detalheFluxo = termica
-        ? 'Série de cura térmica com 28 dias completos; registrar o ensaio de liberação de 28 dias.'
+        ? 'Série na janela de acompanhamento (Ferro Norte 3231–3257) com 28 dias completos; registrar o ensaio de liberação de 28 dias.'
         : 'O ensaio de 14 dias foi reprovado e o prazo de 28 dias já chegou.';
       return;
     }
 
     const primeiro28 = ens28ComResultado[0];
     if (primeiro28.resultado === 'Aprovado') return definirLiberado(serie, primeiro28, termica
-      ? 'Aprovado no ensaio de liberação de 28 dias (série de cura térmica; o ensaio de 14 dias é apenas acompanhamento).'
+      ? 'Aprovado no ensaio de liberação de 28 dias (janela de acompanhamento Ferro Norte 3231–3257; o ensaio de 14 dias é apenas acompanhamento).'
       : 'Aprovado no primeiro ensaio de 28 dias após reprova de 14 dias.');
 
     const contra = ens28ComResultado.slice(1);
@@ -543,6 +584,9 @@ const FluxoLiberacao = (() => {
     ALERTA_PECAS,
     ALERTA_LOTES,
     STATUS,
+    JANELA_ACOMPANHAMENTO14,
+    exigeAcompanhamento14,
+    serieExigeAcompanhamento14,
     calcular,
     serieDoLote,
     normalizarSerie,

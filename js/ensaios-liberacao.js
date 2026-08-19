@@ -243,10 +243,12 @@ function preencherDadosDoLote(id) {
 function atualizarAvisoAcompanhamento(l) {
   const box = document.getElementById('avisoAcompanhamento');
   if (!box) return;
-  if (!l || !l.curaTermica) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  // O aviso só vale na janela histórica (Ferro Norte, lotes 3231 a 3257). Do
+  // 3258 em diante o lote de cura térmica libera normalmente no ensaio de 14 dias.
+  if (!l || !exigeAcompanhamento14(l)) { box.style.display = 'none'; box.innerHTML = ''; return; }
   box.style.display = '';
   box.innerHTML = `<div style="border:1px solid #fcd9b6;background:#fff7ed;color:#8a4b0a;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45">`
-    + `<strong>Lote de cura térmica.</strong> O ensaio de 14 dias é de <strong>acompanhamento</strong> — registre o relatório iAuditor normalmente, mas ele <strong>não libera</strong> a série. A liberação ocorre apenas no ensaio de <strong>28 dias</strong>.</div>`;
+    + `<strong>Lote de cura térmica da janela Ferro Norte 3231–3257.</strong> O ensaio de 14 dias é de <strong>acompanhamento</strong> — registre o relatório iAuditor normalmente, mas ele <strong>não libera</strong> a série. A liberação ocorre apenas no ensaio de <strong>28 dias</strong>.</div>`;
 }
 
 function abrirNovo() {
@@ -475,9 +477,10 @@ function montarRegistroAPartirDoIauditor(data, fileName, textoBruto) {
   const resultado = inferirResultadoIauditor(data, classificacao.liberacaoReal);
   const linhas = linhasRelatorioIauditor(data);
   const responsavel = limparValorIauditor(meta['Fiscal responsável'] || meta['Responsável'] || '');
-  // Relatório de ACOMPANHAMENTO (14 dias) de lote de cura térmica:
+  // Relatório de ACOMPANHAMENTO (14 dias) da janela Ferro Norte 3231–3257:
   // deve ser registrado na aba Ensaios de Acompanhamento, não como liberação.
-  const acompanhamento14 = /aposos14dias|ensaioaposos14/.test(normLocal(textoBruto || '')) && !!prod?.curaTermica;
+  // Fora da janela, o relatório de 14 dias volta a ser ensaio de liberação.
+  const acompanhamento14 = /aposos14dias|ensaioaposos14/.test(normLocal(textoBruto || '')) && exigeAcompanhamento14(prod);
 
   const reg = {
     producaoLoteId: prod?.id || '',
@@ -593,7 +596,7 @@ function renderLeituraIauditor(item) {
   const linhasMostradas = (r.linhas || []).slice(0, 10);
   const avisoAcomp14 = r.acompanhamento14
     ? `<div style="border:1px solid #fcd9b6;background:#fff7ed;color:#8a4b0a;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.45;margin:10px 0">
-        <strong>Este parece ser um ensaio de ACOMPANHAMENTO (14 dias).</strong> O relatório traz a marcação "Ensaio após os 14 dias de produção" e o lote está marcado como cura térmica. Ele deve ser registrado na aba <strong>Ensaios de Acompanhamento</strong> e não libera série.
+        <strong>Este parece ser um ensaio de ACOMPANHAMENTO (14 dias).</strong> O relatório traz a marcação "Ensaio após os 14 dias de produção" e o lote é de cura térmica da janela Ferro Norte 3231–3257. Ele deve ser registrado na aba <strong>Ensaios de Acompanhamento</strong> e não libera série.
         <div style="margin-top:8px"><button class="btn btn-secundario" type="button" onclick="location.href='ensaios-acompanhamento.html'">Ir para Ensaios de Acompanhamento</button></div>
       </div>`
     : '';
@@ -643,7 +646,7 @@ async function registrarLeituraIauditor() {
     return;
   }
   if (atual.registro.acompanhamento14) {
-    App.toast('Este relatório é um ensaio de acompanhamento (14 dias, cura térmica). Registre-o na aba Ensaios de Acompanhamento.', 'aviso');
+    App.toast('Este relatório é um ensaio de acompanhamento (14 dias, janela Ferro Norte 3231–3257). Registre-o na aba Ensaios de Acompanhamento.', 'aviso');
     return;
   }
   if (!atual.registro.classificacao?.liberacaoReal) {
@@ -753,6 +756,12 @@ function dataPtParaISO(v) {
 
 function normLocal(v) {
   return String(v == null ? '' : v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+}
+
+// Regra do acompanhamento de 14 dias — fonte única em js/fluxo-liberacao-core.js
+// (janela Ferro Norte, lotes 3231 a 3257, com cura térmica).
+function exigeAcompanhamento14(lote) {
+  return !!(window.FluxoLiberacao && FluxoLiberacao.exigeAcompanhamento14 && FluxoLiberacao.exigeAcompanhamento14(lote));
 }
 
 function fecharModal() { document.getElementById('modal').classList.remove('aberto'); }

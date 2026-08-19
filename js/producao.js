@@ -76,6 +76,12 @@ const STATUS_LOTE = Object.freeze({
 // TOLERANCIA_ENSAIO_28 de js/fluxo-liberacao-core.js.
 const TOLERANCIA_ENSAIO_28 = 1;
 
+// Regra do acompanhamento de 14 dias — fonte única em js/fluxo-liberacao-core.js
+// (janela Ferro Norte, lotes 3231 a 3257, com cura térmica).
+function exigeAcompanhamento14(reg) {
+  return !!(window.FluxoLiberacao && FluxoLiberacao.exigeAcompanhamento14 && FluxoLiberacao.exigeAcompanhamento14(reg));
+}
+
 const CAMPOS_STATUS_AUTOMATICO = [
   'dataFabricacaoEm', 'cura14', 'cura28',
   'comp14Cp1', 'comp14Cp2', 'tracao14Cp1', 'tracao14Cp2',
@@ -276,12 +282,14 @@ function statusAutomaticoDoLote(reg, ensaios = []) {
   const aprovado = inteiroOuZero(reg.aprovado);
   const reprovados = inteiroOuZero(reg.reprovados);
   const aAnalisar = inteiroOuZero(reg.aAnalisar);
-  // Cura térmica: o ensaio de 14 dias é apenas acompanhamento (informativo) e não
-  // decide o status do lote — só o ensaio de 28 dias conta. A tolerância cobre o
+  // Janela de acompanhamento (Ferro Norte 3231–3257): ali o ensaio de 14 dias é
+  // apenas acompanhamento (informativo) e não decide o status do lote — só o
+  // ensaio de 28 dias conta. Fora dessa janela — inclusive nos lotes de cura
+  // térmica do 3258 em diante — vale o fluxo normal. A tolerância cobre o
   // ensaio rompido pouco antes da data de cura; precisa bater com a do motor em
   // js/fluxo-liberacao-core.js, senão Produção e Fluxo voltam a divergir.
   const cura28Minima = cura28 ? dataISOAdicionarDias(cura28, -TOLERANCIA_ENSAIO_28) : '';
-  const ensaiosDecisao = reg.curaTermica
+  const ensaiosDecisao = exigeAcompanhamento14(reg)
     ? (ensaios || []).filter(e => e.dataEnsaio && cura28Minima && e.dataEnsaio >= cura28Minima)
     : ensaios;
   const ultimoEnsaio = ultimoEnsaioLiberacao(ensaiosDecisao);
@@ -486,7 +494,7 @@ function render() {
     linhas += `<tr class="${preenchimento.status === 'critico' ? 'linha-alerta' : ''}">
       <td>${U.dataBR(r.dataFabricacao)}</td>
       <td><strong>${semanaRotulo(r.dataFabricacao)}</strong></td>
-      <td><strong>${U.esc(r.lote)}</strong>${r.curaTermica ? ' <span class="tag-termica" title="Cura térmica — libera só aos 28 dias">térmica</span>' : ''}</td>
+      <td><strong>${U.esc(r.lote)}</strong>${r.curaTermica ? ` <span class="tag-termica" title="${exigeAcompanhamento14(r) ? 'Cura térmica na janela Ferro Norte 3231–3257 — o ensaio de 14 dias é só acompanhamento; libera aos 28 dias' : 'Cura térmica — informativo; a liberação segue o ensaio de 14 dias'}">térmica</span>` : ''}</td>
       <td>${U.badgeProjeto(r.projeto)}</td>
       <td>${U.badgeBitola(r)}</td>
       <td>${U.esc(r.tipo)}</td>
