@@ -131,6 +131,14 @@ begin
     execute format(
       'create policy %1$s_delete_admin on %1$I for delete to authenticated
          using (eh_admin())', t);
+
+    -- CREATE TABLE ... (LIKE ...) copia colunas, índices e constraints, mas
+    -- NÃO copia privilégios de tabela: sem estes GRANTs o PostgREST responde
+    -- "permission denied for table conprem_*" antes mesmo de olhar a RLS.
+    -- Quem decide o acesso por perfil continuam sendo as policies acima.
+    execute format('grant select, insert, update, delete on public.%I to authenticated', t);
+    execute format('grant select, insert, update on public.%I to service_role', t);
+    execute format('revoke all on public.%I from anon', t);
   end loop;
 end $$;
 

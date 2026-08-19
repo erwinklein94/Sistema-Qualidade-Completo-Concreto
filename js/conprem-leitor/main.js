@@ -173,8 +173,10 @@ async function gravar() {
   refs.retornoGravacao.replaceChildren();
 
   let totalGravado = 0;
+  let totalErros = 0;
   for (const r of relatos) {
     totalGravado += r.gravados;
+    totalErros += r.erros.length;
     const div = document.createElement('div');
     div.className = r.erros.length ? 'aviso aviso--erro' : 'aviso';
     const partes = [`${r.titulo}: ${r.gravados} gravado(s)`];
@@ -184,12 +186,24 @@ async function gravar() {
     refs.retornoGravacao.append(div);
   }
 
-  App.toast(
-    totalGravado
-      ? `${totalGravado} registro(s) gravado(s) na área Conprem.`
-      : 'Nada novo para gravar: os registros do lote já estavam no banco.',
-    totalGravado ? 'ok' : 'aviso',
-  );
+  // "Nada novo" e "deu erro" são coisas diferentes: com falha no meio, o aviso
+  // precisa mandar o usuário olhar o detalhe em vez de sugerir que estava tudo
+  // no banco.
+  if (totalErros) {
+    App.toast(
+      totalGravado
+        ? `${totalGravado} registro(s) gravado(s), mas ${totalErros} falhou(ram). Veja o detalhe abaixo.`
+        : `Nada foi gravado: ${totalErros} falha(s). Veja o detalhe abaixo.`,
+      'erro',
+    );
+  } else {
+    App.toast(
+      totalGravado
+        ? `${totalGravado} registro(s) gravado(s) na área Conprem.`
+        : 'Nada novo para gravar: os registros do lote já estavam no banco.',
+      totalGravado ? 'ok' : 'aviso',
+    );
+  }
   atualizarBotoes();
 }
 
