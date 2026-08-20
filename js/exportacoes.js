@@ -43,14 +43,20 @@ const Exportacoes = (() => {
     const filtros = Array.isArray(rel.filtros) ? rel.filtros : filtrosDaTela();
     const secoes = (rel.secoes || []).map((sec, idx) => {
       const columns = (sec.columns || []).map(c => typeof c === 'string' ? { key: c, label: c } : c);
-      const rows = (sec.rows || []).map(row => Array.isArray(row)
+      const xlsxColumns = (sec.xlsxColumns || columns).map(c => typeof c === 'string' ? { key: c, label: c } : c);
+      const normalizarLinhas = (linhas, colunas) => (linhas || []).map(row => Array.isArray(row)
         ? row
-        : columns.map(c => valorCelula(row?.[c.key])));
+        : colunas.map(c => valorCelula(row?.[c.key])));
+      const rows = normalizarLinhas(sec.rows, columns);
+      const xlsxRows = normalizarLinhas(sec.xlsxRows || sec.rows, xlsxColumns);
       return {
         titulo: sec.titulo || `Dados ${idx + 1}`,
         columns,
         headers: columns.map(c => c.label !== undefined ? c.label : c.key),
         rows,
+        xlsxColumns,
+        xlsxHeaders: xlsxColumns.map(c => c.label !== undefined ? c.label : c.key),
+        xlsxRows,
       };
     }).filter(sec => sec.headers.length && sec.rows.length);
 
@@ -64,6 +70,7 @@ const Exportacoes = (() => {
       layoutGraficosPDF: rel.layoutGraficosPDF || 'apos-tabelas',
       observacao: rel.observacao || 'Fonte: Supabase. Exportação gerada somente a partir dos filtros aplicados na tela.',
       xlsxSomenteDados: !!rel.xlsxSomenteDados,
+      xlsxEstatisticas: rel.xlsxEstatisticas || null,
       toastXlsx: rel.toastXlsx || ''
     };
   }
@@ -165,7 +172,7 @@ const Exportacoes = (() => {
     const wb = XLSX.utils.book_new();
 
     if (rel.xlsxSomenteDados) {
-      const sec = rel.secoes[0];
+      const sec = secaoXLSX(rel.secoes[0]);
       if (!sec || !sec.rows.length) throw new Error('Não há dados filtrados para exportar.');
       const aoa = [sec.headers, ...sec.rows];
       const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -195,14 +202,107 @@ const Exportacoes = (() => {
     XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
 
     rel.secoes.forEach((sec, i) => {
+      sec = secaoXLSX(sec);
       const aoa = [sec.headers, ...sec.rows];
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = sec.headers.map((h, idx) => ({ wch: Math.min(42, Math.max(12, String(h).length + 4, ...sec.rows.slice(0, 200).map(r => String(r[idx] ?? '').length + 2))) }));
+      ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+      aplicarFormatosColunasXLSX(XLSX, ws, sec);
       XLSX.utils.book_append_sheet(wb, ws, nomeAba(sec.titulo, i));
     });
 
+    adicionarEstatisticasXLSX(XLSX, wb, rel);
+
+    wb.Workbook = wb.Workbook || {};
+    wb.Workbook.CalcPr = {
+      ...(wb.Workbook.CalcPr || {}),
+      calcMode: 'auto',
+      fullCalcOnLoad: '1',
+      forceFullCalc: '1',
+    };
+
     XLSX.writeFile(wb, `${rel.nomeArquivo}.xlsx`);
     App?.toast?.('Excel gerado com os dados filtrados.', 'sucesso');
+  }
+
+  function secaoXLSX(sec) {
+    if (!sec) return sec;
+    return {
+      ...sec,
+      columns: sec.xlsxColumns || sec.columns,
+      headers: sec.xlsxHeaders || sec.headers,
+      rows: sec.xlsxRows || sec.rows,
+    };
+  }
+
+  function aplicarFormatosColunasXLSX(XLSX, ws, sec) {
+    (sec.columns || []).forEach((coluna, indice) => {
+      if (!coluna?.format) return;
+      for (let linha = 1; linha <= sec.rows.length; linha += 1) {
+        const endereco = XLSX.utils.encode_cell({ r: linha, c: indice });
+        if (ws[endereco] && typeof ws[endereco].v === 'number') ws[endereco].z = coluna.format;
+      }
+    });
+  }
+
+  function nomeAbaNaFormula(nome) {
+    return `'${String(nome || '').replace(/'/g, "''")}'`;
+  }
+
+  function adicionarEstatisticasXLSX(XLSX, wb, rel) {
+    const config = rel.xlsxEstatisticas;
+    if (!config || !Array.isArray(config.colunas) || !config.colunas.length) return;
+
+    const indiceSecao = Number.isInteger(config.secao) ? config.secao : 0;
+    const sec = secaoXLSX(rel.secoes[indiceSecao]);
+    if (!sec?.rows?.length) return;
+
+    const nomeDados = nomeAba(sec.titulo, indiceSecao);
+    const cabecalhos = ['Ensaio', 'Idade', 'Corpo de prova', 'Unidade', 'n', 'Média', 'Desvio padrão amostral', 'Coeficiente de variação', 'Mínimo', 'Máximo'];
+    const aoa = [
+      [config.titulo || 'Estatísticas dos corpos de prova'],
+      ['Cálculos feitos exclusivamente com os valores numéricos dos lotes filtrados. O coeficiente de variação é o desvio padrão amostral dividido pela média.'],
+      [],
+      cabecalhos,
+      ...config.colunas.map(item => [item.ensaio, item.idade, item.cp, item.unidade || 'MPa', '', '', '', '', '', '']),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const primeiraLinhaDados = 2;
+    const ultimaLinhaDados = sec.rows.length + 1;
+
+    config.colunas.forEach((item, indice) => {
+      const indiceColuna = sec.columns.findIndex(coluna => coluna.key === item.key);
+      if (indiceColuna < 0) return;
+
+      const letraColuna = XLSX.utils.encode_col(indiceColuna);
+      const intervalo = `${nomeAbaNaFormula(nomeDados)}!${letraColuna}${primeiraLinhaDados}:${letraColuna}${ultimaLinhaDados}`;
+      const linha = 4 + indice;
+      const celulaN = XLSX.utils.encode_cell({ r: linha, c: 4 });
+      const celulaMedia = XLSX.utils.encode_cell({ r: linha, c: 5 });
+      const celulaDesvio = XLSX.utils.encode_cell({ r: linha, c: 6 });
+      const celulaCv = XLSX.utils.encode_cell({ r: linha, c: 7 });
+      const celulaMin = XLSX.utils.encode_cell({ r: linha, c: 8 });
+      const celulaMax = XLSX.utils.encode_cell({ r: linha, c: 9 });
+
+      ws[celulaN] = { t: 'n', f: `COUNT(${intervalo})`, z: '0' };
+      ws[celulaMedia] = { t: 'n', f: `IF(COUNT(${intervalo})>0,AVERAGE(${intervalo}),"")`, z: '0.00' };
+      ws[celulaDesvio] = { t: 'n', f: `IF(COUNT(${intervalo})>1,STDEV.S(${intervalo}),"")`, z: '0.00' };
+      ws[celulaCv] = { t: 'n', f: `IFERROR(STDEV.S(${intervalo})/AVERAGE(${intervalo}),"")`, z: '0.0%' };
+      ws[celulaMin] = { t: 'n', f: `IF(COUNT(${intervalo})>0,MIN(${intervalo}),"")`, z: '0.00' };
+      ws[celulaMax] = { t: 'n', f: `IF(COUNT(${intervalo})>0,MAX(${intervalo}),"")`, z: '0.00' };
+    });
+
+    ws['!cols'] = [
+      { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 10 }, { wch: 8 },
+      { wch: 13 }, { wch: 24 }, { wch: 26 }, { wch: 13 }, { wch: 13 },
+    ];
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 9 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 9 } },
+    ];
+    ws['!freeze'] = { xSplit: 0, ySplit: 4 };
+    ws['!autofilter'] = { ref: `A4:J${4 + config.colunas.length}` };
+    XLSX.utils.book_append_sheet(wb, ws, nomeAba(config.nomeAba || 'Estatísticas CP', rel.secoes.length));
   }
 
   async function exportarPDF(rel) {

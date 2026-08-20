@@ -76,13 +76,14 @@ async function listarHistoricoFerroNorte() {
     'comp_28_cp2',
     'tracao_28',
     'tracao_28_cp2',
+    'atualizado_em',
   ].join(',');
   const historico = [];
   let ultimoId = '';
 
   for (;;) {
     let consulta = cliente
-      .from('producao_lotes')
+      .from(window.Area ? Area.tabela('producao_lotes') : 'producao_lotes')
       .select(colunas)
       .ilike('projeto', 'ferro%')
       .order('id', { ascending: true })
@@ -108,14 +109,73 @@ async function listarHistoricoFerroNorte() {
   return historico;
 }
 
+const CCT_CAMPOS_RESULTADO = [
+  'comp_14',
+  'comp_14_cp2',
+  'tracao_14',
+  'tracao_14_cp2',
+  'comp_28',
+  'comp_28_cp2',
+  'tracao_28',
+  'tracao_28_cp2',
+];
+
+function valorCpPreenchido(valor) {
+  return valor != null && String(valor).trim() !== '';
+}
+
+function chaveLoteComparativo(registro) {
+  const lote = String(registro?.lote || '').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/\bLOTE\b/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+  const projeto = FluxoLiberacao.projetoCanonico(registro);
+  const fornecedor = String(registro?.fornecedor || '').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+  return `${projeto}|${fornecedor}|${lote}`;
+}
+
+// A base antiga chegou a ter mais de uma ocorrência do mesmo lote. Mantém a
+// ocorrência mais recente como principal e completa apenas resultados vazios
+// com os valores existentes nas demais ocorrências.
+function consolidarHistoricoFerroNorte(registros) {
+  const porLote = new Map();
+
+  (registros || []).forEach(registro => {
+    const chave = chaveLoteComparativo(registro);
+    const existente = porLote.get(chave);
+    if (!existente) {
+      porLote.set(chave, { ...registro });
+      return;
+    }
+
+    const dataExistente = String(existente.atualizado_em || existente.data_fabricacao || '');
+    const dataRegistro = String(registro.atualizado_em || registro.data_fabricacao || '');
+    const principal = dataRegistro > dataExistente ? { ...registro } : existente;
+    const complemento = principal === existente ? registro : existente;
+
+    CCT_CAMPOS_RESULTADO.forEach(campo => {
+      if (!valorCpPreenchido(principal[campo]) && valorCpPreenchido(complemento[campo])) {
+        principal[campo] = complemento[campo];
+      }
+    });
+    porLote.set(chave, principal);
+  });
+
+  return [...porLote.values()];
+}
+
 async function carregarComparativoCuraTermica() {
   CCT.carregando = true;
   CCT.erro = '';
   renderComparativo();
   try {
     const producao = await listarHistoricoFerroNorte();
-    CCT.prod = (producao || []).filter(r =>
-      FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE');
+    CCT.prod = consolidarHistoricoFerroNorte((producao || []).filter(r =>
+      FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE'));
     CCT.carregando = false;
     renderComparativo();
   } catch (err) {
@@ -138,7 +198,19 @@ function numCp(v) {
 
 // Par de corpos de prova: mantém os dois valores reais, sem média.
 function par(cp1, cp2) {
-  return { cp1: numCp(cp1), cp2: numCp(cp2) };
+  const primeiro = numCp(cp1);
+  const segundoSeparado = numCp(cp2);
+  if (segundoSeparado != null || !valorCpPreenchido(cp1)) {
+    return { cp1: primeiro, cp2: segundoSeparado };
+  }
+
+  // Compatibilidade com o cadastro anterior às colunas CP2, quando os dois
+  // resultados eram salvos juntos (ex.: "75,0 / 69,9").
+  const partes = String(cp1).match(/-?\d+(?:[.,]\d+)?/g) || [];
+  return {
+    cp1: partes.length ? numCp(partes[0]) : primeiro,
+    cp2: partes.length > 1 ? numCp(partes[1]) : null,
+  };
 }
 
 function temValor(p) {
@@ -1303,6 +1375,24 @@ function registrarExportacaoComparativo(lotes) {
         { key: 'tracao28Export', label: 'Tração 28d (MPa)' },
         { key: 'ganhoTracaoExport', label: 'Ganho tração' },
       ],
+      xlsxColumns: [
+        { key: 'lote', label: 'Lote' },
+        { key: 'dataExport', label: 'Fabricação' },
+        { key: 'fornecedor', label: 'Fábrica' },
+        { key: 'tipoCuraExport', label: 'Tipo de cura' },
+        { key: 'comp14Cp1Export', label: 'Compressão 14d CP1 (MPa)', format: '0.0' },
+        { key: 'comp14Cp2Export', label: 'Compressão 14d CP2 (MPa)', format: '0.0' },
+        { key: 'comp28Cp1Export', label: 'Compressão 28d CP1 (MPa)', format: '0.0' },
+        { key: 'comp28Cp2Export', label: 'Compressão 28d CP2 (MPa)', format: '0.0' },
+        { key: 'ganhoCompCp1Export', label: 'Ganho compressão CP1', format: '0.0%' },
+        { key: 'ganhoCompCp2Export', label: 'Ganho compressão CP2', format: '0.0%' },
+        { key: 'tracao14Cp1Export', label: 'Tração 14d CP1 (MPa)', format: '0.0' },
+        { key: 'tracao14Cp2Export', label: 'Tração 14d CP2 (MPa)', format: '0.0' },
+        { key: 'tracao28Cp1Export', label: 'Tração 28d CP1 (MPa)', format: '0.0' },
+        { key: 'tracao28Cp2Export', label: 'Tração 28d CP2 (MPa)', format: '0.0' },
+        { key: 'ganhoTracaoCp1Export', label: 'Ganho tração CP1', format: '0.0%' },
+        { key: 'ganhoTracaoCp2Export', label: 'Ganho tração CP2', format: '0.0%' },
+      ],
       rows: lotes.map(l => ({
         lote: l.lote,
         fornecedor: l.fornecedor,
@@ -1315,7 +1405,40 @@ function registrarExportacaoComparativo(lotes) {
         tracao28Export: parTexto(l.tracao28),
         ganhoTracaoExport: ganhoTexto(l.tracao14, l.tracao28),
       })),
+      xlsxRows: lotes.map(l => ({
+        lote: l.lote,
+        fornecedor: l.fornecedor,
+        tipoCuraExport: l.curaTermica ? 'Cura térmica' : 'Cura normal',
+        dataExport: U.dataBR(l.data),
+        comp14Cp1Export: l.comp14.cp1,
+        comp14Cp2Export: l.comp14.cp2,
+        comp28Cp1Export: l.comp28.cp1,
+        comp28Cp2Export: l.comp28.cp2,
+        ganhoCompCp1Export: ganhoPct(l.comp14.cp1, l.comp28.cp1) == null ? null : ganhoPct(l.comp14.cp1, l.comp28.cp1) / 100,
+        ganhoCompCp2Export: ganhoPct(l.comp14.cp2, l.comp28.cp2) == null ? null : ganhoPct(l.comp14.cp2, l.comp28.cp2) / 100,
+        tracao14Cp1Export: l.tracao14.cp1,
+        tracao14Cp2Export: l.tracao14.cp2,
+        tracao28Cp1Export: l.tracao28.cp1,
+        tracao28Cp2Export: l.tracao28.cp2,
+        ganhoTracaoCp1Export: ganhoPct(l.tracao14.cp1, l.tracao28.cp1) == null ? null : ganhoPct(l.tracao14.cp1, l.tracao28.cp1) / 100,
+        ganhoTracaoCp2Export: ganhoPct(l.tracao14.cp2, l.tracao28.cp2) == null ? null : ganhoPct(l.tracao14.cp2, l.tracao28.cp2) / 100,
+      })),
     }],
+    xlsxEstatisticas: {
+      nomeAba: 'Estatísticas CP',
+      titulo: 'Estatísticas dos corpos de prova — recorte filtrado',
+      secao: 0,
+      colunas: [
+        { key: 'comp14Cp1Export', ensaio: 'Compressão', idade: '14 dias', cp: 'CP1', unidade: 'MPa' },
+        { key: 'comp14Cp2Export', ensaio: 'Compressão', idade: '14 dias', cp: 'CP2', unidade: 'MPa' },
+        { key: 'comp28Cp1Export', ensaio: 'Compressão', idade: '28 dias', cp: 'CP1', unidade: 'MPa' },
+        { key: 'comp28Cp2Export', ensaio: 'Compressão', idade: '28 dias', cp: 'CP2', unidade: 'MPa' },
+        { key: 'tracao14Cp1Export', ensaio: 'Tração', idade: '14 dias', cp: 'CP1', unidade: 'MPa' },
+        { key: 'tracao14Cp2Export', ensaio: 'Tração', idade: '14 dias', cp: 'CP2', unidade: 'MPa' },
+        { key: 'tracao28Cp1Export', ensaio: 'Tração', idade: '28 dias', cp: 'CP1', unidade: 'MPa' },
+        { key: 'tracao28Cp2Export', ensaio: 'Tração', idade: '28 dias', cp: 'CP2', unidade: 'MPa' },
+      ],
+    },
     graficos: [
       { titulo: 'Acompanhamento 14 dias — Compressão × Tração (CP1 e CP2)', canvasId: 'chart14' },
       { titulo: 'Liberação 28 dias — Compressão × Tração (CP1 e CP2)', canvasId: 'chart28' },
