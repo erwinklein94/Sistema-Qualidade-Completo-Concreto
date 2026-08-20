@@ -85,7 +85,6 @@ async function listarHistoricoFerroNorte() {
     let consulta = cliente
       .from(window.Area ? Area.tabela('producao_lotes') : 'producao_lotes')
       .select(colunas)
-      .ilike('projeto', 'ferro%')
       .order('id', { ascending: true })
       .limit(tamanhoPagina);
 
@@ -112,25 +111,25 @@ async function listarHistoricoFerroNorte() {
 async function listarAuditoriaResultadosFerroNorte() {
   const cliente = window.Auth?.cliente?.();
   if (!cliente) return [];
-  const { data, error } = await cliente
-    .from('auditoria_alteracoes')
-    .select('registro_id,criado_em,valores_antes,valores_depois')
-    .eq('tabela', 'producao_lotes')
-    .order('criado_em', { ascending: false })
-    .limit(20000);
-  if (error) throw error;
-  return data || [];
-}
+  const tamanhoPagina = 1000;
+  const limiteSeguranca = 50000;
+  const historico = [];
 
-async function listarDataBooksResultadosFerroNorte() {
-  const cliente = window.Auth?.cliente?.();
-  if (!cliente) return [];
-  const { data, error } = await cliente
-    .from('data_books_dormentes')
-    .select('lote,data_producao,compressao_axial_14_dias,compressao_axial_28_dias,tracao_flexao_14_dias,tracao_flexao_28_dias')
-    .limit(5000);
-  if (error) throw error;
-  return data || [];
+  for (let inicio = 0; inicio < limiteSeguranca; inicio += tamanhoPagina) {
+    const { data, error } = await cliente
+      .from('auditoria_alteracoes')
+      .select('tabela,registro_id,criado_em,valores_antes,valores_depois')
+      .in('tabela', ['producao_lotes', 'data_books_dormentes'])
+      .order('criado_em', { ascending: false })
+      .range(inicio, inicio + tamanhoPagina - 1);
+    if (error) throw error;
+
+    const pagina = data || [];
+    historico.push(...pagina);
+    if (pagina.length < tamanhoPagina) break;
+  }
+
+  return historico;
 }
 
 const CCT_CAMPOS_RESULTADO = [
@@ -149,11 +148,14 @@ function valorCpPreenchido(valor) {
 }
 
 function loteCanonicoComparativo(valor) {
-  return String(valor || '').normalize('NFD')
+  const limpo = String(valor || '').normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
     .replace(/\bLOTE\b/g, '')
     .replace(/[^A-Z0-9]/g, '');
+  const partes = limpo.match(/^([A-Z]*)(\d+)$/);
+  if (!partes) return limpo;
+  return `${partes[1]}${partes[2].replace(/^0+(?=\d)/, '')}`;
 }
 
 function chaveLoteComparativo(registro) {
@@ -185,27 +187,29 @@ function recuperarResultadosDaAuditoria(registros, auditoria) {
   (auditoria || []).forEach(evento => {
     [evento?.valores_depois, evento?.valores_antes].forEach(fonte => {
       if (!fonte || typeof fonte !== 'object') return;
-      const destino = porId.get(String(evento.registro_id || ''))
-        || porLote.get(loteCanonicoComparativo(fonte.lote));
-      if (destino) preenchidos += completarResultadosVazios(destino, fonte);
+      const origemDataBook = evento?.tabela === 'data_books_dormentes';
+      const valores = origemDataBook ? {
+        lote: fonte.lote,
+        comp_14: fonte.compressao_axial_14_dias,
+        comp_28: fonte.compressao_axial_28_dias,
+        tracao_14: fonte.tracao_flexao_14_dias,
+        tracao_28: fonte.tracao_flexao_28_dias,
+      } : fonte;
+      const destino = (!origemDataBook && porId.get(String(evento.registro_id || '')))
+        || porLote.get(loteCanonicoComparativo(valores.lote));
+      if (destino) preenchidos += completarResultadosVazios(destino, valores);
     });
   });
   return preenchidos;
 }
 
-function recuperarResultadosDosDataBooks(registros, dataBooks) {
+function recuperarResultadosDeOutrasProducao(registros, producao) {
   const porLote = new Map((registros || []).map(registro => [loteCanonicoComparativo(registro.lote), registro]));
   let preenchidos = 0;
 
-  (dataBooks || []).forEach(item => {
+  (producao || []).forEach(item => {
     const destino = porLote.get(loteCanonicoComparativo(item?.lote));
-    if (!destino) return;
-    preenchidos += completarResultadosVazios(destino, {
-      comp_14: item.compressao_axial_14_dias,
-      comp_28: item.compressao_axial_28_dias,
-      tracao_14: item.tracao_flexao_14_dias,
-      tracao_28: item.tracao_flexao_28_dias,
-    });
+    if (destino && destino !== item) preenchidos += completarResultadosVazios(destino, item);
   });
   return preenchidos;
 }
@@ -244,19 +248,18 @@ async function carregarComparativoCuraTermica() {
     const producao = await listarHistoricoFerroNorte();
     const ferroNorte = (producao || []).filter(r =>
       FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE');
-    const [auditoriaResultado, dataBooksResultado] = await Promise.allSettled([
-      listarAuditoriaResultadosFerroNorte(),
-      listarDataBooksResultadosFerroNorte(),
-    ]);
-    const auditoria = auditoriaResultado.status === 'fulfilled' ? auditoriaResultado.value : [];
-    const dataBooks = dataBooksResultado.status === 'fulfilled' ? dataBooksResultado.value : [];
+    const recuperadosProducao = recuperarResultadosDeOutrasProducao(ferroNorte, producao);
+    const auditoriaResultado = await Promise.allSettled([listarAuditoriaResultadosFerroNorte()]);
+    const auditoria = auditoriaResultado[0].status === 'fulfilled' ? auditoriaResultado[0].value : [];
+    if (auditoriaResultado[0].status === 'rejected') {
+      console.warn('Não foi possível consultar os snapshots históricos de resultados', auditoriaResultado[0].reason);
+    }
     const recuperadosAuditoria = recuperarResultadosDaAuditoria(ferroNorte, auditoria);
-    const recuperadosDataBooks = recuperarResultadosDosDataBooks(ferroNorte, dataBooks);
     CCT.prod = consolidarHistoricoFerroNorte(ferroNorte);
-    if (recuperadosAuditoria || recuperadosDataBooks) {
+    if (recuperadosProducao || recuperadosAuditoria) {
       console.info('Resultados históricos recuperados para o comparativo de cura', {
+        producao: recuperadosProducao,
         auditoria: recuperadosAuditoria,
-        dataBooks: recuperadosDataBooks,
       });
     }
     CCT.carregando = false;
