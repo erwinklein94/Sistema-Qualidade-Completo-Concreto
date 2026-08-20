@@ -109,6 +109,30 @@ async function listarHistoricoFerroNorte() {
   return historico;
 }
 
+async function listarAuditoriaResultadosFerroNorte() {
+  const cliente = window.Auth?.cliente?.();
+  if (!cliente) return [];
+  const { data, error } = await cliente
+    .from('auditoria_alteracoes')
+    .select('registro_id,criado_em,valores_antes,valores_depois')
+    .eq('tabela', 'producao_lotes')
+    .order('criado_em', { ascending: false })
+    .limit(20000);
+  if (error) throw error;
+  return data || [];
+}
+
+async function listarDataBooksResultadosFerroNorte() {
+  const cliente = window.Auth?.cliente?.();
+  if (!cliente) return [];
+  const { data, error } = await cliente
+    .from('data_books_dormentes')
+    .select('lote,data_producao,compressao_axial_14_dias,compressao_axial_28_dias,tracao_flexao_14_dias,tracao_flexao_28_dias')
+    .limit(5000);
+  if (error) throw error;
+  return data || [];
+}
+
 const CCT_CAMPOS_RESULTADO = [
   'comp_14',
   'comp_14_cp2',
@@ -124,18 +148,66 @@ function valorCpPreenchido(valor) {
   return valor != null && String(valor).trim() !== '';
 }
 
-function chaveLoteComparativo(registro) {
-  const lote = String(registro?.lote || '').normalize('NFD')
+function loteCanonicoComparativo(valor) {
+  return String(valor || '').normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
     .replace(/\bLOTE\b/g, '')
     .replace(/[^A-Z0-9]/g, '');
+}
+
+function chaveLoteComparativo(registro) {
+  const lote = loteCanonicoComparativo(registro?.lote);
   const projeto = FluxoLiberacao.projetoCanonico(registro);
   const fornecedor = String(registro?.fornecedor || '').normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim()
     .toUpperCase();
   return `${projeto}|${fornecedor}|${lote}`;
+}
+
+function completarResultadosVazios(destino, fonte) {
+  let preenchidos = 0;
+  CCT_CAMPOS_RESULTADO.forEach(campo => {
+    if (!valorCpPreenchido(destino[campo]) && valorCpPreenchido(fonte?.[campo])) {
+      destino[campo] = fonte[campo];
+      preenchidos += 1;
+    }
+  });
+  return preenchidos;
+}
+
+function recuperarResultadosDaAuditoria(registros, auditoria) {
+  const porId = new Map((registros || []).map(registro => [String(registro.id || ''), registro]));
+  const porLote = new Map((registros || []).map(registro => [loteCanonicoComparativo(registro.lote), registro]));
+  let preenchidos = 0;
+
+  (auditoria || []).forEach(evento => {
+    [evento?.valores_depois, evento?.valores_antes].forEach(fonte => {
+      if (!fonte || typeof fonte !== 'object') return;
+      const destino = porId.get(String(evento.registro_id || ''))
+        || porLote.get(loteCanonicoComparativo(fonte.lote));
+      if (destino) preenchidos += completarResultadosVazios(destino, fonte);
+    });
+  });
+  return preenchidos;
+}
+
+function recuperarResultadosDosDataBooks(registros, dataBooks) {
+  const porLote = new Map((registros || []).map(registro => [loteCanonicoComparativo(registro.lote), registro]));
+  let preenchidos = 0;
+
+  (dataBooks || []).forEach(item => {
+    const destino = porLote.get(loteCanonicoComparativo(item?.lote));
+    if (!destino) return;
+    preenchidos += completarResultadosVazios(destino, {
+      comp_14: item.compressao_axial_14_dias,
+      comp_28: item.compressao_axial_28_dias,
+      tracao_14: item.tracao_flexao_14_dias,
+      tracao_28: item.tracao_flexao_28_dias,
+    });
+  });
+  return preenchidos;
 }
 
 // A base antiga chegou a ter mais de uma ocorrência do mesmo lote. Mantém a
@@ -157,11 +229,7 @@ function consolidarHistoricoFerroNorte(registros) {
     const principal = dataRegistro > dataExistente ? { ...registro } : existente;
     const complemento = principal === existente ? registro : existente;
 
-    CCT_CAMPOS_RESULTADO.forEach(campo => {
-      if (!valorCpPreenchido(principal[campo]) && valorCpPreenchido(complemento[campo])) {
-        principal[campo] = complemento[campo];
-      }
-    });
+    completarResultadosVazios(principal, complemento);
     porLote.set(chave, principal);
   });
 
@@ -174,8 +242,23 @@ async function carregarComparativoCuraTermica() {
   renderComparativo();
   try {
     const producao = await listarHistoricoFerroNorte();
-    CCT.prod = consolidarHistoricoFerroNorte((producao || []).filter(r =>
-      FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE'));
+    const ferroNorte = (producao || []).filter(r =>
+      FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE');
+    const [auditoriaResultado, dataBooksResultado] = await Promise.allSettled([
+      listarAuditoriaResultadosFerroNorte(),
+      listarDataBooksResultadosFerroNorte(),
+    ]);
+    const auditoria = auditoriaResultado.status === 'fulfilled' ? auditoriaResultado.value : [];
+    const dataBooks = dataBooksResultado.status === 'fulfilled' ? dataBooksResultado.value : [];
+    const recuperadosAuditoria = recuperarResultadosDaAuditoria(ferroNorte, auditoria);
+    const recuperadosDataBooks = recuperarResultadosDosDataBooks(ferroNorte, dataBooks);
+    CCT.prod = consolidarHistoricoFerroNorte(ferroNorte);
+    if (recuperadosAuditoria || recuperadosDataBooks) {
+      console.info('Resultados históricos recuperados para o comparativo de cura', {
+        auditoria: recuperadosAuditoria,
+        dataBooks: recuperadosDataBooks,
+      });
+    }
     CCT.carregando = false;
     renderComparativo();
   } catch (err) {
@@ -206,7 +289,9 @@ function par(cp1, cp2) {
 
   // Compatibilidade com o cadastro anterior às colunas CP2, quando os dois
   // resultados eram salvos juntos (ex.: "75,0 / 69,9").
-  const partes = String(cp1).match(/-?\d+(?:[.,]\d+)?/g) || [];
+  const partes = String(cp1)
+    .replace(/\bCP\s*[12]\b/gi, '')
+    .match(/-?\d+(?:[.,]\d+)?/g) || [];
   return {
     cp1: partes.length ? numCp(partes[0]) : primeiro,
     cp2: partes.length > 1 ? numCp(partes[1]) : null,
