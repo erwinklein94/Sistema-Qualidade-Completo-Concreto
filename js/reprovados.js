@@ -607,8 +607,8 @@ function registrarExportacaoReprovados(lista) {
 const COLUNAS_PLANILHA_ANTIGA_REPROVADOS = [
   { key: 'semana', label: 'SEMANA' },
   { key: 'dataProducao', label: 'DATA DE PRODUÇÃO' },
-  { key: 'periodoInspecao', label: 'PERÍODO DE INSPEÇÃO' },
-  { key: 'espacoPeriodoLote', label: '' },
+  { key: 'periodoInspecaoInicio', label: 'PERÍODO DE INSPEÇÃO' },
+  { key: 'periodoInspecaoFim', label: 'PERÍODO DE INSPEÇÃO' },
   { key: 'lote', label: 'LOTE' },
   { key: 'projeto', label: 'PROJETO' },
   { key: 'tipo', label: 'TIPO' },
@@ -624,8 +624,8 @@ function linhaPlanilhaAntigaReprovados(r) {
   return {
     semana: p.semana || r.semana || '',
     dataProducao: U.dataBR(r.dataProducao),
-    periodoInspecao: p.ini || p.fim ? `${U.dataBR(p.ini)} a ${U.dataBR(p.fim)}` : '',
-    espacoPeriodoLote: '',
+    periodoInspecaoInicio: U.dataBR(p.ini),
+    periodoInspecaoFim: U.dataBR(p.fim),
     lote: r.lote || '',
     projeto: r.projeto || '',
     tipo: r.tipo || '',
