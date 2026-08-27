@@ -985,6 +985,21 @@ window.preencherModalComLeituraIauditor = preencherModalComLeituraIauditor;
 
 function registrarExportacaoEnsaiosLiberacao(lista) {
   if (!window.Exportacoes) return;
+  const observacoesExportacao = lista.map(r => separarObservacoesEnsaioParaExcel(r.observacoes));
+  const camposObservacoes = [];
+  const camposVistos = new Set();
+  observacoesExportacao.forEach(obs => {
+    Object.keys(obs.campos).forEach(rotulo => {
+      if (camposVistos.has(rotulo)) return;
+      camposVistos.add(rotulo);
+      camposObservacoes.push(rotulo);
+    });
+  });
+  const colunasObservacoes = camposObservacoes.map((rotulo, indice) => ({
+    key: `observacaoCampo${indice}`,
+    label: rotulo
+  }));
+
   Exportacoes.registrar({
     titulo: 'Ensaios de Liberação',
     nomeArquivo: 'ensaios-liberacao',
@@ -1003,16 +1018,68 @@ function registrarExportacaoEnsaiosLiberacao(lista) {
         { key: 'quantidadeEnsaiada', label: 'Quantidade ensaiada' },
         { key: 'responsavel', label: 'Responsável' },
         { key: 'linkRelatorio', label: 'Link relatório SharePoint/iAuditor' },
-        { key: 'observacoes', label: 'Observações' },
+        ...colunasObservacoes,
+        { key: 'observacoesAdicionais', label: 'Observações adicionais' },
         { key: 'vinculoExport', label: 'Vínculo' }
       ],
-      rows: lista.map(r => ({
-        ...r,
-        dataEnsaioExport: U.dataBR(r.dataEnsaio),
-        semanaExport: rotuloSemana(r),
-        bitolaExport: bitolaRegistro(r),
-        vinculoExport: r.producaoLoteId ? 'Vinculado à produção' : 'Manual'
-      }))
+      rows: lista.map((r, linha) => {
+        const obs = observacoesExportacao[linha];
+        const camposSeparados = {};
+        camposObservacoes.forEach((rotulo, indice) => {
+          camposSeparados[`observacaoCampo${indice}`] = obs.campos[rotulo] || '';
+        });
+        return {
+          ...r,
+          ...camposSeparados,
+          dataEnsaioExport: U.dataBR(r.dataEnsaio),
+          semanaExport: rotuloSemana(r),
+          bitolaExport: bitolaRegistro(r),
+          observacoesAdicionais: obs.adicionais,
+          vinculoExport: r.producaoLoteId ? 'Vinculado à produção' : 'Manual'
+        };
+      })
     }]
   });
+}
+
+function separarObservacoesEnsaioParaExcel(observacoes) {
+  const texto = String(observacoes || '').replace(/\r\n?/g, '\n').trim();
+  if (!texto) return { campos: {}, adicionais: '' };
+
+  const campos = {};
+  const adicionais = [];
+  let emRespostas = false;
+  const adicionarCampo = (rotulo, valor) => {
+    const chave = String(rotulo || '').trim();
+    const conteudo = String(valor || '').trim();
+    if (!chave || !conteudo) return;
+    campos[chave] = campos[chave] ? `${campos[chave]} | ${conteudo}` : conteudo;
+  };
+
+  texto.split('\n').forEach(linhaOriginal => {
+    const linha = linhaOriginal.trim();
+    if (!linha) return;
+    if (/^Registro sincronizado automaticamente pela API do SafetyCulture\.?$/i.test(linha)) return;
+    if (/^Respostas:$/i.test(linha)) {
+      emRespostas = true;
+      return;
+    }
+
+    const metadado = linha.match(/^(Audit ID|Template|Vínculo com Produção):\s*(.*)$/i);
+    if (metadado) {
+      adicionarCampo(metadado[1], metadado[2]);
+      return;
+    }
+
+    if (emRespostas) {
+      const resposta = linha.match(/^-\s*(.+?):\s*(.*)$/);
+      if (resposta) {
+        adicionarCampo(resposta[1], resposta[2]);
+        return;
+      }
+    }
+    adicionais.push(linha);
+  });
+
+  return { campos, adicionais: adicionais.join('\n') };
 }
