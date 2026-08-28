@@ -7079,12 +7079,14 @@ body[data-tema="escuro"] .menu-dd-link.ativo { color: #fff; }
   .menu-dd-painel { right: 0; }
 }
 
-/* ===================== LOGIN — fundo "Rumo ao Hexa" cobrindo toda a tela ===================== */
+/* ===================== LOGIN — identidade ferroviaria sem logotipo ===================== */
 .login-page {
-  background: url('../assets/brand/login-bg-hexa.jpg') center center / cover no-repeat;
-  background-color: #00233f; /* fallback enquanto a imagem carrega */
+  background:
+    linear-gradient(115deg, rgba(0,35,63,.96), rgba(0,56,101,.88) 48%, rgba(50,166,230,.72)),
+    url('../assets/rumo/grafismo-vagoes-azul.png') center center / cover no-repeat;
+  background-color: #00233f;
 }
-/* a imagem é o fundo: remove a textura diagonal decorativa para a foto aparecer limpa */
+/* o grafismo é o fundo: remove a textura diagonal decorativa duplicada */
 .login-page::before { display: none; }
 /* garante o card sempre acima da foto */
 .login-card { position: relative; z-index: 1; }

@@ -160,7 +160,6 @@ var Auth = (() => {
     const html = `
       <div class="auth-bloqueio">
         <div class="login-card">
-          <div class="login-marca"><img src="assets/brand/rumo-logo-positivo.png" alt="Rumo"></div>
           <h1>Configuração pendente</h1>
           <p>${erroConfiguracao()}</p>
           <div class="aviso-info" style="margin-top:16px">

@@ -219,14 +219,9 @@ const App = {
     // menu vira conprem-* nas páginas da Conprem para o item certo acender.
     this.paginaAtiva = window.Area ? Area.chaveMenu(paginaAtiva) : paginaAtiva;
     const empresa = window.Area ? Area.nome() : '';
-    const home = window.Area ? Area.home() : 'index.html';
-
     const topo = `
       <header class="topo">
         <div class="flex" style="align-items:center;gap:14px;">
-          <a class="topo-marca" href="${home}" aria-label="Rumo — ir para o Dashboard">
-            <img src="assets/brand/rumo-logo-positivo.png" alt="Rumo">
-          </a>
           <div class="topo-identidade">
             <div class="topo-kicker">Rumo · Qualidade Ferroviária${empresa ? ` · ${empresa}` : ''}</div>
             <h1>${titulo}</h1>
