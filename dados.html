@@ -52,36 +52,6 @@
           </div>
         </div>
 
-        <div class="card" id="safecultureAdminCard">
-          <div class="card-titulo">
-            <span class="acento">Integração SafetyCulture</span>
-            <span class="card-sub">Sincronização automática dos relatórios de inspeção e ensaios</span>
-          </div>
-          <p class="txt-cinza" style="margin-bottom:16px;font-size:14px;line-height:1.7">
-            O token fica protegido nas Edge Function Secrets do Supabase. O navegador recebe somente o resultado da sincronização e nunca tem acesso à credencial do SafetyCulture.
-          </p>
-          <div id="safecultureAdminStatus"></div>
-          <div class="flex gap12" style="flex-wrap:wrap;align-items:center;margin:18px 0">
-            <button class="btn btn-secundario" id="btnSafecultureTestar" onclick="SafetyCultureSync.testarConexao()">Testar conexão e descobrir templates</button>
-            <button class="btn btn-safeculture" id="btnSafecultureSincronizar" onclick="SafetyCultureSync.sincronizarAdmin()">Sincronizar SafetyCulture</button>
-            <button class="btn btn-secundario" id="btnSafecultureReprocessar" onclick="SafetyCultureSync.sincronizarAdmin(48)">Reprocessar últimas 48 horas</button>
-          </div>
-          <div class="card-titulo" style="margin-top:24px">
-            <span class="acento">Relatórios das últimas 24 horas</span>
-            <span class="card-sub">O que entrou no site e o que ficou de fora, com o lote de cada relatório</span>
-          </div>
-          <div id="safecultureRelatorios"></div>
-          <div class="card-titulo" style="margin-top:18px">
-            <span class="acento">Templates encontrados</span>
-            <span class="card-sub">Confirme em qual página cada modelo deve ser gravado</span>
-          </div>
-          <div id="safecultureTemplates"></div>
-          <div class="card-titulo" style="margin-top:24px">
-            <span class="acento">Últimas execuções</span>
-          </div>
-          <div id="safecultureHistorico"></div>
-        </div>
-
         <div class="card">
           <div class="card-titulo"><span class="acento">Custo da não qualidade</span></div>
           <p class="txt-cinza" style="margin-bottom:18px;font-size:14px;line-height:1.7">
@@ -141,7 +111,7 @@
           <div class="card-titulo"><span class="acento">Como funciona agora</span></div>
           <div style="font-size:14px;line-height:1.7;color:var(--cinza-texto)">
             <p style="margin-bottom:10px"><strong style="color:var(--azul-escuro)">Banco oficial:</strong> Produção, Reprovados, Ensaios de Liberação, Painel de Séries, Dashboard e Indicador Semanal passam a usar o Supabase como fonte principal.</p>
-            <p style="margin-bottom:10px"><strong style="color:var(--azul-escuro)">Entrada de dados:</strong> novos registros devem ser criados manualmente pelas telas de lançamento. A importação inicial já foi concluída e removida desta versão.</p>
+            <p style="margin-bottom:10px"><strong style="color:var(--azul-escuro)">Entrada de dados:</strong> novos relatórios devem ser cadastrados pelo leitor de PDF ou manualmente nas telas de lançamento. A integração automática externa foi encerrada e o histórico existente foi preservado.</p>
             <p><strong style="color:var(--azul-escuro)">Regra operacional:</strong> o histórico oficial deve nascer dos lançamentos feitos no site, não de planilhas importadas.</p>
           </div>
         </div>
@@ -162,8 +132,8 @@
   <script src="js/exportacoes.js?v=20260715-excel-site-v1"></script>
   <script src="js/comum.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/safeculture-integracao.js?v=20260717-dedup-lote-v2"></script>
-  <script src="js/dados.js?v=20260716-safeculture-v1"></script>
+  <script src="js/safeculture-integracao.js?v=20260828-historico-local-v1"></script>
+  <script src="js/dados.js?v=20260828-sem-sincronizacao-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

@@ -1724,6 +1724,9 @@ Deno.serve(async (req) => {
     const input = await req.json().catch(() => ({})) as Record<string, unknown>;
     const action = String(input.action || "status").toLowerCase();
 
+    if (["discover", "sync"].includes(action)) {
+      return json({ error: "A integracao automatica com o SafetyCulture foi encerrada." }, 410);
+    }
     if (action === "status") return json(await getStatus(supabase));
     if (action === "discover") {
       const templates = await discoverTemplates(supabase);
