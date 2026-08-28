@@ -509,6 +509,59 @@
     return best;
   }
 
+  /* ---------- novo formulario de Inspecao de Pista (rotulo sobre valor) ---------- */
+  const FORMULARIO_PISTA_META = {
+    preparadopor: 'Responsável', fornecedor: 'Fornecedor', projeto: 'Projeto',
+    tipodedormente: 'Tipo de dormente', comusp: 'USP', tipodeombreira: 'Tipo de ombreira',
+    lote: 'Lote', datadafabricacao: 'Data da fabricação', pista: 'Pista',
+    quantidadeproduzida: 'Quantidade produzida', quantidadereprovada: 'Quantidade reprovada',
+    dataprevistadecura: 'Data prevista de cura',
+  };
+
+  function ehCabecalhoFormularioPista(texto) {
+    const n = norm(texto);
+    return n.indexOf('materiaisdormenteconcreto') !== -1 && n.indexOf('inspecaodepista') !== -1;
+  }
+
+  function ehRotuloFormularioPista(texto) {
+    const n = norm(texto);
+    return !!FORMULARIO_PISTA_META[n]
+      || n.indexOf('dormentesreprovados') === 0
+      || n.indexOf('dormentesreparados') === 0;
+  }
+
+  function extrairFormularioPista(pages, meta, sections, dedupe) {
+    const ehNovoFormulario = pages.some(pg => ehCabecalhoFormularioPista(pg.rows.map(row => row.text).join(' ')))
+      && pages.some(pg => pg.rows.some(row => /^formul[aá]rio\s*\d+/i.test(clean(row.text))));
+    if (!ehNovoFormulario) return null;
+
+    const campos = {};
+    meta['Tipo de relatório'] = 'Inspeção de pista';
+    for (const pg of pages) {
+      const rows = pg.rows.filter(row => !rowIsFooterOrNoise(row, pg));
+      for (let i = 0; i < rows.length; i++) {
+        const label = clean(rows[i].text);
+        if (!ehRotuloFormularioPista(label)) continue;
+        const proxima = rows.slice(i + 1).find(row => {
+          if (row.top - rows[i].top > 55) return false;
+          if (ehCabecalhoFormularioPista(row.text) || /^formul[aá]rio\s*\d+/i.test(clean(row.text))) return false;
+          return !ehRotuloFormularioPista(row.text);
+        });
+        const valor = clean(proxima?.text || '');
+        if (!valor) continue;
+
+        campos[label] = valor;
+        const metaLabel = FORMULARIO_PISTA_META[norm(label)];
+        if (metaLabel && !meta[metaLabel]) meta[metaLabel] = valor;
+        if (/^dormentes\s+(reprovados|reparados)\s*-/i.test(label)) {
+          addRow(sections, 'Inspeção de pista', buildRow(label, valor, null), dedupe,
+            `formulario:${pg.pageNum}:${Math.round(rows[i].top)}`);
+        }
+      }
+    }
+    return campos;
+  }
+
   /* ---------- parser principal ---------- */
   function parse(pagesRaw) {
     const pages = (pagesRaw || []).map((pg) => ({
@@ -522,6 +575,7 @@
     const headers = detectHeaders(pages);
     const sections = {};
     const dedupe = new Set();
+    const camposFormulario = extrairFormularioPista(pages, meta, sections, dedupe);
     let conclusao = null;
     let bitolaContext = '';
 
@@ -576,7 +630,7 @@
     const sectionList = sortSectionTitles(Object.keys(sections))
       .map((title) => ({ title, rows: sections[title] }));
 
-    return { meta, sections: sectionList, conclusao };
+    return { meta, sections: sectionList, conclusao, camposFormulario };
   }
 
   return { parse, _internals: { norm, isValueToken, matchDict, groupRows } };

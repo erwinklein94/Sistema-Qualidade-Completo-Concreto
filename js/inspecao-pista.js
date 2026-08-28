@@ -1,6 +1,6 @@
 /* =====================================================================
    INSPECAO-PISTA.JS — Histórico consultivo de inspeções de pista.
-   Independente das demais telas: leitura de iAuditor + registro com link.
+   Independente das demais telas: leitura de PDF + registro com link.
    ===================================================================== */
 let PISTA_REGISTROS = [];
 let PISTA_CARREGANDO = false;
@@ -29,7 +29,8 @@ const CHAVES_LEITURA_PISTA = [
   'pista', 'trecho', 'posição', 'posicao', 'local', 'molde', 'cavidade', 'atividade',
   'etapa', 'limpeza', 'forma', 'formas', 'liberação', 'liberacao', 'armadura',
   'desmoldante', 'conferência', 'conferencia', 'não conformidade', 'nao conformidade',
-  'pendência', 'pendencia', 'ação corretiva', 'acao corretiva', 'observação', 'observacao'
+  'pendência', 'pendencia', 'ação corretiva', 'acao corretiva', 'observação', 'observacao',
+  'dormentes reprovados', 'dormentes reparados'
 ];
 const CHAVES_OUTROS_RELATORIOS = [
   'inspecao de concretagem', 'inspeção de concretagem', 'concretagem', 'slump', 'abatimento',
@@ -51,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.body.classList.add('pagina-ensaios-liberacao');
   App.montarLayout('inspecaoPista', Area.titulo('Inspeção de Pista'), `Histórico consultivo de inspeções de pista — ${Area.fornecedor()}`);
   App.acoesTopo(`
-    <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDFs iAuditor</button>
+    <button class="btn btn-secundario" onclick="abrirImportadorIauditor()">${ICN.upload}Importar PDFs</button>
     ${SafetyCultureSync.controlesTopoHtml()}
     ${Auth.pode('criar') ? `<button class="btn btn-primario" onclick="abrirNovo()">${ICN.add}Novo relatório</button>` : App.avisoModoConsulta()}
   `);
@@ -242,7 +243,7 @@ function renderTabela(lista, total) {
     return;
   }
   if (!lista.length) {
-    alvo.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhuma inspeção de pista registrada</h3><p>${total ? 'Ajuste os filtros ou' : 'Comece'} importando um PDF do iAuditor ou criando um relatório manual.</p></div>`;
+    alvo.innerHTML = `<div class="vazio">${ICN.vazioBox}<h3>Nenhuma inspeção de pista registrada</h3><p>${total ? 'Ajuste os filtros ou' : 'Comece'} importando um relatório em PDF ou criando um lançamento manual.</p></div>`;
     return;
   }
 
@@ -465,7 +466,7 @@ function fecharModal() { IAUDITOR_EDIT_IDX = null; document.getElementById('moda
 function fecharVer() { document.getElementById('modalVer').classList.remove('aberto'); }
 
 /* ---------------------------------------------------------------------
-   Leitor de iAuditor (PDF) — lê, valida Pista e oferece salvar direto
+   Leitor de PDF — lê, valida Pista e oferece salvar direto
    --------------------------------------------------------------------- */
 function inicializarLeitorIauditor() {
   const input = document.getElementById('iauditorPdfInput');
@@ -493,7 +494,7 @@ async function lerRelatoriosIauditor(files) {
   if (!alvo) return;
   const pdfs = Array.from(files || []).filter(f => /\.pdf$/i.test(f.name));
   const ignorados = Array.from(files || []).length - pdfs.length;
-  if (!pdfs.length) { renderErroIauditor('Selecione um ou mais arquivos PDF exportados do iAuditor.'); return; }
+  if (!pdfs.length) { renderErroIauditor('Selecione um ou mais relatórios em PDF.'); return; }
   if (!window.pdfjsLib || !window.RumoParser) { renderErroIauditor('O leitor de PDF não foi carregado. Verifique sua conexão e recarregue a página.'); return; }
 
   IAUDITOR_RELATORIOS = [];
@@ -510,7 +511,7 @@ async function lerRelatoriosIauditor(files) {
       const valido = ehRelatorioPista(data, registro, file.name);
       IAUDITOR_RELATORIOS.push({ fileName: file.name, data, registro, valido, erro: false, linkDigitado: '' });
     } catch (err) {
-      console.error('Erro ao ler relatório iAuditor', file.name, err);
+      console.error('Erro ao ler relatório PDF', file.name, err);
       IAUDITOR_RELATORIOS.push({ fileName: file.name, data: null, registro: null, valido: false, erro: true, linkDigitado: '' });
     }
   }
@@ -550,7 +551,7 @@ function montarRegistroIauditor(data, fileName) {
 
   const itensInspecionados = montarResumoItens(linhas);
   const naoConformidades = montarNaoConformidades(linhas, data);
-  const acoesCorretivas = limparValor(encontrarValor(linhas, ['ação corretiva', 'acao corretiva', 'tratativa', 'plano de ação', 'plano de acao']));
+  const acoesCorretivas = montarAcoesCorretivasFormulario(linhas);
 
   return {
     dataInspecao, lote, projeto, bitola, fornecedor, resultado, responsavel, dormentesReprovados,
@@ -625,11 +626,27 @@ function encontrarValor(linhas, chaves) {
 }
 
 function inferirResultado(data, linhas) {
+  const qtdFormulario = normalizarQuantidadeReprovados(data?.meta?.['Quantidade reprovada']);
+  if (qtdFormulario !== '') return Number(qtdFormulario) > 0 ? 'Reprovado' : 'Aprovado';
   if (data?.conclusao?.situacao === 'ok') return 'Aprovado';
   if (data?.conclusao?.situacao === 'fail') return 'Reprovado';
   if ((linhas || []).some(l => l.situacao === 'fail')) return 'Reprovado';
   if ((linhas || []).some(l => l.situacao === 'ok')) return 'Aprovado';
   return 'Pendente';
+}
+
+function montarAcoesCorretivasFormulario(linhas) {
+  const reparados = (linhas || []).filter(l => {
+    const campo = normTexto(l.campo || '');
+    return campo.includes('dormentes reparados') && numeroLeitura(l.valor) > 0;
+  });
+  if (reparados.length) return reparados.map(l => `- ${l.campo}: ${l.valor}`).join('\n');
+  return limparValor(encontrarValor(linhas, ['ação corretiva', 'acao corretiva', 'tratativa', 'plano de ação', 'plano de acao']));
+}
+
+function numeroLeitura(valor) {
+  const n = Number(String(valor == null ? '' : valor).replace(/[^0-9,.-]/g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : 0;
 }
 
 function montarResumoItens(linhas) {
@@ -642,7 +659,10 @@ function montarNaoConformidades(linhas, data) {
   const termos = ['não conforme', 'nao conforme', 'reprovado', 'pendente', 'falha', 'defeito', 'não conformidade', 'nao conformidade'];
   const ncs = (linhas || []).filter(l => {
     const texto = normTexto(`${l.secao} ${l.campo} ${l.valor} ${l.criterio} ${l.situacaoLabel}`);
-    return l.situacao === 'fail' || termos.some(t => texto.includes(normTexto(t)));
+    const campo = normTexto(l.campo || '');
+    if (campo.includes('dormentes reparados')) return false;
+    const detalheReprovado = campo.includes('dormentes reprovados') && numeroLeitura(l.valor) > 0;
+    return detalheReprovado || l.situacao === 'fail' || (termos.some(t => texto.includes(normTexto(t))) && numeroLeitura(l.valor) > 0);
   }).slice(0, 20).map(l => `- ${l.secao} · ${l.campo}: ${l.valor}${l.criterio ? ` (critério: ${l.criterio})` : ''}`);
   if (!ncs.length && data?.conclusao?.situacao === 'fail') {
     ncs.push(`- Conclusão: ${data.conclusao.valor || data.conclusao.ensaio || 'Relatório com reprovação.'}`);
@@ -674,7 +694,7 @@ function inferirTipoRelatorio(data) {
 
 function montarObservacoes({ fileName, meta, tipo, linhas, dormentesReprovados }) {
   const cab = [
-    'Registro importado do leitor de relatórios iAuditor.',
+    'Registro importado pelo leitor de PDF.',
     `Arquivo: ${fileName}`,
     `Tipo de relatório: ${tipo || '—'}`,
   ];
@@ -762,7 +782,7 @@ function renderLeituraIauditorLote() {
             <span class="iauditor-chip ${it.erro ? 'erro' : 'aviso'}">${it.erro ? 'Falha na leitura' : 'Não identificado'}</span>
           </div>
           ${it.erro
-            ? '<p class="txt-mini txt-cinza" style="margin-top:8px">Não foi possível ler este PDF. Confira se é um relatório exportado do iAuditor.</p>'
+            ? '<p class="txt-mini txt-cinza" style="margin-top:8px">Não foi possível ler este PDF. Confira se é o formulário de Inspeção de Pista.</p>'
             : `<div class="iauditor-meta-grid">
                  ${metaItem('Tipo', r?.tipo)}
                  ${metaItem('Lote', r?.lote)}
@@ -833,7 +853,7 @@ async function salvarLeiturasIauditorSelecionadas() {
       PISTA_REGISTROS.unshift(mapDoBanco(salvo));
       salvosIdx.push(idx);
     } catch (err) {
-      console.error('Erro ao salvar leitura iAuditor (lote)', atual.fileName, err);
+      console.error('Erro ao salvar leitura de PDF (lote)', atual.fileName, err);
       falhas.push(atual.fileName);
     }
   }
@@ -871,7 +891,7 @@ function preencherModalComLeitura(idx) {
   document.getElementById('id').value = '';
   CAMPOS_PISTA.forEach(c => setValor(c, r[c] != null ? r[c] : ''));
   if (atual.linkDigitado) setValor('linkRelatorio', atual.linkDigitado);
-  document.getElementById('modalTitulo').textContent = `Salvar leitura iAuditor — ${r.lote || ''}`;
+  document.getElementById('modalTitulo').textContent = `Salvar leitura de PDF — ${r.lote || ''}`;
   document.getElementById('modal').classList.add('aberto');
 }
 

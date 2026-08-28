@@ -19,20 +19,20 @@
             <span class="card-sub">Registro consultivo — cada item leva direto ao relatório pelo link</span>
           </div>
           <p class="txt-cinza" style="font-size:14px;line-height:1.7">
-            Esta tela guarda apenas relatórios de <strong>Inspeção de Pista</strong>. Leia o PDF exportado do iAuditor para registrar direto no Supabase, ou lance manualmente. A área é independente das demais telas do site e serve somente como histórico consultivo com acesso ao relatório original.
+            Esta tela guarda apenas relatórios de <strong>Inspeção de Pista</strong>. Importe o novo formulário em PDF para registrar direto no Supabase, ou lance manualmente. A área é independente das demais telas do site e serve somente como histórico consultivo com acesso ao relatório original.
           </p>
         </div>
 
         <div class="card iauditor-card" id="iauditorCard">
           <div class="card-titulo">
-            <span class="acento">Leitor de relatório iAuditor — Inspeção de Pista</span>
+            <span class="acento">Leitor de PDF — Inspeção de Pista</span>
             <span class="card-sub">Importe o PDF, confira a leitura e salve o relatório direto no histórico</span>
           </div>
           <div class="iauditor-grid">
-            <div class="iauditor-drop" id="iauditorDropzone" role="button" tabindex="0" aria-label="Importar PDF do iAuditor">
+            <div class="iauditor-drop" id="iauditorDropzone" role="button" tabindex="0" aria-label="Importar relatório em PDF">
               <div class="iauditor-drop-icone"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
               <div>
-                <strong>Solte os PDFs do iAuditor aqui</strong>
+                <strong>Solte os relatórios em PDF aqui</strong>
                 <p>Pode soltar <strong>vários de uma vez</strong>. O leitor identifica lote, projeto, bitola, pista, trecho/posição, molde, cavidade, atividade, não conformidades e responsável de cada relatório.</p>
                 <button class="btn btn-secundario" type="button" id="iauditorEscolherPdf">Escolher PDFs</button>
               </div>
@@ -41,7 +41,7 @@
             <div class="iauditor-orientacao">
               <h3>Como esta área funciona</h3>
               <p>Importe quantos PDFs quiser de uma vez. O sistema lê cada um e mostra quais foram identificados como <strong>Inspeção de Pista</strong> — só esses podem ser salvos aqui.</p>
-              <p>Marque os relatórios que deseja registrar e clique em <strong>Salvar selecionados</strong> para gravar todos de uma só vez. O <strong>link do relatório</strong> (SharePoint/iAuditor) é <strong>opcional</strong> e pode ser colado agora em cada um ou anexado depois pelo botão Editar. Para lançar sem PDF, use <strong>Novo relatório</strong>.</p>
+              <p>Marque os relatórios que deseja registrar e clique em <strong>Salvar selecionados</strong> para gravar todos de uma só vez. O <strong>link do relatório</strong> é <strong>opcional</strong> e pode ser colado agora em cada um ou anexado depois pelo botão Editar. Para lançar sem PDF, use <strong>Novo relatório</strong>.</p>
             </div>
           </div>
           <div id="iauditorResultado" class="iauditor-resultado"></div>
@@ -94,7 +94,7 @@
             <div class="campo"><label>Reprovados</label><input id="dormentesReprovados" type="number" min="0" step="1" placeholder="Qtd. dormentes reprovados"></div>
 
             <div class="form-secao">Relatório</div>
-            <div class="campo full"><label>Link do relatório <span class="dica">(SharePoint/iAuditor — opcional, pode anexar depois)</span></label><input id="linkRelatorio" type="url" placeholder="https://..."></div>
+            <div class="campo full"><label>Link do relatório <span class="dica">(opcional, pode anexar depois)</span></label><input id="linkRelatorio" type="url" placeholder="https://..."></div>
             <div class="campo full"><label>Arquivo de origem</label><input id="arquivoOrigem" type="text" placeholder="Nome do PDF importado (opcional)"></div>
             <div class="campo full"><label>Observações</label><textarea id="observacoes" placeholder="Pontos relevantes da inspeção de pista"></textarea></div>
           </div>
@@ -131,8 +131,8 @@
   <script src="js/safeculture-integracao.js?v=20260828-historico-local-v1"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}</script>
-  <script src="js/iauditor-parser.js?v=20260526-1"></script>
-  <script src="js/inspecao-pista.js?v=20260819-area-conprem-v1"></script>
+  <script src="js/iauditor-parser.js?v=20260828-formulario-pista-v1"></script>
+  <script src="js/inspecao-pista.js?v=20260828-formulario-pista-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
