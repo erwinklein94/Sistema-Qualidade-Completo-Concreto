@@ -170,7 +170,10 @@ const App = {
 
     const topo = document.querySelector('.topo');
     const margem = 10;
-    const top = Math.max(margem, Math.round((topo?.offsetHeight || 88) + 8));
+    const botaoRect = painel.previousElementSibling?.getBoundingClientRect();
+    const topoRect = topo?.getBoundingClientRect();
+    const inicio = botaoRect ? botaoRect.bottom + 8 : 96;
+    const top = Math.max(margem, Math.round(inicio - (topoRect?.top || 0)));
 
     painel.style.position = 'absolute';
     painel.style.left = `${margem}px`;
@@ -178,8 +181,8 @@ const App = {
     painel.style.top = `${top}px`;
     painel.style.width = 'auto';
     painel.style.minWidth = '0';
+    painel.style.maxHeight = `${Math.max(120, window.innerHeight - inicio - margem)}px`;
     painel.style.maxWidth = 'none';
-    painel.style.maxHeight = `calc(100vh - ${top + margem}px)`;
     painel.style.overflowY = 'auto';
   },
 
@@ -220,19 +223,23 @@ const App = {
     this.paginaAtiva = window.Area ? Area.chaveMenu(paginaAtiva) : paginaAtiva;
     const empresa = window.Area ? Area.nome() : '';
     const topo = `
-      <header class="topo">
-        <div class="flex" style="align-items:center;gap:14px;">
+      <header class="topo topo-unificado">
+        <div class="topo-navegacao">
+          <a class="topo-logo" href="index.html" aria-label="Rumo — página inicial"><img src="assets/rumo/logotipo-white.png" alt="Rumo" width="124" height="48"></a>
+          <nav class="topo-modulos" aria-label="Módulos do sistema">${this.menuDropdownsHtml()}</nav>
+          <button class="btn btn-secundario btn-sm tema-toggle" id="botaoTema" type="button" onclick="App.alternarTema()" aria-pressed="false" title="Alternar tema">${ICN.tema}<span>Tema escuro</span></button>
+        </div>
+        <div class="topo-contexto">
           <div class="topo-identidade">
-            <div class="topo-kicker">Rumo · Qualidade Ferroviária${empresa ? ` · ${empresa}` : ''}</div>
+            <div class="topo-kicker">Qualidade Ferroviária${empresa ? ` · ${empresa}` : ''}</div>
             <h1>${titulo}</h1>
             ${subtitulo ? `<div class="subtitulo">${subtitulo}</div>` : ''}
           </div>
-        </div>
-        <div class="topo-acoes">
-          ${this.menuDropdownsHtml()}
-          <button class="btn btn-secundario btn-sm tema-toggle" id="botaoTema" type="button" onclick="App.alternarTema()" aria-pressed="false" title="Alternar tema">${ICN.tema}<span>Tema escuro</span></button>
-          <div class="usuario-auth" id="areaUsuario"></div>
-          <div class="topo-pagina-acoes" id="topoAcoes">${window.Exportacoes && paginaAtiva !== 'banco' ? window.Exportacoes.botoes() : ''}</div>
+          <div class="topo-operacoes">
+            <div class="usuario-auth" id="areaUsuario"></div>
+            <div class="topo-pagina-acoes" id="topoAcoes">${window.Exportacoes && paginaAtiva !== 'banco' ? window.Exportacoes.botoes() : ''}</div>
+          </div>
+          <div class="topo-assinatura" aria-hidden="true">Trilhos<br>que conectam<br>o Brasil</div>
         </div>
       </header>`;
 
@@ -251,6 +258,7 @@ const App = {
       document.addEventListener('click', (ev) => {
         if (!ev.target.closest('.menu-dd')) App.fecharDropdowns();
       });
+      window.addEventListener('resize', () => App.fecharDropdowns());
       this._atalhoMenuConfigurado = true;
     }
 

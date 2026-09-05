@@ -12,3 +12,13 @@ A camada compartilhada `css/rumo-ui.css` é carregada depois dos estilos existen
 - Nenhum erro JavaScript no ambiente de prévia; `git diff --check` aprovado.
 
 A prévia remove os scripts de dados e autenticação e carrega o layout compartilhado real. Os indicadores usam traços, sem números fictícios. Essa verificação cobre apresentação e navegação compartilhada; não valida login real, gráficos com dados nem operações no banco.
+
+## Padronização a partir da referência visual
+
+A segunda revisão substitui o cabeçalho antigo por um componente de duas faixas em `App.montarLayout`: marca, módulos e tema na primeira; título, usuário e ações na segunda. Os títulos e as ações continuam definidos pelas páginas. As regras específicas antigas deixam de reorganizar essas áreas. O fundo usa uma ilustração vetorial de trilhos, com as cores da Rumo.
+
+- Estilos atualizados nas 38 páginas; componente compartilhado nas 36 páginas internas.
+- Verificação local das 36 páginas internas em 1440, 1024 e 390 pixels, em claro e escuro: 216 combinações.
+- Incluídas as classes de página adicionadas pelos scripts, para verificar conflitos com os estilos específicos de produção, ensaios, subcomponentes e demais áreas.
+- Conferidos carregamento do logo, layout único, ausência de transbordamento horizontal, abertura dos menus dentro da tela e fechamento por Escape.
+- Conta e ações na prévia são elementos de validação. Não foi usada sessão real nem foram executadas operações no banco.
