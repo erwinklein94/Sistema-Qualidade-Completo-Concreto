@@ -249,7 +249,14 @@ create index if not exists idx_amv_defeitos_inspecao on public.amv_defeitos (ins
 
 
 /* ---------------------------------------------------------------------
-   Auditoria: mesmos gatilhos das demais tabelas do sistema.
+   Carimbo de quem criou e quem alterou (criado_em/por, atualizado_em/por).
+
+   Só este gatilho. A trilha de auditoria linha a linha
+   (registrar_auditoria_alteracao) NÃO é aplicada aqui: a tabela
+   public.auditoria_alteracoes não existe mais neste banco, e a área de
+   AMV nasceu com a decisão de não usar essa trilha. Se um dia ela voltar,
+   é só acrescentar o gatilho — mas aí confira antes se a tabela existe,
+   porque sem ela toda gravação nas tabelas de AMV falha.
    --------------------------------------------------------------------- */
 do $$
 declare t text;
@@ -258,10 +265,7 @@ begin
     execute format('drop trigger if exists trg_%s_preencher_auditoria on public.%I', t, t);
     execute format('create trigger trg_%s_preencher_auditoria before insert or update on public.%I for each row execute function public.preencher_campos_auditoria()', t, t);
 
-    if to_regprocedure('public.registrar_auditoria_alteracao()') is not null then
-      execute format('drop trigger if exists trg_%s_registrar_auditoria on public.%I', t, t);
-      execute format('create trigger trg_%s_registrar_auditoria after insert or update or delete on public.%I for each row execute function public.registrar_auditoria_alteracao()', t, t);
-    end if;
+    execute format('drop trigger if exists trg_%s_registrar_auditoria on public.%I', t, t);
   end loop;
 end $$;
 
