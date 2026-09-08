@@ -258,7 +258,6 @@ const TABELAS_SITE_COMPLETO = [
   { aba: 'Configurações', tabela: 'configuracoes_sistema', pagina: 'Dados do Sistema · Configurações' },
   { aba: 'Listas de Configuração', tabela: 'listas_configuracao', pagina: 'Listas dos formulários (fábricas, projetos...)' },
   { aba: 'Avisos Dashboard', tabela: 'avisos_dashboard', pagina: 'Dashboard · Quadro de Avisos' },
-  { aba: 'Auditoria', tabela: 'auditoria_alteracoes', pagina: 'Auditoria Geral', maxLinhas: 20000 },
 ];
 
 async function lerTabelaCompleta(cliente, tabela, maxLinhas = 100000) {

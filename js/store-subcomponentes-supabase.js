@@ -10,7 +10,6 @@ const StoreSubcomponentesSupabase = (() => {
     estoque: 'estoque_subcomponentes',
     inspecoes: 'inspecoes_subcomponentes',
     rnc: 'rnc_subcomponentes',
-    auditoria: 'auditoria_alteracoes',
     usuarios: 'usuarios_app'
   };
 
@@ -239,34 +238,6 @@ const StoreSubcomponentesSupabase = (() => {
     };
   }
 
-  function resumoAuditoria(r) {
-    const dados = r.valores_depois || r.valores_antes || {};
-    const tabela = r.tabela || '';
-    if (tabela === 'empresas_subcomponentes') return ['Empresa: ' + (dados.nome || ''), 'Status: ' + (dados.status || '')].join(' | ');
-    if (tabela === 'materiais_subcomponentes') return ['Material: ' + (dados.subcomponente || ''), 'SAP: ' + (dados.cod_sap || ''), 'Fornecedor: ' + (dados.fornecedor_nome || '')].join(' | ');
-    if (tabela === 'estoque_subcomponentes') return ['Estoque: ' + (dados.subcomponente || ''), 'Lote: ' + (dados.lote || ''), 'Empresa: ' + (dados.empresa_nome || '')].join(' | ');
-    if (tabela === 'inspecoes_subcomponentes') return ['Inspeção: ' + (dados.subcomponente || ''), 'Lote: ' + (dados.lote || ''), 'Status: ' + (dados.status || '')].join(' | ');
-    if (tabela === 'usuarios_app') return ['Usuário: ' + (dados.email || ''), 'Perfil: ' + (dados.perfil || ''), 'Ativo: ' + (dados.ativo ?? '')].join(' | ');
-    return dados.id || r.registro_id || '';
-  }
-
-  function fromAuditoria(r) {
-    return {
-      id: r.id,
-      data_hora: r.criado_em || r.data_hora || '',
-      usuario_id: r.usuario_id || '',
-      usuario_email: r.usuario_email || '',
-      usuario_nome: r.usuario_nome || '',
-      usuario_perfil: '',
-      acao: r.acao || '',
-      tabela: r.tabela || '',
-      registro_id: r.registro_id || '',
-      resumo: r.resumo || resumoAuditoria(r),
-      dados_antigos: r.valores_antes || r.dados_antigos || null,
-      dados_novos: r.valores_depois || r.dados_novos || null
-    };
-  }
-
   async function selectAll(table, orderColumn, ascending = true) {
     const { data, error } = await db()
       .from(table)
@@ -373,19 +344,6 @@ const StoreSubcomponentesSupabase = (() => {
     return true;
   }
 
-  async function carregarAuditoria() {
-    exigirPermissao('verAuditoria', 'consultar auditoria de subcomponentes');
-    const tabelas = ['empresas_subcomponentes', 'materiais_subcomponentes', 'estoque_subcomponentes', 'inspecoes_subcomponentes', 'usuarios_app'];
-    const { data, error } = await db()
-      .from(TABLES.auditoria)
-      .select('*')
-      .in('tabela', tabelas)
-      .order('criado_em', { ascending: false })
-      .limit(1000);
-    if (error) throw error;
-    return (data || []).map(fromAuditoria);
-  }
-
   async function carregarUsuarios() {
     exigirPermissao('gerenciarUsuarios', 'administrar usuários');
     const { data, error } = await db()
@@ -412,7 +370,7 @@ const StoreSubcomponentesSupabase = (() => {
     throw new Error('Limpeza total desativada neste sistema. Exclua registros individualmente pelo site.');
   }
 
-  return { carregarDb, listarInspecoes, salvarDb, salvarRegistro, remover, carregarAuditoria, carregarUsuarios, salvarUsuario, limparDb };
+  return { carregarDb, listarInspecoes, salvarDb, salvarRegistro, remover, carregarUsuarios, salvarUsuario, limparDb };
 })();
 
 window.StoreSubcomponentesSupabase = StoreSubcomponentesSupabase;

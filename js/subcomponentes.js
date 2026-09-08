@@ -15,7 +15,6 @@ const NAV = [
   { key: 'inspecoes', title: 'Inspeções realizadas', icon: '✓' },
   { sec: 'Sistema' },
   { key: 'dados', title: 'Dados e backup', icon: '⚙' },
-  { key: 'auditoria', title: 'Auditoria', icon: '◷', adminOnly: true },
   { key: 'usuarios', title: 'Usuários e perfis', icon: '👥', adminOnly: true }
 ];
 
@@ -29,7 +28,6 @@ const PAGE_COPY = {
   'indicador-semanal': ['Indicador Semanal', 'Resumo das inspeções de subcomponentes realizadas na semana selecionada.'],
   rnc: ['RNC', 'Quadro de não conformidades registradas nas inspeções de subcomponentes.'],
   dados: ['Dados e backup', 'Exportação de segurança dos dados salvos no Supabase.'],
-  auditoria: ['Auditoria', 'Histórico de cadastros, edições e exclusões feitos no sistema.'],
   usuarios: ['Usuários e perfis', 'Controle dos perfis admin, fiscalização e consulta.']
 };
 
@@ -53,10 +51,8 @@ let state = {
     inspecoes: { material: '', empresa: '', status: '', semana: '', search: '' },
     'indicador-semanal': { semana: '' },
     cards: { query: '', hasNc: '', hasStock: '', empresa: '' },
-    auditoria: { acao: '', tabela: '', usuario: '', search: '' },
     usuarios: { perfil: '', ativo: '', search: '' }
   },
-  auditoria: [],
   usuarios: [],
   modal: null
 };
@@ -256,14 +252,13 @@ const SubcomponentesApp = {
   },
   activeFromHash() {
     const key = String(location.hash || '').replace('#', '').trim();
-    const allowed = new Set(['dashboard', 'cards', 'empresas', 'materiais', 'estoque', 'inspecoes', 'indicador-semanal', 'rnc', 'dados', 'auditoria', 'usuarios']);
+    const allowed = new Set(['dashboard', 'cards', 'empresas', 'materiais', 'estoque', 'inspecoes', 'indicador-semanal', 'rnc', 'dados', 'usuarios']);
     if (allowed.has(key)) state.active = key;
-    if ((state.active === 'auditoria' || state.active === 'usuarios') && !isAdmin()) state.active = 'dashboard';
+    if (state.active === 'usuarios' && !isAdmin()) state.active = 'dashboard';
   },
   bindShell() {
     window.addEventListener('hashchange', async () => {
       this.activeFromHash();
-      if (state.active === 'auditoria') await DB.loadAudit();
       if (state.active === 'usuarios') await DB.loadUsers();
       render();
     });
@@ -275,7 +270,7 @@ const SubcomponentesApp = {
     });
   },
   renderNav() {
-    if ((state.active === 'auditoria' || state.active === 'usuarios') && !isAdmin()) state.active = 'dashboard';
+    if (state.active === 'usuarios' && !isAdmin()) state.active = 'dashboard';
     if (window.App) {
       window.App.paginaAtiva = `sub-${state.active}`;
       window.App.atualizarMenuPorPermissoes?.();
@@ -313,7 +308,6 @@ const SubcomponentesApp = {
     document.getElementById('topDownloadCsvMateriais')?.addEventListener('click', () => downloadCsv('materiais'));
     document.getElementById('topDownloadCsvEstoque')?.addEventListener('click', () => downloadCsv('estoque'));
     document.getElementById('topDownloadCsvInspecoes')?.addEventListener('click', () => downloadCsv('inspecoes'));
-    document.getElementById('topRefreshAudit')?.addEventListener('click', async () => { await DB.loadAudit(); render(); });
     document.getElementById('topRefreshUsers')?.addEventListener('click', async () => { await DB.loadUsers(); render(); });
     document.getElementById('topNewUserProfile')?.addEventListener('click', () => openModal('usuario'));
   },
@@ -330,7 +324,6 @@ const SubcomponentesApp = {
     }
     try {
       await DB.init();
-      if (state.active === 'auditoria') await DB.loadAudit();
       if (state.active === 'usuarios') await DB.loadUsers();
       render();
       SubcomponentesApp.toast('Dados atualizados com sucesso.');
@@ -429,20 +422,7 @@ const DB = {
   },
   async loadAdminData() {
     if (!this.usingSupabase() || !isAdmin() || !window.StoreSubcomponentesSupabase) return;
-    await Promise.all([this.loadAudit(), this.loadUsers()]);
-  },
-  async loadAudit() {
-    if (!this.usingSupabase() || !isAdmin() || !window.StoreSubcomponentesSupabase?.carregarAuditoria) {
-      state.auditoria = [];
-      return;
-    }
-    try {
-      state.auditoria = await window.StoreSubcomponentesSupabase.carregarAuditoria();
-    } catch (error) {
-      console.error('Falha ao carregar auditoria:', error);
-      state.auditoria = [];
-      SubcomponentesApp.toast(traduzErroBanco(error), 'erro');
-    }
+    await this.loadUsers();
   },
   async loadUsers() {
     if (!this.usingSupabase() || !isAdmin() || !window.StoreSubcomponentesSupabase?.carregarUsuarios) {
@@ -461,7 +441,6 @@ const DB = {
     if (!this.usingSupabase() || !isAdmin() || !window.StoreSubcomponentesSupabase?.salvarUsuario) throw new Error('Somente admin pode gerenciar usuários.');
     await window.StoreSubcomponentesSupabase.salvarUsuario(usuario);
     await this.loadUsers();
-    await this.loadAudit();
   },
   async replace() {
     throw new Error('Restauração de backup desativada neste sistema. Cadastre, edite ou exclua registros manualmente.');
@@ -852,9 +831,6 @@ function topActions() {
     actions.push(`<button class="btn btn-secundario btn-sm" type="button" id="topDownloadCsvEstoque">CSV estoque</button>`);
     actions.push(`<button class="btn btn-secundario btn-sm" type="button" id="topDownloadCsvInspecoes">CSV inspeções</button>`);
   }
-  if (state.active === 'auditoria') {
-    actions.push(`<button class="btn btn-secundario btn-sm" type="button" id="topRefreshAudit">${check}<span>Atualizar auditoria</span></button>`);
-  }
   if (state.active === 'usuarios') {
     actions.push(`<button class="btn btn-secundario btn-sm" type="button" id="topRefreshUsers">${check}<span>Atualizar usuários</span></button>`);
     actions.push(`<button class="btn btn-primario btn-sm" type="button" id="topNewUserProfile">${add}<span>Perfil de usuário</span></button>`);
@@ -892,7 +868,6 @@ function render() {
     rnc: renderRnc,
     cards: renderCards,
     dados: renderDados,
-    auditoria: renderAuditoria,
     usuarios: renderUsuarios
   };
   try {
@@ -1331,49 +1306,6 @@ function cardHtml(c) {
     <div style="margin-top:12px;display:flex;gap:7px;flex-wrap:wrap">${c.status.length ? c.status.slice(0, 5).map(badge).join('') : badge('Sem inspeção')}</div>
   </article>`;
 }
-
-function renderAuditoria() {
-  if (!isAdmin()) return `${hero()}${empty('Acesso restrito', 'Somente usuários admin podem visualizar a auditoria.')}`;
-  const f = state.filters.auditoria;
-  const registros = (state.auditoria || []).filter((r) =>
-    (!f.acao || r.acao === f.acao) &&
-    (!f.tabela || r.tabela === f.tabela) &&
-    (!f.usuario || String(r.usuario_email || r.usuario_nome || '').includes(f.usuario)) &&
-    matches(`${r.usuario_nome} ${r.usuario_email} ${r.acao} ${r.tabela} ${r.resumo} ${r.registro_id}`, f.search)
-  );
-  const usuarios = unique(state.auditoria || [], (r) => r.usuario_email || r.usuario_nome).filter(Boolean);
-  const tabelas = unique(state.auditoria || [], (r) => r.tabela).filter(Boolean);
-  const deletes = registros.filter((r) => r.acao === 'DELETE').length;
-  return `${hero()}
-    <div class="toolbar"><div class="contador">${fmt(registros.length)} evento(s) de auditoria</div><button class="btn btn-secundario" type="button" id="refreshAudit">Atualizar auditoria</button></div>
-    <div class="grid-kpi">
-      ${kpi('Eventos', fmt(registros.length), 'registros filtrados', 'var(--azul-claro)')}
-      ${kpi('Adições', fmt(registros.filter((r) => r.acao === 'INSERT').length), 'cadastros realizados', 'var(--verde)')}
-      ${kpi('Edições', fmt(registros.filter((r) => r.acao === 'UPDATE').length), 'alterações salvas', 'var(--amarelo)')}
-      ${kpi('Exclusões', fmt(deletes), 'registros removidos', 'var(--erro)')}
-    </div>
-    <div class="barra-filtros">
-      <div class="campo"><label>Ação</label><select data-filter="auditoria.acao">${optionList(['INSERT', 'UPDATE', 'DELETE'], f.acao, 'Todas')}</select></div>
-      <div class="campo"><label>Tabela</label><select data-filter="auditoria.tabela">${optionList(tabelas, f.tabela, 'Todas')}</select></div>
-      <div class="campo"><label>Usuário</label><select data-filter="auditoria.usuario">${optionList(usuarios, f.usuario, 'Todos')}</select></div>
-      <div class="campo"><label>Busca</label><input type="search" value="${esc(f.search)}" data-filter="auditoria.search" placeholder="Resumo, lote, e-mail, ID..."></div>
-      <button class="btn btn-secundario" data-clear-filters="auditoria" type="button">Limpar filtros</button>
-    </div>
-    ${panel('Histórico de auditoria', 'Mostra quem adicionou, editou ou excluiu registros. Exclusões guardam uma cópia do registro removido no Supabase.', auditoriaTable(registros))}`;
-}
-function auditoriaTable(records) {
-  if (!records.length) return empty('Nenhum evento encontrado', 'Clique em Atualizar auditoria ou ajuste os filtros.');
-  return `<div class="tabela-wrap"><table class="tabela"><thead><tr><th>Data/hora</th><th>Ação</th><th>Tela/Tabela</th><th>Usuário</th><th>Perfil</th><th>Resumo</th><th>ID registro</th></tr></thead><tbody>${records.slice(0, 800).map((r) => `
-    <tr>
-      <td>${dataHoraBR(r.data_hora)}</td>
-      <td>${acaoBadge(r.acao)}</td>
-      <td>${esc(tabelaLabel(r.tabela))}</td>
-      <td><strong>${esc(r.usuario_nome || '—')}</strong><br><small>${esc(r.usuario_email || '')}</small></td>
-      <td>${perfilBadge(r.usuario_perfil)}</td>
-      <td>${esc(r.resumo || '—')}</td>
-      <td><code>${esc(r.registro_id || '')}</code></td>
-    </tr>`).join('')}</tbody></table></div>`;
-}
 function renderUsuarios() {
   if (!isAdmin()) return `${hero()}${empty('Acesso restrito', 'Somente usuários admin podem gerenciar perfis.')}`;
   const f = state.filters.usuarios;
@@ -1384,7 +1316,7 @@ function renderUsuarios() {
   ).sort((a, b) => String(a.email || '').localeCompare(String(b.email || ''), 'pt-BR'));
   return `${hero()}
     <div class="toolbar"><div class="contador">${fmt(registros.length)} usuário(s) do sistema</div><div class="form-acoes" style="margin-top:0"><button class="btn btn-secundario" type="button" id="refreshUsers">Atualizar usuários</button><button class="btn btn-primario" type="button" id="newUserProfile">＋ Perfil de usuário</button></div></div>
-    <div class="aviso-info"><span>🔐</span><div><strong>Perfis:</strong> admin gerencia usuários, auditoria e exclusões; fiscalização cadastra e edita registros operacionais; consulta apenas visualiza e exporta.</div></div>
+    <div class="aviso-info"><span>🔐</span><div><strong>Perfis:</strong> admin gerencia usuários e exclusões; fiscalização cadastra e edita registros operacionais; consulta apenas visualiza e exporta.</div></div>
     <div class="barra-filtros">
       <div class="campo"><label>Perfil</label><select data-filter="usuarios.perfil">${optionList(PERFIS_USUARIO, f.perfil, 'Todos')}</select></div>
       <div class="campo"><label>Status</label><select data-filter="usuarios.ativo"><option value="">Todos</option><option value="true" ${f.ativo === 'true' ? 'selected' : ''}>Ativo</option><option value="false" ${f.ativo === 'false' ? 'selected' : ''}>Inativo</option></select></div>
@@ -1567,7 +1499,6 @@ function bindPage() {
   $('#downloadCsvMateriais')?.addEventListener('click', () => downloadCsv('materiais'));
   $('#downloadCsvEstoque')?.addEventListener('click', () => downloadCsv('estoque'));
   $('#downloadCsvInspecoes')?.addEventListener('click', () => downloadCsv('inspecoes'));
-  $('#refreshAudit')?.addEventListener('click', async () => { await DB.loadAudit(); render(); });
   $('#refreshUsers')?.addEventListener('click', async () => { await DB.loadUsers(); render(); });
   $('#newUserProfile')?.addEventListener('click', () => openModal('usuario'));
 }
@@ -1748,7 +1679,6 @@ async function saveModal(ev) {
     } else {
       await DB.save(id ? 'Registro editado' : 'Novo registro cadastrado');
     }
-    if (isAdmin()) await DB.loadAudit();
     closeModal();
     render();
     if (type === 'inspecao' && estoqueSincronizado.length) {
@@ -1930,7 +1860,6 @@ async function deleteRecord(type, id) {
     if (type === 'inspecao') state.db.inspecoes = state.db.inspecoes.filter((r) => r.id !== id);
     if (type === 'rnc') state.db.rnc = (state.db.rnc || []).filter((r) => r.id !== id);
     await DB.remove(type, id);
-    if (isAdmin()) await DB.loadAudit();
     render();
     SubcomponentesApp.toast('Registro excluído.');
   } catch (error) {
@@ -2078,7 +2007,6 @@ function traduzErroBanco(error) {
   if (/JWT|session|Auth session missing|Invalid Refresh Token/i.test(msg)) return 'Sua sessão expirou. Saia e entre novamente.';
   if (/Failed to fetch|NetworkError|Load failed|fetch/i.test(msg)) return 'Falha de conexão com o Supabase. Verifique a internet e tente novamente.';
   if (/materiais_subcomponentes/i.test(msg)) return 'A tabela de materiais ainda não existe. Rode o SQL supabase/2026-05-24-materiais-subcomponentes.sql no Supabase.';
-  if (/auditoria_alteracoes/i.test(msg)) return 'A auditoria unificada ainda não está pronta. Rode o SQL supabase/2026-05-31-subcomponentes-integrado-concreto.sql no Supabase.';
   if (/relation .* does not exist|Could not find the table|schema cache/i.test(msg)) return 'As tabelas de subcomponentes ainda não existem no Supabase. Rode o SQL da pasta supabase primeiro.';
   return `Não foi possível concluir: ${msg}`;
 }
@@ -2094,7 +2022,6 @@ async function bootstrap() {
   }
   SubcomponentesApp.init();
   await DB.init();
-  if (state.active === 'auditoria') await DB.loadAudit();
   if (state.active === 'usuarios') await DB.loadUsers();
   render();
 }

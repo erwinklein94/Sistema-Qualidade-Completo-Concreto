@@ -108,30 +108,6 @@ async function listarHistoricoFerroNorte() {
   return historico;
 }
 
-async function listarAuditoriaResultadosFerroNorte() {
-  const cliente = window.Auth?.cliente?.();
-  if (!cliente) return [];
-  const tamanhoPagina = 1000;
-  const limiteSeguranca = 50000;
-  const historico = [];
-
-  for (let inicio = 0; inicio < limiteSeguranca; inicio += tamanhoPagina) {
-    const { data, error } = await cliente
-      .from('auditoria_alteracoes')
-      .select('tabela,registro_id,criado_em,valores_antes,valores_depois')
-      .in('tabela', ['producao_lotes', 'data_books_dormentes'])
-      .order('criado_em', { ascending: false })
-      .range(inicio, inicio + tamanhoPagina - 1);
-    if (error) throw error;
-
-    const pagina = data || [];
-    historico.push(...pagina);
-    if (pagina.length < tamanhoPagina) break;
-  }
-
-  return historico;
-}
-
 const CCT_CAMPOS_RESULTADO = [
   'comp_14',
   'comp_14_cp2',
@@ -175,30 +151,6 @@ function completarResultadosVazios(destino, fonte) {
       destino[campo] = fonte[campo];
       preenchidos += 1;
     }
-  });
-  return preenchidos;
-}
-
-function recuperarResultadosDaAuditoria(registros, auditoria) {
-  const porId = new Map((registros || []).map(registro => [String(registro.id || ''), registro]));
-  const porLote = new Map((registros || []).map(registro => [loteCanonicoComparativo(registro.lote), registro]));
-  let preenchidos = 0;
-
-  (auditoria || []).forEach(evento => {
-    [evento?.valores_depois, evento?.valores_antes].forEach(fonte => {
-      if (!fonte || typeof fonte !== 'object') return;
-      const origemDataBook = evento?.tabela === 'data_books_dormentes';
-      const valores = origemDataBook ? {
-        lote: fonte.lote,
-        comp_14: fonte.compressao_axial_14_dias,
-        comp_28: fonte.compressao_axial_28_dias,
-        tracao_14: fonte.tracao_flexao_14_dias,
-        tracao_28: fonte.tracao_flexao_28_dias,
-      } : fonte;
-      const destino = (!origemDataBook && porId.get(String(evento.registro_id || '')))
-        || porLote.get(loteCanonicoComparativo(valores.lote));
-      if (destino) preenchidos += completarResultadosVazios(destino, valores);
-    });
   });
   return preenchidos;
 }
@@ -248,18 +200,16 @@ async function carregarComparativoCuraTermica() {
     const producao = await listarHistoricoFerroNorte();
     const ferroNorte = (producao || []).filter(r =>
       FluxoLiberacao.projetoCanonico(r) === 'FERRO NORTE');
+    // Resultados em branco num lote são completados a partir de outros
+    // lançamentos do mesmo lote em Produção. Antes isso também era
+    // reconstruído a partir dos snapshots da trilha de auditoria
+    // (valores_antes/valores_depois), mas essa trilha foi removida do
+    // sistema — o que Produção não tiver, fica em branco mesmo.
     const recuperadosProducao = recuperarResultadosDeOutrasProducao(ferroNorte, producao);
-    const auditoriaResultado = await Promise.allSettled([listarAuditoriaResultadosFerroNorte()]);
-    const auditoria = auditoriaResultado[0].status === 'fulfilled' ? auditoriaResultado[0].value : [];
-    if (auditoriaResultado[0].status === 'rejected') {
-      console.warn('Não foi possível consultar os snapshots históricos de resultados', auditoriaResultado[0].reason);
-    }
-    const recuperadosAuditoria = recuperarResultadosDaAuditoria(ferroNorte, auditoria);
     CCT.prod = consolidarHistoricoFerroNorte(ferroNorte);
-    if (recuperadosProducao || recuperadosAuditoria) {
+    if (recuperadosProducao) {
       console.info('Resultados históricos recuperados para o comparativo de cura', {
         producao: recuperadosProducao,
-        auditoria: recuperadosAuditoria,
       });
     }
     CCT.carregando = false;

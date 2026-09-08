@@ -125,7 +125,6 @@ var Auth = (() => {
       podeEditar: admin || fiscalizacao,
       podeExcluir: admin,
       podeGerenciarUsuarios: admin,
-      podeVerAuditoria: admin,
       podeGerenciarSistema: admin,
     };
   }
@@ -146,7 +145,6 @@ var Auth = (() => {
       editar: p.podeEditar,
       excluir: p.podeExcluir,
       gerenciarUsuarios: p.podeGerenciarUsuarios,
-      verAuditoria: p.podeVerAuditoria,
       gerenciarSistema: p.podeGerenciarSistema,
     };
     return !!mapa[acao];

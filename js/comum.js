@@ -95,11 +95,10 @@ const App = {
       {
         sec: 'ADMINISTRAÇÃO DO SISTEMA',
         group: 'sistema',
-        desc: 'Usuários, auditoria, banco e dados gerais'
+        desc: 'Usuários, banco e dados gerais'
       },
       { k: 'banco', t: 'Conexão Supabase', ic: ICN.config, href: 'banco.html', group: 'sistema', adminOnly: true },
       { k: 'usuarios', t: 'Usuários e Perfis', ic: ICN.config, href: 'usuarios.html', group: 'sistema', adminOnly: true },
-      { k: 'auditoria', t: 'Auditoria Geral', ic: ICN.config, href: 'auditoria.html', group: 'sistema', adminOnly: true },
       { k: 'dados', t: 'Dados do Sistema', ic: ICN.config, href: 'dados.html', group: 'sistema', adminOnly: true },
     ];
   },
