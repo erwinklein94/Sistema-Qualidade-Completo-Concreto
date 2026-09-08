@@ -8273,3 +8273,104 @@ body[data-tema="escuro"] .safeculture-erro-msg { color: #ffb3b3; }
 }
 .refugo-chips .badge { font-size: 10.5px; padding: 2px 8px; }
 .refugo-chips .badge strong { margin-left: 2px; font-weight: 800; }
+
+/* ---------------------------------------------------------------------
+   Menu único de DORMENTES DE CONCRETO — Cavan e Conprem no mesmo botão do
+   topo, separadas por subtítulo dentro do painel. Junto vêm as três áreas
+   novas (Madeira, Lastro e AMV), que nascem vazias e ganham cor própria
+   para não se confundirem com o concreto.
+   --------------------------------------------------------------------- */
+.menu-dd--dormentes-concreto .menu-dd-botao::before {
+  background: linear-gradient(90deg, var(--azul-claro, #32A6E6) 50%, #F78344 50%);
+}
+.menu-dd--madeira .menu-dd-botao::before { background: #B5732F; }
+.menu-dd--lastro .menu-dd-botao::before { background: #8A94A6; }
+.menu-dd--amv .menu-dd-botao::before { background: #1E9F7F; }
+
+.menu-dd-subtitulo {
+  margin: 6px 4px 3px;
+  padding: 5px 8px 4px;
+  border-bottom: 1px solid var(--cinza-borda, #e2e8f0);
+  color: var(--cinza-texto, #5a6b7b);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+}
+.menu-dd-subtitulo:first-child { margin-top: 0; }
+.menu-dd-subtitulo--concreto { color: var(--azul-claro, #32A6E6); border-bottom-color: rgba(50,166,230,.4); }
+.menu-dd-subtitulo--conprem { color: #C9601F; border-bottom-color: rgba(247,131,68,.45); }
+
+body[data-tema="escuro"] .menu-dd-subtitulo {
+  border-bottom-color: rgba(255,255,255,.16);
+  color: rgba(255,255,255,.62);
+}
+body[data-tema="escuro"] .menu-dd-subtitulo--concreto { color: #6dd6ff; }
+body[data-tema="escuro"] .menu-dd-subtitulo--conprem { color: #F9A472; }
+
+/* Áreas novas no menu lateral: mesmo desenho dos demais grupos. */
+.nav-section-label--madeira {
+  background: linear-gradient(135deg, rgba(181,115,47,.26), rgba(255,255,255,.07));
+  border-color: rgba(181,115,47,.46);
+}
+.nav-section-label--madeira span::before {
+  background: #B5732F;
+  box-shadow: 0 0 0 4px rgba(181,115,47,.18);
+}
+.nav-section-label--lastro {
+  background: linear-gradient(135deg, rgba(138,148,166,.26), rgba(255,255,255,.07));
+  border-color: rgba(138,148,166,.46);
+}
+.nav-section-label--lastro span::before {
+  background: #8A94A6;
+  box-shadow: 0 0 0 4px rgba(138,148,166,.18);
+}
+.nav-section-label--amv {
+  background: linear-gradient(135deg, rgba(30,159,127,.26), rgba(255,255,255,.07));
+  border-color: rgba(30,159,127,.46);
+}
+.nav-section-label--amv span::before {
+  background: #1E9F7F;
+  box-shadow: 0 0 0 4px rgba(30,159,127,.18);
+}
+.nav a.nav-link--madeira::after,
+.nav a.nav-link--lastro::after,
+.nav a.nav-link--amv::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  opacity: .72;
+}
+.nav a.nav-link--madeira::after { background: #B5732F; }
+.nav a.nav-link--lastro::after { background: #8A94A6; }
+.nav a.nav-link--amv::after { background: #1E9F7F; }
+.nav a.nav-link--madeira.ativo {
+  background: linear-gradient(90deg, rgba(181,115,47,.30), rgba(255,255,255,.09)) !important;
+  border-color: rgba(181,115,47,.52) !important;
+}
+.nav a.nav-link--lastro.ativo {
+  background: linear-gradient(90deg, rgba(138,148,166,.30), rgba(255,255,255,.09)) !important;
+  border-color: rgba(138,148,166,.52) !important;
+}
+.nav a.nav-link--amv.ativo {
+  background: linear-gradient(90deg, rgba(30,159,127,.30), rgba(255,255,255,.09)) !important;
+  border-color: rgba(30,159,127,.52) !important;
+}
+
+/* Cartão das áreas que ainda não têm módulo cadastrado. */
+.area-vazia {
+  max-width: 760px;
+  margin: 0 auto;
+}
+.area-vazia .area-vazia-lista {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--cinza-texto, #5a6b7b);
+  font-size: 13px;
+  line-height: 1.7;
+}

@@ -44,6 +44,27 @@ const App = {
       { k: 'conprem-inspecaoPista', t: 'Inspeção de Pista', ic: ICN.ensaios, href: 'conprem-inspecao-pista.html', group: 'conprem' },
 
       {
+        sec: 'DORMENTES DE MADEIRA',
+        group: 'madeira',
+        desc: 'Área nova de dormentes de madeira, ainda sem módulos'
+      },
+      { k: 'madeira-visao', t: 'Visão Geral Madeira', ic: ICN.producao, href: 'dormentes-madeira.html', group: 'madeira' },
+
+      {
+        sec: 'LASTRO',
+        group: 'lastro',
+        desc: 'Área nova de lastro ferroviário, ainda sem módulos'
+      },
+      { k: 'lastro-visao', t: 'Visão Geral Lastro', ic: ICN.vazioBox, href: 'lastro.html', group: 'lastro' },
+
+      {
+        sec: 'AMV',
+        group: 'amv',
+        desc: 'Aparelhos de mudança de via — área nova, ainda sem módulos'
+      },
+      { k: 'amv-visao', t: 'Visão Geral AMV', ic: ICN.trem, href: 'amv.html', group: 'amv' },
+
+      {
         sec: 'SUBCOMPONENTES',
         group: 'subcomponentes',
         desc: 'Empresas, materiais, estoque e inspeções de fornecedores'
@@ -66,6 +87,7 @@ const App = {
       },
       { k: 'ferramenta-iauditor', t: 'Leitor de Iauditor', ic: ICN.olho, href: 'leitor-iauditor.html', group: 'ferramentas' },
       { k: 'ferramenta-equipamentos', t: 'Controle de Equipamentos', ic: ICN.config, href: 'controle-equipamentos.html', group: 'ferramentas' },
+      { k: 'ferramenta-leitor-laboratorio', t: 'Leitor de relatórios de laboratório - subcomponentes', ic: ICN.olho, href: 'https://erwinklein94.github.io/Homologacao-de-materiais/index.html', group: 'ferramentas', external: true },
       { k: 'ferramenta-guia-inspetor', t: 'Guia do Inspetor Padrão', ic: ICN.alerta, href: 'https://www.guiadoinspetorpadrao.com.br', group: 'ferramentas', external: true },
 
       {
@@ -115,11 +137,24 @@ const App = {
     return nav;
   },
 
-  // Grupos exibidos como botões dropdown no topo direito
+  // Grupos exibidos como botões dropdown no topo direito.
+  // `subgrupos` junta vários grupos do menu embaixo de um botão só, mantendo
+  // cada um separado por um subtítulo dentro do painel — é assim que Cavan e
+  // Conprem convivem no botão único de Dormentes de Concreto.
   gruposDropdown() {
     return [
-      { grupo: 'concreto', titulo: 'Cavan', ic: ICN.producao },
-      { grupo: 'conprem', titulo: 'Conprem', ic: ICN.producao },
+      {
+        grupo: 'dormentes-concreto',
+        titulo: 'Dormentes de Concreto',
+        ic: ICN.producao,
+        subgrupos: [
+          { grupo: 'concreto', titulo: 'Cavan SP' },
+          { grupo: 'conprem', titulo: 'Conprem MG' },
+        ],
+      },
+      { grupo: 'madeira', titulo: 'Dormentes de Madeira', ic: ICN.producao },
+      { grupo: 'lastro', titulo: 'Lastro', ic: ICN.vazioBox },
+      { grupo: 'amv', titulo: 'AMV', ic: ICN.trem },
       { grupo: 'subcomponentes', titulo: 'Subcomponentes', ic: ICN.vazioBox },
       { grupo: 'ferramentas', titulo: 'Ferramentas', ic: ICN.config },
       { grupo: 'sistema', titulo: 'Administração', ic: ICN.config },
@@ -131,14 +166,22 @@ const App = {
     const itens = this.menuPermitido();
     let blocos = '';
     this.gruposDropdown().forEach(g => {
-      const links = itens.filter(m => !m.sec && m.group === g.grupo);
+      const subgrupos = g.subgrupos && g.subgrupos.length ? g.subgrupos : [{ grupo: g.grupo }];
+      const links = itens.filter(m => !m.sec && subgrupos.some(s => s.grupo === m.group));
       if (!links.length) return;
       const ativoNoGrupo = links.some(m => m.k === this.paginaAtiva);
       let opcoes = '';
-      links.forEach(m => {
-        const classes = ['menu-dd-link', m.k === this.paginaAtiva ? 'ativo' : '', `nav-link--${m.group}`].filter(Boolean).join(' ');
-        const externalAttrs = m.external ? ' target="_blank" rel="noopener" data-external="true"' : '';
-        opcoes += `<a href="${m.href}" class="${classes}" role="menuitem"${externalAttrs} onclick="App.fecharDropdowns()">${m.ic}<span>${m.t}</span></a>`;
+      subgrupos.forEach(s => {
+        const doSubgrupo = links.filter(m => m.group === s.grupo);
+        if (!doSubgrupo.length) return;
+        if (s.titulo) {
+          opcoes += `<div class="menu-dd-subtitulo menu-dd-subtitulo--${s.grupo}" role="presentation">${s.titulo}</div>`;
+        }
+        doSubgrupo.forEach(m => {
+          const classes = ['menu-dd-link', m.k === this.paginaAtiva ? 'ativo' : '', `nav-link--${m.group}`].filter(Boolean).join(' ');
+          const externalAttrs = m.external ? ' target="_blank" rel="noopener" data-external="true"' : '';
+          opcoes += `<a href="${m.href}" class="${classes}" role="menuitem"${externalAttrs} onclick="App.fecharDropdowns()">${m.ic}<span>${m.t}</span></a>`;
+        });
       });
       blocos += `
         <div class="menu-dd menu-dd--${g.grupo}" data-grupo="${g.grupo}">
@@ -221,7 +264,10 @@ const App = {
     // As telas de dormentes servem Cavan e Conprem com o mesmo JS; a chave do
     // menu vira conprem-* nas páginas da Conprem para o item certo acender.
     this.paginaAtiva = window.Area ? Area.chaveMenu(paginaAtiva) : paginaAtiva;
-    const empresa = window.Area ? Area.nome() : '';
+    // Área nova (madeira, lastro, AMV) não é de nenhuma das duas empresas de
+    // concreto: declara data-sem-empresa no <body> para o kicker não dizer Cavan.
+    const semEmpresa = document.body.dataset.semEmpresa === '1';
+    const empresa = window.Area && !semEmpresa ? Area.nome() : '';
     const topo = `
       <header class="topo topo-unificado">
         <div class="topo-navegacao">

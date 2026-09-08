@@ -1,44 +1,41 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Data books · Controle de Dormentes Rumo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Área de lastro ferroviário — ainda sem módulos cadastrados" />
+  <title>Lastro · Controle de Dormentes Rumo</title>
 
-  <link rel="stylesheet" href="css/style.css?v=20260908-areas-novas-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260908-areas-novas-v1" />
   <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
   <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
 </head>
-<body data-pagina="data-books">
+<body data-pagina="lastro" data-menu="lastro-visao" data-sem-empresa="1" data-titulo="Lastro" data-subtitulo="Área de lastro ferroviário — ainda sem módulos cadastrados">
   <div class="app" id="app">
     <main class="conteudo" id="conteudo">
-      <div class="pagina pagina-data-books" id="paginaDataBooks">
+      <section class="pagina pagina-lastro" id="paginaArea">
         <div class="vazio">
           <div class="loader"></div>
-          <h3>Carregando Data books</h3>
-          <p>Consultando registros no Supabase.</p>
+          <h3>Carregando Lastro</h3>
+          <p>Preparando a área de lastro.</p>
         </div>
-      </div>
+      </section>
     </main>
   </div>
 
-  <div class="modal-overlay" id="modalDataBook" aria-hidden="true"></div>
-  <div class="modal-overlay" id="modalDetalheDataBook" aria-hidden="true"></div>
   <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
-  <script src="js/supabase-config.js?v=20260523-3"></script>
+  <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
   <script src="js/auth.js?v=20260828-sem-logo-v1"></script>
-  <script>Auth.exigirLogin();</script>
   <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/store.js?v=20260531-topo-limpo-v1"></script>
   <script src="js/store-supabase.js?v=20260819-conprem-proprio-v1"></script>
-  <script src="js/exportacoes.js?v=20260531-topo-limpo-v1"></script>
   <script src="js/comum.js?v=20260908-areas-novas-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/data-books.js?v=20260619-data-books-documental-v1"></script>
+  <script src="js/area-em-construcao.js?v=20260908-areas-novas-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
