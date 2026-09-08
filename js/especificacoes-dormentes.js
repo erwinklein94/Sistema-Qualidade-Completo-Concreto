@@ -10,6 +10,15 @@ let ESPEC_ERRO = '';
 
 const SECOES_CAMPOS = [
   {
+    titulo: 'Fonte e pontos a confirmar',
+    campos: [
+      { id: 'revisao_fonte', label: 'Revisão da referência' },
+      { id: 'fonte_documental', label: 'Arquivo e células de origem', tipo: 'textarea', full: true },
+      { id: 'desenho_referencia', label: 'Desenho de referência' },
+      { id: 'pendencias_confirmacao', label: 'Divergências e requisitos a confirmar', tipo: 'textarea', full: true }
+    ]
+  },
+  {
     titulo: 'Identificação',
     campos: [
       { id: 'projeto', label: 'Projeto', tipo: 'select', obrigatorio: true },
@@ -37,7 +46,10 @@ const SECOES_CAMPOS = [
   {
     titulo: 'Resistências — Compressão axial (MPa) e Tração na flexão',
     campos: [
+      { id: 'idades_ensaios_concreto', label: 'Idades previstas no anexo', tipo: 'textarea', full: true },
+      { id: 'comp_axial_3_dias', label: 'Comp. axial — 3 dias' },
       { id: 'comp_axial_7_dias', label: 'Comp. axial — 7 dias' },
+      { id: 'tracao_flexao_7_dias', label: 'Tração flexão — 7 dias' },
       { id: 'comp_axial_14_dias', label: 'Comp. axial — 14 dias' },
       { id: 'tracao_flexao_14_dias', label: 'Tração flexão — 14 dias' },
       { id: 'comp_axial_28_dias', label: 'Comp. axial — 28 dias' },
@@ -47,7 +59,7 @@ const SECOES_CAMPOS = [
     ]
   },
   {
-    titulo: 'Ensaios de cargas',
+    titulo: 'Cargas de ensaio (kN) e critérios de aceitação',
     campos: [
       { id: 'momento_positivo_apoio_trilho', label: 'Momento positivo no apoio dos trilhos' },
       { id: 'fissura_apoio_positivo', label: 'Apresentou fissuras? — apoio positivo' },
@@ -58,6 +70,8 @@ const SECOES_CAMPOS = [
       { id: 'momento_negativo_centro', label: 'Momento negativo no centro do dormente' },
       { id: 'fissura_centro_negativo', label: 'Apresentou fissuras? — centro negativo' },
       { id: 'ancoragem', label: 'Ancoragem' },
+      { id: 'ensaio_ruina', label: 'Ensaio de ruína', tipo: 'textarea', full: true },
+      { id: 'verificacao_trincas_ombreira', label: 'Verificação de trincas na ombreira' },
       { id: 'ancoragem_fissura_descarga', label: 'Ancoragem: fissura > 0,5 mm após descarga?' },
       { id: 'aderencia_escorregamento_aco', label: 'Aderência — escorregamento do aço' },
       { id: 'arrancamento_ombreira_a', label: 'Arrancamento na ombreira A' },
@@ -71,21 +85,41 @@ const SECOES_CAMPOS = [
     titulo: 'Ensaios dimensionais — medidas e tolerâncias',
     campos: [
       { id: 'inclinacao_base_apoio_trilhos', label: 'Inclinação da base de apoio dos trilhos' },
+      { id: 'leitura_gabarito_inclinacao', label: 'Leitura do gabarito — Cavan' },
       { id: 'empeno_transversal_entre_apoios', label: 'Empeno transversal (torção) entre apoios' },
       { id: 'torcao_ombreira_a', label: 'Torção na ombreira A' },
       { id: 'torcao_ombreira_b', label: 'Torção na ombreira B' },
       { id: 'torcao_ombreira_c', label: 'Torção na ombreira C' },
       { id: 'comprimento_dormente', label: 'Comprimento do dormente' },
       { id: 'base_retangular', label: 'Base retangular' },
+      { id: 'largura_base_apoio', label: 'Base variável — largura no apoio' },
+      { id: 'largura_base_centro', label: 'Base variável — largura no centro' },
       { id: 'altura_secao_testeira', label: 'Altura na seção da testeira' },
       { id: 'altura_secao_plataforma', label: 'Altura na seção da plataforma' },
       { id: 'altura_entre_ombreiras', label: 'Altura entre ombreiras' },
       { id: 'altura_secao_centro', label: 'Altura na seção do centro' },
+      { id: 'distancia_apoio_centro', label: 'Distância ao centro — pontos definidos na ficha' },
+      { id: 'ombreiras_externas_mesa', label: 'Ombreiras externas — mesa (W/X)' },
+      { id: 'ombreiras_externas_faces', label: 'Ombreiras externas — faces (A/B)' },
+      { id: 'ombreiras_locais_mesa', label: 'Ombreiras do mesmo apoio — mesa (W/X)' },
+      { id: 'ombreiras_locais_faces', label: 'Ombreiras do mesmo apoio — faces (A/B)' },
+      { id: 'tolerancias_ombreiras', label: 'Tolerâncias e divergências das ombreiras', tipo: 'textarea', full: true },
       { id: 'dist_interna_ombreiras_externas', label: 'Dist. interna entre ombreiras externas' },
       { id: 'dist_interna_ombreiras_mesmo_trilho', label: 'Dist. interna entre ombreiras do mesmo trilho' },
       { id: 'dist_interna_ombreiras_mesmo_apoio', label: 'Dist. interna entre ombreiras do mesmo apoio' },
       { id: 'altura_ombreira', label: 'Altura da ombreira' },
-      { id: 'temperatura_maxima', label: 'Temperatura máxima — referência antiga' }
+    ]
+  },
+  {
+    titulo: 'Concretagem, cura e acondicionamento',
+    campos: [
+      { id: 'temperatura_maxima', label: 'Temperatura máxima de cura' },
+      { id: 'temperatura_inicial_concretagem', label: 'Temperatura inicial da concretagem' },
+      { id: 'diferenca_temperatura_nucleo_superficie', label: 'Diferença núcleo/superfície' },
+      { id: 'taxa_aquecimento_cura', label: 'Taxa máxima de aquecimento' },
+      { id: 'monitoramento_cura', label: 'Monitoramento e cobertura dos moldes', tipo: 'textarea', full: true },
+      { id: 'peso_total_com_insumos', label: 'Peso total com insumos — ficha' },
+      { id: 'armazenamento_acondicionamento', label: 'Armazenamento e acondicionamento', tipo: 'textarea', full: true }
     ]
   },
   {
@@ -114,6 +148,7 @@ const SECOES_CAMPOS = [
     titulo: 'Protensão, acabamento e danos admissíveis',
     campos: [
       { id: 'fio_protensao', label: 'Fio de protensão' },
+      { id: 'quantidade_fios_protensao', label: 'Quantidade de fios de protensão' },
       { id: 'posicionamento_fios_protensao', label: 'Posicionamento dos fios de protensão' },
       { id: 'superficie_apoio_trilho', label: 'Superfície de apoio do trilho' },
       { id: 'danos_admissiveis_movimentacao', label: 'Danos admissíveis (movimentação/transporte)' }
@@ -129,7 +164,18 @@ const SECOES_CAMPOS = [
       { id: 'usp_rigidez_estatica', label: 'Rigidez estática (Cstat)' },
       { id: 'usp_area_contato', label: 'Área de contato' },
       { id: 'usp_resistencia_arrancamento', label: 'Resistência ao arrancamento' },
+      { id: 'usp_carga_arrancamento', label: 'Carga de arrancamento USP — kgf' },
       { id: 'usp_resistencia_tracao', label: 'Resistência à tração' }
+    ]
+  },
+  {
+    titulo: 'Requisitos documentais dos insumos',
+    campos: [
+      { id: 'documental_agregado_miudo', label: 'Agregado miúdo', tipo: 'textarea', full: true },
+      { id: 'documental_agregado_graudo', label: 'Agregado graúdo', tipo: 'textarea', full: true },
+      { id: 'documental_aco', label: 'Aço', tipo: 'textarea', full: true },
+      { id: 'documental_cimento', label: 'Cimento — resistências próprias do material', tipo: 'textarea', full: true },
+      { id: 'documental_concreto', label: 'Concreto — laudos e requisitos sem limite informado', tipo: 'textarea', full: true }
     ]
   },
   {
@@ -143,177 +189,7 @@ const SECOES_CAMPOS = [
 const CAMPOS = SECOES_CAMPOS.flatMap(secao => secao.campos.map(campo => campo.id));
 const ROTULOS = Object.fromEntries(SECOES_CAMPOS.flatMap(secao => secao.campos.map(campo => [campo.id, campo.label])));
 
-const VALORES_COMUNS = {
-  slump_abatimento_inicio: '230 ± 30 mm',
-  slump_abatimento_meio: '230 ± 30 mm',
-  slump_abatimento_fim: '230 ± 30 mm',
-  slump_espalhamento_inicio: '400 a 600 mm',
-  slump_espalhamento_meio: '400 a 600 mm',
-  slump_espalhamento_fim: '400 a 600 mm'
-};
-
-// Limites da palmilha under sleeper pad — EM-SPE-055 rev.05 (06/10/2025)
-const VALORES_USP = {
-  usp_distancia_bordos: '≥ 10 e ≤ 20 mm dos bordos da face inferior',
-  usp_imersao_elastomero: '≥ 2 mm no concreto fresco (além da camada de conexão)',
-  usp_espessura_elastomero_externo: '≥ 7 e ≤ 20 mm',
-  usp_planicidade: '≤ 2 mm na peça de 1.380 mm',
-  usp_rigidez_estatica: 'Cstat ≥ 0,22 N/mm³ — NBR 16649 Anexo A, categoria C',
-  usp_area_contato: '≥ 18% — NBR 16649 Anexo C',
-  usp_resistencia_arrancamento: '≥ 0,3 N/mm² — NBR 16649 Anexo E',
-  usp_resistencia_tracao: '≥ 2,5 N/mm² — NBR 16649 Anexo F'
-};
-
-const ESPEC_PADROES_DORMENTES = {
-  'MALHA PAULISTA BITOLA MISTA': {
-    projeto: 'MALHA PAULISTA BITOLA MISTA',
-    bitola: 'Bitola Mista',
-    tipo_dormente: 'Bitola Mista MP - USP',
-    ...VALORES_COMUNS,
-    ...VALORES_USP,
-    momento_positivo_apoio_trilho: '256,60 kN — sem fissuras',
-    fissura_apoio_positivo: 'Não',
-    momento_negativo_apoio_trilho: '191,20 kN — sem fissuras',
-    fissura_apoio_negativo: 'Não',
-    momento_positivo_centro: '53,53 kN — sem fissuras',
-    fissura_centro_positivo: 'Não',
-    momento_negativo_centro: '76,50 kN — sem fissuras',
-    fissura_centro_negativo: 'Não',
-    ancoragem: '384,90 kN — sem fissura > 0,5 mm após descarga',
-    ancoragem_fissura_descarga: 'Não',
-    aderencia_escorregamento_aco: '0,000 mm — máx. 0,025 mm',
-    arrancamento_ombreira_a: '53,40 kN',
-    arrancamento_ombreira_b: '53,40 kN',
-    arrancamento_ombreira_c: '53,40 kN',
-    inclinacao_base_apoio_trilhos: 'Sim — entre 1:35 e 1:45',
-    empeno_transversal_entre_apoios: '0,78 mm',
-    torcao_ombreira_a: 'Aprovado — carga 340 N·m',
-    torcao_ombreira_b: 'Aprovado — carga 340 N·m',
-    torcao_ombreira_c: 'Aprovado — carga 340 N·m',
-    comprimento_dormente: '2800 mm — tolerância ±6 mm',
-    base_retangular: '262 mm — nominal 265 mm; tolerância ±3 mm',
-    altura_secao_testeira: '250 mm — tolerância +6/-3 mm',
-    altura_secao_centro: '224 mm — referência 225 mm',
-    dist_interna_ombreiras_externas: '171 mm — tolerância ±1 mm',
-    dist_interna_ombreiras_mesmo_trilho: 'Aprovado — medida de projeto',
-    altura_ombreira: 'Aprovado — tolerância ±2,0 mm',
-    observacao: 'Padrão pré-preenchido conforme leituras principais informadas para Malha Paulista Bitola Mista.'
-  },
-  'MALHA PAULISTA BITOLA LARGA': {
-    projeto: 'MALHA PAULISTA BITOLA LARGA',
-    bitola: 'Bitola Larga',
-    tipo_dormente: 'Bitola Larga MP',
-    ...VALORES_COMUNS,
-    ...VALORES_USP,
-    carga_eixo_projeto: '32,5 t/eixo',
-    velocidade_maxima_projeto: '80 km/h',
-    espacamento_dormentes: 'Máx. 600 mm (1.667 dormentes/km)',
-    peso_maximo_dormente: '≤ 400 kg (excluindo fixações)',
-    inclinacao_trilho: '1:40, para dentro da via',
-    pressao_max_lastro: '≤ 1,00 MPa',
-    bitola_grade_montada: '1.600 mm +2/-1 mm (grade c/ mín. 10 dormentes, a cada 2 mil fabricados)',
-    dist_centro_eixo_via: 'Tolerância 12 mm (controle na forma)',
-    momento_fletor_positivo_apoio: '30,6 kN·m',
-    momento_fletor_negativo_apoio: '21,4 kN·m',
-    momento_fletor_negativo_centro: '24,4 kN·m',
-    momento_fletor_positivo_centro: '17,1 kN·m',
-    fio_protensao: 'CP 170 RB ou CP 175 RB (NBR 7482); aderência inicial exige acabamento entalhado "E"',
-    posicionamento_fios_protensao: '±3 mm vertical / ±6 mm horizontal — fora da tolerância, refugo',
-    superficie_apoio_trilho: 'Plana e lisa; irregularidades ≤ 1 mm',
-    danos_admissiveis_movimentacao: '≤ 10 mm prof. × ≤ 150 mm compr. × ≤ 25 mm alt., só abaixo da linha de centro; armadura exposta = refugo',
-    comp_axial_28_dias: '≥ 65 MPa',
-    tracao_flexao_28_dias: '≥ 7,5 MPa',
-    temperatura_maxima: '≤ 60 °C na cura, até a desprotensão (prevenção DEF)',
-    momento_positivo_apoio_trilho: '193,50 kN — sem fissuras',
-    fissura_apoio_positivo: 'Não',
-    momento_negativo_apoio_trilho: '144,00 kN — sem fissuras',
-    fissura_apoio_negativo: 'Não',
-    momento_positivo_centro: '44,80 kN — sem fissuras',
-    fissura_centro_positivo: 'Não',
-    momento_negativo_centro: '63,90 kN — sem fissuras',
-    fissura_centro_negativo: 'Não',
-    ancoragem: '290,30 kN — sem fissura > 0,5 mm após descarga',
-    ancoragem_fissura_descarga: 'Não',
-    aderencia_escorregamento_aco: '0,000 mm — máx. 0,025 mm',
-    arrancamento_ombreira_a: '53,40 kN',
-    arrancamento_ombreira_b: '53,40 kN',
-    inclinacao_base_apoio_trilhos: 'Sim — entre 1:35 e 1:45',
-    empeno_transversal_entre_apoios: '0,10 mm — limite ≤ 1 mm',
-    torcao_ombreira_a: 'Aprovado — carga 340 N·m',
-    torcao_ombreira_b: 'Aprovado — carga 340 N·m',
-    comprimento_dormente: '2795 mm — nominal 2800 mm; tolerância ±6 mm',
-    base_retangular: '262 mm — nominal 265 mm; tolerância ±3 mm',
-    altura_secao_plataforma: '240 mm — medida de projeto',
-    altura_secao_centro: '200 mm — referência desenho ENG-DVP-D130',
-    dist_interna_ombreiras_externas: '171 mm — tolerância ±1 mm ou passa/não passa',
-    dist_interna_ombreiras_mesmo_trilho: 'Aprovado — medida de projeto',
-    altura_ombreira: 'Aprovado — tolerância ±2,0 mm',
-    observacao: 'Limites conforme EM-SPE-035 rev.10 (09/09/2025) e EM-SPE-055 rev.05 (06/10/2025). Tolerâncias da forma: comprimento ±6 mm, largura ±3 mm, altura +6/-3 mm. Inclinação do apoio entre 1:35 e 1:45. Trilho TR-68 (AREMA 136-RE) ou UIC-60 (60E1), fixação fast-clip. Garantia do dormente: 10 anos. Garantia da palmilha USP: 1.000 MTBT. Desenho de referência ENG-DVP-D130; palmilha bitola larga base retangular ENG-DVP-D131.'
-  },
-  'FERRO NORTE': {
-    projeto: 'FERRO NORTE',
-    bitola: 'Bitola Larga',
-    tipo_dormente: 'Bitola Larga FN',
-    ...VALORES_COMUNS,
-    momento_positivo_apoio_trilho: '234,80 kN — sem fissuras',
-    fissura_apoio_positivo: 'Não',
-    momento_negativo_apoio_trilho: '175,00 kN — sem fissuras',
-    fissura_apoio_negativo: 'Não',
-    momento_positivo_centro: '46,90 kN — sem fissuras',
-    fissura_centro_positivo: 'Não',
-    momento_negativo_centro: '67,00 kN — sem fissuras',
-    fissura_centro_negativo: 'Não',
-    ancoragem: '352,20 kN — sem fissura > 0,5 mm após descarga',
-    ancoragem_fissura_descarga: 'Não',
-    aderencia_escorregamento_aco: '0,000 mm — máx. 0,025 mm',
-    arrancamento_ombreira_a: '53,40 kN',
-    arrancamento_ombreira_b: '53,40 kN',
-    inclinacao_base_apoio_trilhos: '5,30 — entre 1:35 e 1:45',
-    empeno_transversal_entre_apoios: '0,29 mm',
-    torcao_ombreira_a: 'Aprovado — carga 340 N·m',
-    torcao_ombreira_b: 'Aprovado — carga 340 N·m',
-    comprimento_dormente: '2800 mm — tolerância ±6 mm',
-    base_retangular: '297 mm — nominal 300 mm; tolerância ±3 mm',
-    altura_entre_ombreiras: '251 mm — referência 250 mm',
-    altura_secao_centro: '222 mm — referência 220 mm',
-    dist_interna_ombreiras_mesmo_apoio: '154 mm — medida de projeto',
-    dist_interna_ombreiras_externas: 'Aprovado — medida de projeto',
-    altura_ombreira: 'Aprovado — passa/não passa',
-    observacao: 'Padrão pré-preenchido conforme leituras principais informadas para Ferro Norte.'
-  },
-  'FMT': {
-    projeto: 'FMT',
-    bitola: 'Bitola Larga',
-    tipo_dormente: 'Bitola Larga FMT USP',
-    ...VALORES_COMUNS,
-    ...VALORES_USP,
-    momento_positivo_apoio_trilho: '193,50 kN — sem fissuras',
-    fissura_apoio_positivo: 'Não',
-    momento_negativo_apoio_trilho: '144,00 kN — sem fissuras',
-    fissura_apoio_negativo: 'Não',
-    momento_positivo_centro: '44,80 kN — sem fissuras',
-    fissura_centro_positivo: 'Não',
-    momento_negativo_centro: '63,90 kN — sem fissuras',
-    fissura_centro_negativo: 'Não',
-    ancoragem: '290,30 kN — sem fissura > 0,5 mm após descarga',
-    ancoragem_fissura_descarga: 'Não',
-    aderencia_escorregamento_aco: '0,000 mm — máx. 0,025 mm',
-    arrancamento_ombreira_a: '53,40 kN',
-    arrancamento_ombreira_b: '53,40 kN',
-    inclinacao_base_apoio_trilhos: 'Sim — entre 1:35 e 1:45',
-    empeno_transversal_entre_apoios: '0,71 mm',
-    torcao_ombreira_a: 'Aprovado — carga 340 N·m',
-    torcao_ombreira_b: 'Aprovado — carga 340 N·m',
-    comprimento_dormente: '2800 mm — tolerância ±6 mm',
-    base_retangular: '262 mm — nominal 265 mm; tolerância ±3 mm',
-    altura_secao_plataforma: '237 mm — medida de projeto',
-    altura_secao_centro: '197 mm — referência desenho ENG-DVP-D130',
-    dist_interna_ombreiras_externas: '171 mm — tolerância ±1 mm ou passa/não passa',
-    dist_interna_ombreiras_mesmo_trilho: 'Aprovado — medida de projeto',
-    altura_ombreira: 'Aprovado — tolerância ±2,0 mm',
-    observacao: 'Padrão pré-preenchido conforme leituras principais informadas para FMT.'
-  }
-};
+const ESPEC_PADROES_DORMENTES = ESPEC_CAVAN.padroes;
 
 function ehAdmin() { return !!(window.Auth?.permissoesAtuais?.().admin); }
 
@@ -458,6 +334,7 @@ function cardEspecificacao(r) {
       <span class="acento">${U.badgeProjeto(r.projeto)} ${U.badgeBitola(r)} ${r._padrao ? '<span class="badge badge-amarelo">Pré-preenchido</span>' : ''}</span>
       <span class="card-sub">${val(r.tipo_dormente)}</span>
     </div>
+    ${valBruto(r.pendencias_confirmacao) ? '<div class="aviso-info"><strong>Há pontos a confirmar nas fontes.</strong> Consulte a seção abaixo antes de usar os valores para aceitação.</div>' : ''}
     ${secoes}
     <div class="form-acoes" style="justify-content:flex-end;margin-top:18px;">
       ${acoesRegistro(r)}
@@ -468,14 +345,14 @@ function cardEspecificacao(r) {
 function secaoCard(r, secao) {
   const itens = secao.campos
     .filter(campo => valBruto(r[campo.id]))
-    .map(campo => detalheItem(campo.label, r[campo.id]))
+    .map(campo => detalheItem(campo.label, r[campo.id], campo.full))
     .join('');
   if (!itens) return '';
   return `<div class="detalhe-secao">${U.esc(secao.titulo)}</div><div class="detalhe-grid">${itens}</div>`;
 }
 
-function detalheItem(rotulo, valor) {
-  return `<div class="detalhe-item"><div class="rot">${U.esc(rotulo)}</div><div class="val">${val(valor)}</div></div>`;
+function detalheItem(rotulo, valor, full = false) {
+  return `<div class="detalhe-item"${full ? ' style="grid-column:1/-1"' : ''}><div class="rot">${U.esc(rotulo)}</div><div class="val">${val(valor)}</div></div>`;
 }
 
 function acoesRegistro(r) {
@@ -516,8 +393,9 @@ function aplicarPadraoProjeto(forcar = false) {
 
   CAMPOS.forEach(campo => {
     if (campo === 'projeto') return;
-    const atual = valBruto(document.getElementById(campo)?.value);
-    if (forcar || !atual) setValor(campo, padrao[campo] || '');
+    // A nova seleção precisa substituir também os campos do projeto anterior.
+    // Registros existentes só recebem o modelo mediante o botão explícito.
+    setValor(campo, padrao[campo] ?? '');
   });
 }
 
@@ -570,7 +448,7 @@ function mensagemErroBanco(err, padrao) {
   const msg = err?.message || err?.details || '';
   if (!msg) return padrao;
   if (/row-level security|violates row-level security/i.test(msg)) return 'Acesso bloqueado pelas regras de segurança do Supabase. Esta área só pode ser editada por Admin.';
-  if (/column .* does not exist|Could not find .* column|schema cache/i.test(msg)) return 'Campos novos ainda não existem no Supabase. Rode supabase/2026-05-31-especificacoes-e-equipamentos.sql e supabase/2026-06-11-especificacoes-em-spe-035-055.sql.';
+  if (/column .* does not exist|Could not find .* column|schema cache/i.test(msg)) return 'A estrutura das especificações precisa ser atualizada. Solicite ao administrador a migração das referências Cavan de 08/09/2026.';
   if (/relation .* does not exist|could not find the table/i.test(msg)) return 'Tabela ainda não criada no Supabase. Rode supabase/2026-05-31-especificacoes-e-equipamentos.sql.';
   if (/JWT|token|auth/i.test(msg)) return 'Sessão expirada ou inválida. Saia e faça login novamente.';
   return msg;
