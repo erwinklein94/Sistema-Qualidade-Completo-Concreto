@@ -8374,3 +8374,33 @@ body[data-tema="escuro"] .menu-dd-subtitulo--conprem { color: #F9A472; }
   font-size: 13px;
   line-height: 1.7;
 }
+
+/* ---------------------------------------------------------------------
+   Grupo de opções marcáveis lado a lado (o campo Projeto do relatório de
+   AMV aceita mais de uma opção ao mesmo tempo).
+   --------------------------------------------------------------------- */
+.opcoes-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 4px 0 2px;
+}
+.opcao-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--cinza-borda, #e2e8f0);
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.opcao-check:hover { border-color: var(--azul-claro, #32A6E6); }
+.opcao-check input { margin: 0; cursor: pointer; }
+.opcao-check:has(input:checked) {
+  border-color: var(--verde, #1E9F7F);
+  background: rgba(30, 159, 127, .10);
+}
+body[data-tema="escuro"] .opcao-check { border-color: rgba(255,255,255,.18); }
+body[data-tema="escuro"] .opcao-check:has(input:checked) { background: rgba(127,224,108,.16); }

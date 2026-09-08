@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Peças de AMV inspecionadas, com classificação e defeitos." />
+  <title>Peças de AMV · Controle de Qualidade Rumo</title>
+
+  <link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1" />
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+  <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
+</head>
+<body data-pagina="amv-pecas" data-sem-empresa="1">
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina">
+
+        <div class="barra-filtros">
+          <div class="busca-rapida campo">
+            <label>Buscar</label>
+            <input type="text" id="busca" placeholder="Tipo de peça, pedido, fornecedor, defeito...">
+          </div>
+          <div class="campo"><label>Família</label><select id="fFamilia"></select></div>
+          <div class="campo"><label>Trilho</label><select id="fTrilho"></select></div>
+          <div class="campo"><label>Inclinação</label><select id="fInclinacao"></select></div>
+          <div class="campo"><label>Mão</label><select id="fMao"></select></div>
+          <div class="campo"><label>Montagem</label><select id="fMontagem"></select></div>
+          <div class="campo"><label>Fornecedor</label><select id="fFornecedor"></select></div>
+          <div class="campo"><label>Defeito</label><select id="fDefeito">
+            <option value="">Todas</option>
+            <option value="com">Só com defeito</option>
+            <option value="sem">Só sem defeito</option>
+          </select></div>
+          <div class="campo"><label>De</label><input type="date" id="fDataIni"></div>
+          <div class="campo"><label>Até</label><input type="date" id="fDataFim"></div>
+        </div>
+
+        <div id="avisoInspecao"></div>
+
+        <div class="grid-kpi" id="kpis"></div>
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Peças inspecionadas</span>
+            <span class="txt-mini txt-cinza" id="contador">0 peças</span>
+          </div>
+          <div id="lista"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="modalTitulo">Nova peça</h2>
+        <button class="fechar-modal" type="button" onclick="fecharModal()">⨯</button>
+      </div>
+      <div class="modal-corpo">
+        <form id="form" onsubmit="return false">
+          <input type="hidden" id="id">
+          <div class="form-grid">
+            <div class="form-secao">Peça</div>
+            <div class="campo full"><label>Inspeção <span class="obrig">*</span></label><select id="inspecaoId"></select></div>
+            <div class="campo"><label>Ordem no relatório <span class="obrig">*</span></label><input id="indice" type="number" min="1" step="1" value="1"></div>
+            <div class="campo"><label>Número do pedido</label><input id="numeroPedido" type="text" placeholder="ex.: 4501909169"></div>
+            <div class="campo full"><label>Tipo de peça <span class="obrig">*</span></label><input id="tipoPeca" type="text" placeholder="ex.: 03- Jacarés Simples N1:14 UIC60 Prolongado"></div>
+            <div class="campo full"><label>Notas do tipo de peça</label><textarea id="tipoPecaNotas" placeholder="Complemento do relatório sobre a peça"></textarea></div>
+            <p class="campo full txt-mini txt-cinza">Família, trilho, inclinação, mão, geometria, montagem e derivação são deduzidas do texto do tipo de peça na hora de salvar.</p>
+
+            <div class="form-secao">Defeito</div>
+            <div class="campo"><label>Há defeito nesta peça?</label><select id="temDefeito">
+              <option value="">Não informado</option>
+              <option value="false">Não</option>
+              <option value="true">Sim</option>
+            </select></div>
+            <div class="campo full"><label>Descrição do defeito</label><textarea id="descricaoDefeito" placeholder="O que foi encontrado, cotas medidas, tolerância e liberação"></textarea></div>
+          </div>
+          <div class="form-acoes">
+            <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
+            <button type="button" class="btn btn-primario" onclick="salvar()">Salvar peça</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/auth.js?v=20260828-sem-logo-v1"></script>
+  <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/exportacoes.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/comum.js?v=20260908-area-amv-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/store-amv-supabase.js?v=20260908-area-amv-v1"></script>
+  <script src="js/amv-comum.js?v=20260908-area-amv-v1"></script>
+  <script src="js/amv-pecas.js?v=20260908-area-amv-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>

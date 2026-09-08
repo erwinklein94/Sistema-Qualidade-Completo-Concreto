@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Histórico de relatórios de inspeção de peças de AMV." />
+  <title>Inspeções de AMV · Controle de Qualidade Rumo</title>
+
+  <link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1" />
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+  <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
+</head>
+<body data-pagina="amv-inspecoes" data-sem-empresa="1">
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina">
+
+        <div class="barra-filtros">
+          <div class="busca-rapida campo">
+            <label>Buscar</label>
+            <input type="text" id="busca" placeholder="Fornecedor, pedido, responsável, local, peça...">
+          </div>
+          <div class="campo"><label>Fornecedor</label><select id="fFornecedor"></select></div>
+          <div class="campo"><label>Projeto</label><select id="fProjeto"></select></div>
+          <div class="campo"><label>Responsável</label><select id="fResponsavel"></select></div>
+          <div class="campo"><label>Defeito</label><select id="fDefeito">
+            <option value="">Todas</option>
+            <option value="com">Só com defeito</option>
+            <option value="sem">Só sem defeito</option>
+          </select></div>
+          <div class="campo"><label>De</label><input type="date" id="fDataIni"></div>
+          <div class="campo"><label>Até</label><input type="date" id="fDataFim"></div>
+        </div>
+
+        <div class="grid-kpi" id="kpis"></div>
+
+        <div class="card">
+          <div class="card-titulo">
+            <span class="acento">Relatórios de inspeção de peças de AMV</span>
+            <span class="txt-mini txt-cinza" id="contador">0 registros</span>
+          </div>
+          <div id="lista"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="modalTitulo">Nova inspeção de AMV</h2>
+        <button class="fechar-modal" type="button" onclick="fecharModal()">⨯</button>
+      </div>
+      <div class="modal-corpo">
+        <form id="form" onsubmit="return false">
+          <input type="hidden" id="id">
+          <div class="form-grid">
+            <div class="form-secao">Identificação do relatório</div>
+            <div class="campo"><label>Data da inspeção <span class="obrig">*</span></label><input id="dataInspecao" type="date" required></div>
+            <div class="campo"><label>Hora de início</label><input id="horaInicio" type="datetime-local"></div>
+            <div class="campo"><label>Fornecedor <span class="obrig">*</span></label><select id="fornecedor" onchange="alternarFornecedorOutro()"></select></div>
+            <div class="campo"><label>Qual fornecedor? <span class="dica">(quando for "Outro")</span></label><input id="fornecedorOutro" type="text" placeholder="Nome do fornecedor"></div>
+            <div class="campo"><label>Responsável pela inspeção</label><input id="responsavel" type="text" placeholder="Quem inspecionou"></div>
+            <div class="campo"><label>Número do pedido</label><input id="numeroPedido" type="text" placeholder="ex.: 4501909169"></div>
+            <div class="campo full"><label>Localização</label><input id="localizacao" type="text" placeholder="Endereço do fornecedor"></div>
+            <div class="campo full"><label>Projeto</label><div id="projetos" class="opcoes-inline"></div></div>
+
+            <div class="form-secao">Quantidades declaradas</div>
+            <div class="campo"><label>Peças programadas</label><input id="qtdProgramadas" type="number" min="0" step="1" value="0"></div>
+            <div class="campo"><label>Peças disponíveis</label><input id="qtdDisponiveis" type="number" min="0" step="1" value="0"></div>
+            <div class="campo"><label>Ajustes</label><input id="qtdAjustes" type="number" min="0" step="1" value="0"></div>
+            <div class="campo"><label>Reprovadas</label><input id="qtdReprovadas" type="number" min="0" step="1" value="0"></div>
+
+            <div class="form-secao">Complementos</div>
+            <div class="campo"><label>Tipagem da peça é legível</label><select id="tipagemLegivel"></select></div>
+            <div class="campo full"><label>Informações adicionais</label><textarea id="informacoesAdicionais" placeholder="O que o relatório trouxe em INFORMAÇÕES ADICIONAIS"></textarea></div>
+            <div class="campo full"><label>Observações internas</label><textarea id="observacoes" placeholder="Anotações da qualidade, fora do relatório de origem"></textarea></div>
+          </div>
+          <div class="form-acoes">
+            <button type="button" class="btn btn-secundario" onclick="fecharModal()">Cancelar</button>
+            <button type="button" class="btn btn-primario" onclick="salvar()">Salvar inspeção</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalVer">
+    <div class="modal">
+      <div class="modal-cab">
+        <h2 id="verTitulo">Detalhe da inspeção</h2>
+        <button class="fechar-modal" type="button" onclick="fecharVer()">⨯</button>
+      </div>
+      <div class="modal-corpo" id="verCorpo"></div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/auth.js?v=20260828-sem-logo-v1"></script>
+  <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/exportacoes.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/comum.js?v=20260908-area-amv-v1"></script>
+  <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+  <script src="js/store-amv-supabase.js?v=20260908-area-amv-v1"></script>
+  <script src="js/amv-comum.js?v=20260908-area-amv-v1"></script>
+  <script src="js/amv-inspecoes.js?v=20260908-area-amv-v1"></script>
+  <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body>
+</html>

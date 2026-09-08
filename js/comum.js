@@ -60,9 +60,11 @@ const App = {
       {
         sec: 'AMV',
         group: 'amv',
-        desc: 'Aparelhos de mudança de via — área nova, ainda sem módulos'
+        desc: 'Aparelhos de mudança de via: inspeção de peças por fornecedor'
       },
-      { k: 'amv-visao', t: 'Visão Geral AMV', ic: ICN.trem, href: 'amv.html', group: 'amv' },
+      { k: 'amv-visao', t: 'Dashboard AMV', ic: ICN.dashboard, href: 'amv.html', group: 'amv' },
+      { k: 'amv-inspecoes', t: 'Inspeções de AMV', ic: ICN.check, href: 'amv-inspecoes.html', group: 'amv' },
+      { k: 'amv-pecas', t: 'Peças de AMV', ic: ICN.producao, href: 'amv-pecas.html', group: 'amv' },
 
       {
         sec: 'SUBCOMPONENTES',
