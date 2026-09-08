@@ -225,7 +225,7 @@ const App = {
     const topo = `
       <header class="topo topo-unificado">
         <div class="topo-navegacao">
-          <a class="topo-logo" href="index.html" aria-label="Rumo — página inicial"><img src="assets/rumo/logotipo-white.png" alt="Rumo" width="124" height="48"></a>
+          <span class="topo-logo" aria-hidden="true"></span>
           <nav class="topo-modulos" aria-label="Módulos do sistema">${this.menuDropdownsHtml()}</nav>
           <button class="btn btn-secundario btn-sm tema-toggle" id="botaoTema" type="button" onclick="App.alternarTema()" aria-pressed="false" title="Alternar tema">${ICN.tema}<span>Tema escuro</span></button>
         </div>
