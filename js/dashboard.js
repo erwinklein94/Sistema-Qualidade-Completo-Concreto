@@ -283,7 +283,9 @@ async function carregarDashboard() {
 }
 
 function atualizarFiltrosComDados() {
-  preencherSelectComDados('fFornecedor', CFG.listas.fornecedores, [...Dashboard.prod, ...Dashboard.rep, ...Dashboard.ens].map(r => r.fornecedor), 'Todos');
+  // O fornecedor identifica a área ativa. Não reincorpore fornecedores de
+  // registros legados da outra área ao seletor (ex.: Conprem no dashboard Cavan).
+  preencherSelectComDados('fFornecedor', CFG.listas.fornecedores, [], 'Todos');
   preencherSelectComDados('fProjeto', CFG.listas.projetos, [], 'Todos');
   preencherSelectComDados('fBitola', CFG.listas.bitolas, [...Dashboard.prod, ...Dashboard.rep, ...Dashboard.ens].map(r => U.bitolaDe(r)), 'Todas');
 }
