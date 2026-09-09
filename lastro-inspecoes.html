@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dashboard Lastro · Controle de Qualidade Rumo</title>
+<title>Inspeções de Pedreira · Controle de Qualidade Rumo</title>
 <link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1">
 <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
 <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
 <link rel="stylesheet" href="css/lastro.css?v=20260909-v1">
-</head><body data-pagina="lastro" data-sem-empresa="1">
+</head><body data-pagina="lastro-inspecoes" data-sem-empresa="1">
 <div class="app" id="app"><main class="conteudo" id="conteudo"><div class="pagina">
 <form id="filtrosLastro" class="barra-filtros" onsubmit="return false">
 <div class="campo"><label for="busca">Buscar</label><input id="busca" type="search" placeholder="Pedreira, responsável, localização"></div>
@@ -22,7 +22,7 @@
 <div class="grid-kpi" id="kpis"></div>
 <p class="lastro-nota">Proporção de respostas positivas = Sim ÷ (Sim + Não). N/D e campos não respondidos ficam fora do cálculo. Os resultados descrevem as inspeções do período, sem determinar aprovação geral da pedreira.</p>
 <div id="analiseLastro"></div>
-<section class="card"><div class="card-titulo"><span>Últimas inspeções</span><span class="txt-mini" id="contadorLastro"></span></div><div id="listaLastro"></div></section>
+<section class="card"><div class="card-titulo"><span>Histórico de inspeções</span><span class="txt-mini" id="contadorLastro"></span></div><div id="listaLastro"></div></section>
 </div></main></div>
 <dialog id="editorLastro" class="lastro-dialog" aria-labelledby="tituloEditor"><div class="modal-cab"><h2 id="tituloEditor">Nova inspeção de pedreira</h2><button type="button" data-fechar-lastro class="fechar-modal" aria-label="Fechar">×</button></div>
 <div class="modal-corpo"><form id="formLastro">

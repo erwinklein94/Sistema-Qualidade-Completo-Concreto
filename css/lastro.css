@@ -1,0 +1,28 @@
+.lastro-dialog { border:1px solid var(--cinza-borda,#d6dee5); border-radius:16px; width:min(900px,94vw); max-height:90vh; margin:auto; padding:0; color:var(--cinza-texto,#16354a); background:var(--cinza-card,#fff); }
+.lastro-dialog::backdrop { background:rgba(0,20,35,.65); }
+body[data-pagina^="lastro"] #kpis { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.lastro-dialog .modal-cab { position:sticky; top:0; background:inherit; z-index:1; }
+.lastro-dialog .modal-corpo { padding:24px; }
+.lastro-criterio { display:grid; grid-template-columns:1fr 1fr; gap:20px; padding:18px 0; border-bottom:1px solid var(--borda,#dde3e9); }
+.lastro-criterio label { min-height:44px; }
+.lastro-criterio textarea { min-height:72px; }
+.lastro-barra { margin:15px 0; font-size:13px; }
+.lastro-barra>div:first-child { display:flex; justify-content:space-between; gap:20px; }
+.lastro-trilho { height:8px; background:rgba(120,140,160,.17); border-radius:5px; margin-top:7px; overflow:hidden; }
+.lastro-trilho span { display:block; height:100%; background:#007da5; border-radius:5px; }
+.lastro-trilho .negativa { background:#c77700; }
+.lastro-negativa { color:#b24d00; font-weight:700; }
+.lastro-detalhe-item { padding:16px 0; border-bottom:1px solid var(--borda,#dde3e9); }
+.lastro-detalhe-item p { margin:8px 0; }
+.lastro-original { overflow-wrap:anywhere; font-size:13px; }
+.lastro-original dt { font-weight:600; margin-top:14px; }
+.lastro-original dd { margin:4px 0 0; white-space:pre-wrap; }
+.lastro-estado:not(:empty) { padding:18px; border:1px solid #c77700; border-radius:8px; margin-bottom:16px; }
+#filtrosLastro { border:0; padding:0; margin:0; min-width:0; }
+.lastro-nota { margin:0 0 20px; font-size:13px; color:var(--cinza-texto,#536471); }
+body[data-tema="escuro"] .lastro-dialog { background:#102b3d; color:#e7f0f5; }
+body[data-tema="escuro"] .lastro-negativa { color:#ffbf69; }
+body[data-tema="escuro"] #analiseLastro .card { background:#082a4d; color:#d9e8f7; }
+@media(max-width:680px) { .lastro-criterio { grid-template-columns:1fr; gap:8px; } .lastro-dialog .modal-corpo { padding:16px; } .lastro-criterio label { min-height:0; } }
+@media(max-width:1000px) { body[data-pagina^="lastro"] #kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:480px) { body[data-pagina^="lastro"] #kpis { grid-template-columns:1fr; } }

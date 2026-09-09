@@ -53,9 +53,10 @@ const App = {
       {
         sec: 'LASTRO',
         group: 'lastro',
-        desc: 'Área nova de lastro ferroviário, ainda sem módulos'
+        desc: 'Qualidade do lastro: inspeções de pedreiras e histórico'
       },
-      { k: 'lastro-visao', t: 'Visão Geral Lastro', ic: ICN.vazioBox, href: 'lastro.html', group: 'lastro' },
+      { k: 'lastro-visao', t: 'Dashboard Lastro', ic: ICN.dashboard, href: 'lastro.html', group: 'lastro' },
+      { k: 'lastro-inspecoes', t: 'Inspeções de Pedreira', ic: ICN.check, href: 'lastro-inspecoes.html', group: 'lastro' },
 
       {
         sec: 'AMV',
