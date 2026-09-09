@@ -46,9 +46,10 @@ const App = {
       {
         sec: 'DORMENTES DE MADEIRA',
         group: 'madeira',
-        desc: 'Área nova de dormentes de madeira, ainda sem módulos'
+        desc: 'Recebimento, qualidade e histórico de dormentes de madeira'
       },
-      { k: 'madeira-visao', t: 'Visão Geral Madeira', ic: ICN.producao, href: 'dormentes-madeira.html', group: 'madeira' },
+      { k: 'madeira-visao', t: 'Dashboard Madeira', ic: ICN.dashboard, href: 'dormentes-madeira.html', group: 'madeira' },
+      { k: 'madeira-inspecoes', t: 'Histórico de Inspeções', ic: ICN.check, href: 'madeira-inspecoes.html', group: 'madeira' },
 
       {
         sec: 'LASTRO',

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Histórico e dashboard das inspeções de recebimento de dormentes de madeira.">
-<title>Dashboard Dormentes de Madeira · Controle de Qualidade Rumo</title>
+<title>Histórico de Dormentes de Madeira · Controle de Qualidade Rumo</title>
 <link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1"><link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2"><link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3"><link rel="stylesheet" href="css/madeira.css?v=20260909-v1">
-</head><body data-pagina="madeira" data-sem-empresa="1">
+</head><body data-pagina="madeira-inspecoes" data-sem-empresa="1">
 <div class="app" id="app"><main class="conteudo" id="conteudo"><div class="pagina">
 <form id="filtrosMadeira" class="barra-filtros" onsubmit="return false">
 <div class="campo"><label for="busca">Buscar</label><input id="busca" type="search" placeholder="Fornecedor, pedido, NF, local"></div>
@@ -20,7 +20,7 @@
 <div class="grid-kpi" id="kpisMadeira"></div>
 <p class="madeira-nota">A taxa consolidada usa somente relatórios com quantidade declarada e quantidade reprovada. Campos ausentes nas versões antigas permanecem como “não informado”. As contagens refletem o que foi registrado pelos fiscais.</p>
 <div id="analiseMadeira"></div>
-<section class="card"><div class="card-titulo"><span>Últimas inspeções</span><span class="txt-mini" id="contadorMadeira"></span></div><div id="listaMadeira"></div></section>
+<section class="card"><div class="card-titulo"><span>Histórico de inspeções</span><span class="txt-mini" id="contadorMadeira"></span></div><div id="listaMadeira"></div></section>
 </div></main></div>
 <dialog id="detalheMadeira" class="madeira-dialog" aria-labelledby="tituloDetalheMadeira"><div class="modal-cab"><h2 id="tituloDetalheMadeira">Relatório de inspeção</h2><button type="button" class="fechar-modal" data-fechar-madeira aria-label="Fechar">×</button></div><div class="modal-corpo" id="detalheCorpo"></div></dialog>
 <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>

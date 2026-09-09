@@ -1,0 +1,15 @@
+body[data-pagina^="madeira"] #kpisMadeira{grid-template-columns:repeat(4,minmax(0,1fr))}
+.madeira-estado:not(:empty){padding:18px;border:1px solid #c77700;border-radius:8px;margin-bottom:16px}
+.madeira-nota{margin:0 0 20px;color:var(--cinza-texto);font-size:13px;line-height:1.5}
+.madeira-barra{margin:15px 0;font-size:13px}.madeira-barra>div:first-child{display:flex;justify-content:space-between;gap:20px}
+.madeira-trilho{height:8px;background:rgba(120,140,160,.17);border-radius:5px;margin-top:7px;overflow:hidden}.madeira-trilho span{display:block;height:100%;background:#1e9f7f;border-radius:5px}.madeira-trilho .reprovado{background:#c77700}
+.madeira-dialog{border:1px solid var(--cinza-borda);border-radius:16px;width:min(940px,94vw);max-height:90vh;margin:auto;padding:0;background:var(--cinza-card);color:var(--cinza-texto)}
+.madeira-dialog::backdrop{background:rgba(0,20,35,.65)}.madeira-dialog .modal-cab{position:sticky;top:0;z-index:2}.madeira-dialog .modal-corpo{padding:24px}
+.madeira-resumo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.madeira-resumo>div{padding:14px;background:rgba(120,140,160,.10);border-radius:8px}.madeira-resumo small{display:block;color:var(--cinza-texto-claro)}
+.madeira-detalhes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}.madeira-detalhes dt{font-weight:700;margin-top:14px}.madeira-detalhes dd{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.madeira-defeitos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.madeira-defeito{padding:14px;border:1px solid var(--cinza-borda);border-radius:8px}.madeira-defeito p{margin:5px 0}
+.madeira-original dt{font-weight:600;margin-top:14px}.madeira-original dd{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+body[data-tema="escuro"] .madeira-dialog{background:#102b3d;color:#e7f0f5}body[data-tema="escuro"] #analiseMadeira .card{background:#082a4d;color:#d9e8f7}
+@media(max-width:1000px){body[data-pagina^="madeira"] #kpisMadeira{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.madeira-detalhes,.madeira-defeitos,.madeira-resumo{grid-template-columns:1fr}.madeira-dialog .modal-corpo{padding:16px}}
+@media(max-width:480px){body[data-pagina^="madeira"] #kpisMadeira{grid-template-columns:1fr}}
