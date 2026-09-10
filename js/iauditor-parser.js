@@ -70,48 +70,52 @@
 
   function hasUnit(v) { return /[a-zA-Z°]/.test(v); }
 
+  /* ---------- seções usadas pelos relatórios de ensaio ---------- */
+  const SECAO_CARGAS = 'Ensaios de cargas';
+  const SECAO_DIMENSIONAIS = 'Ensaios dimensionais';
+
   /* ---------- dicionário técnico do modelo "Dormente de Concreto" ---------- */
   const DICT = [
     // ---- cargas ----
-    { key: 'momentopositivonoapoiodostrilhosapresentoufissuras', name: '↳ Apresentou fissuras? (apoio, positivo)', kind: 'bool' },
-    { key: 'momentopositivonoapoiodostrilhos', name: 'Momento positivo no apoio dos trilhos', unit: 'kN', crit: 'Não deve fissurar' },
-    { key: 'momentonegativonoapoiodostrilhosapresentoufissuras', name: '↳ Apresentou fissuras? (apoio, negativo)', kind: 'bool' },
-    { key: 'momentonegativonoapoiodostrilhos', name: 'Momento negativo no apoio dos trilhos', unit: 'kN', crit: 'Não deve fissurar' },
-    { key: 'momentopositivonocentrododormenteapresentoufissuras', name: '↳ Apresentou fissuras? (centro, positivo)', kind: 'bool' },
-    { key: 'momentopositivonocentrododormente', name: 'Momento positivo no centro do dormente', unit: 'kN', crit: 'Não deve fissurar' },
-    { key: 'momentonegativonocentrododormenteapresentoufissuras', name: '↳ Apresentou fissuras? (centro, negativo)', kind: 'bool' },
-    { key: 'momentonegativonocentrododormente', name: 'Momento negativo no centro do dormente', unit: 'kN', crit: 'Não deve fissurar' },
-    { key: 'naancoragemapresentoufissura', name: '↳ Ancoragem: fissura > 0,5 mm após descarga?', kind: 'bool' },
-    { key: 'ancoragemcargaaplicada50', name: 'Ancoragem (carga 50% acima do mom. positivo)', unit: 'kN', crit: 'Sem fissura > 0,5 mm após descarga' },
-    { key: 'ancoragemmomentopositivonosapoiosdostrilhos', name: 'Ancoragem (momento positivo nos apoios)', unit: 'kN', crit: 'Sem fissura > 0,5 mm após descarga' },
-    { key: 'fissuracaonomomentopositivonosapoiosdostrilhos', name: 'Fissuração no momento positivo nos apoios dos trilhos', unit: 'kN', crit: 'Sem fissura > 0,5 mm após descarga' },
-    { key: 'aderenciaescorregamento', name: 'Aderência — escorregamento do aço', crit: 'Máx. 0,025 mm', max: 0.025 },
-    { key: 'cargaultimanomomentopositivonoapoiodostrilhos', name: 'Aderência — escorregamento do aço', crit: 'Máx. 0,025 mm', max: 0.025 },
-    { key: 'ensaiodearrancamentonaombreiraa', name: 'Arrancamento na ombreira A', unit: 'kN', crit: 'Carga 53,40 kN' },
-    { key: 'ensaiodearrancamentonaombreirab', name: 'Arrancamento na ombreira B', unit: 'kN', crit: 'Carga 53,40 kN' },
-    { key: 'ensaiodearrancamentonaombreirac', name: 'Arrancamento na ombreira C', unit: 'kN', crit: 'Carga 53,40 kN' },
-    { key: 'arrancamentonaombreiraa', name: 'Arrancamento na ombreira A', unit: 'kN', crit: 'Carga 53,40 kN' },
-    { key: 'arrancamentonaombreirab', name: 'Arrancamento na ombreira B', unit: 'kN', crit: 'Carga 53,40 kN' },
-    { key: 'arrancamentonaombreirac', name: 'Arrancamento na ombreira C', unit: 'kN', crit: 'Carga 53,40 kN' },
+    { key: 'momentopositivonoapoiodostrilhosapresentoufissuras', name: '↳ Apresentou fissuras? (apoio, positivo)', kind: 'bool', sec: SECAO_CARGAS },
+    { key: 'momentopositivonoapoiodostrilhos', name: 'Momento positivo no apoio dos trilhos', unit: 'kN', crit: 'Não deve fissurar', sec: SECAO_CARGAS },
+    { key: 'momentonegativonoapoiodostrilhosapresentoufissuras', name: '↳ Apresentou fissuras? (apoio, negativo)', kind: 'bool', sec: SECAO_CARGAS },
+    { key: 'momentonegativonoapoiodostrilhos', name: 'Momento negativo no apoio dos trilhos', unit: 'kN', crit: 'Não deve fissurar', sec: SECAO_CARGAS },
+    { key: 'momentopositivonocentrododormenteapresentoufissuras', name: '↳ Apresentou fissuras? (centro, positivo)', kind: 'bool', sec: SECAO_CARGAS },
+    { key: 'momentopositivonocentrododormente', name: 'Momento positivo no centro do dormente', unit: 'kN', crit: 'Não deve fissurar', sec: SECAO_CARGAS },
+    { key: 'momentonegativonocentrododormenteapresentoufissuras', name: '↳ Apresentou fissuras? (centro, negativo)', kind: 'bool', sec: SECAO_CARGAS },
+    { key: 'momentonegativonocentrododormente', name: 'Momento negativo no centro do dormente', unit: 'kN', crit: 'Não deve fissurar', sec: SECAO_CARGAS },
+    { key: 'naancoragemapresentoufissura', name: '↳ Ancoragem: fissura > 0,5 mm após descarga?', kind: 'bool', sec: SECAO_CARGAS },
+    { key: 'ancoragemcargaaplicada50', name: 'Ancoragem (carga 50% acima do mom. positivo)', unit: 'kN', crit: 'Sem fissura > 0,5 mm após descarga', sec: SECAO_CARGAS },
+    { key: 'ancoragemmomentopositivonosapoiosdostrilhos', name: 'Ancoragem (momento positivo nos apoios)', unit: 'kN', crit: 'Sem fissura > 0,5 mm após descarga', sec: SECAO_CARGAS },
+    { key: 'fissuracaonomomentopositivonosapoiosdostrilhos', name: 'Fissuração no momento positivo nos apoios dos trilhos', unit: 'kN', crit: 'Sem fissura > 0,5 mm após descarga', sec: SECAO_CARGAS },
+    { key: 'aderenciaescorregamento', name: 'Aderência — escorregamento do aço', crit: 'Máx. 0,025 mm', max: 0.025, sec: SECAO_CARGAS },
+    { key: 'cargaultimanomomentopositivonoapoiodostrilhos', name: 'Aderência — escorregamento do aço', crit: 'Máx. 0,025 mm', max: 0.025, sec: SECAO_CARGAS },
+    { key: 'ensaiodearrancamentonaombreiraa', name: 'Arrancamento na ombreira A', unit: 'kN', crit: 'Carga 53,40 kN', sec: SECAO_CARGAS },
+    { key: 'ensaiodearrancamentonaombreirab', name: 'Arrancamento na ombreira B', unit: 'kN', crit: 'Carga 53,40 kN', sec: SECAO_CARGAS },
+    { key: 'ensaiodearrancamentonaombreirac', name: 'Arrancamento na ombreira C', unit: 'kN', crit: 'Carga 53,40 kN', sec: SECAO_CARGAS },
+    { key: 'arrancamentonaombreiraa', name: 'Arrancamento na ombreira A', unit: 'kN', crit: 'Carga 53,40 kN', sec: SECAO_CARGAS },
+    { key: 'arrancamentonaombreirab', name: 'Arrancamento na ombreira B', unit: 'kN', crit: 'Carga 53,40 kN', sec: SECAO_CARGAS },
+    { key: 'arrancamentonaombreirac', name: 'Arrancamento na ombreira C', unit: 'kN', crit: 'Carga 53,40 kN', sec: SECAO_CARGAS },
     // ---- dimensionais ----
-    { key: 'inclinacaodabasedeapoiodostrilhos', name: 'Inclinação da base de apoio dos trilhos', crit: 'Entre 1:35 e 1:45' },
-    { key: 'empenotransversal', name: 'Empeno transversal (torção) entre apoios', crit: 'Máx. 1 mm', max: 1 },
-    { key: 'ensaiodetorcaonaombreiraa', name: 'Torção na ombreira A', kind: 'status', crit: 'Carga 340 N·m' },
-    { key: 'ensaiodetorcaonaombreirab', name: 'Torção na ombreira B', kind: 'status', crit: 'Carga 340 N·m' },
-    { key: 'ensaiodetorcaonaombreirac', name: 'Torção na ombreira C', kind: 'status', crit: 'Carga 340 N·m' },
-    { key: 'ocomprimentododormente', name: 'Comprimento do dormente', crit: '2.800 mm (±6)', min: 2794, max: 2806 },
-    { key: 'comprimentododormente', name: 'Comprimento do dormente', crit: '2.800 mm (±6)', min: 2794, max: 2806 },
-    { key: 'odormmentedeverapossuirbaseretangular', name: 'Base retangular', crit: 'Medida de projeto' },
-    { key: 'odormentedeverapossuirbaseretangular', name: 'Base retangular', crit: 'Medida de projeto' },
-    { key: 'baseretangularnatesteira', name: 'Base retangular na testeira', crit: '300 mm (±3)', min: 297, max: 303 },
-    { key: 'alturadodormentenasecaoentreombreiras', name: 'Altura entre ombreiras', crit: 'Medida de projeto' },
-    { key: 'alturadodormentenasecaodaplataforma', name: 'Altura na seção da plataforma', crit: 'Medida de projeto' },
-    { key: 'aalturadodormentenasecaodaplataforma', name: 'Altura na seção da plataforma', crit: 'Medida de projeto' },
-    { key: 'alturadodormentenasecaodocentro', name: 'Altura na seção do centro', crit: 'Medida de projeto' },
-    { key: 'distanciainternaentreombreirasdemesmoapoio', name: 'Dist. interna entre ombreiras (mesmo apoio)', crit: 'Medida de projeto' },
-    { key: 'distanciainternaentreombreirasdomesmotrilho', name: 'Dist. interna entre ombreiras do mesmo trilho', crit: 'Medida de projeto' },
-    { key: 'distanciainternaentreombreirasexternas', name: 'Dist. interna entre ombreiras externas', crit: 'Medida de projeto' },
-    { key: 'verificacaodaalturadaombreira', name: 'Altura da ombreira', kind: 'status', crit: 'Passa / Não passa' },
+    { key: 'inclinacaodabasedeapoiodostrilhos', name: 'Inclinação da base de apoio dos trilhos', crit: 'Entre 1:35 e 1:45', sec: SECAO_DIMENSIONAIS },
+    { key: 'empenotransversal', name: 'Empeno transversal (torção) entre apoios', crit: 'Máx. 1 mm', max: 1, sec: SECAO_DIMENSIONAIS },
+    { key: 'ensaiodetorcaonaombreiraa', name: 'Torção na ombreira A', kind: 'status', crit: 'Carga 340 N·m', sec: SECAO_DIMENSIONAIS },
+    { key: 'ensaiodetorcaonaombreirab', name: 'Torção na ombreira B', kind: 'status', crit: 'Carga 340 N·m', sec: SECAO_DIMENSIONAIS },
+    { key: 'ensaiodetorcaonaombreirac', name: 'Torção na ombreira C', kind: 'status', crit: 'Carga 340 N·m', sec: SECAO_DIMENSIONAIS },
+    { key: 'ocomprimentododormente', name: 'Comprimento do dormente', crit: '2.800 mm (±6)', min: 2794, max: 2806, sec: SECAO_DIMENSIONAIS },
+    { key: 'comprimentododormente', name: 'Comprimento do dormente', crit: '2.800 mm (±6)', min: 2794, max: 2806, sec: SECAO_DIMENSIONAIS },
+    { key: 'odormmentedeverapossuirbaseretangular', name: 'Base retangular', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'odormentedeverapossuirbaseretangular', name: 'Base retangular', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'baseretangularnatesteira', name: 'Base retangular na testeira', crit: '300 mm (±3)', min: 297, max: 303, sec: SECAO_DIMENSIONAIS },
+    { key: 'alturadodormentenasecaoentreombreiras', name: 'Altura entre ombreiras', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'alturadodormentenasecaodaplataforma', name: 'Altura na seção da plataforma', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'aalturadodormentenasecaodaplataforma', name: 'Altura na seção da plataforma', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'alturadodormentenasecaodocentro', name: 'Altura na seção do centro', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'distanciainternaentreombreirasdemesmoapoio', name: 'Dist. interna entre ombreiras (mesmo apoio)', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'distanciainternaentreombreirasdomesmotrilho', name: 'Dist. interna entre ombreiras do mesmo trilho', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'distanciainternaentreombreirasexternas', name: 'Dist. interna entre ombreiras externas', crit: 'Medida de projeto', sec: SECAO_DIMENSIONAIS },
+    { key: 'verificacaodaalturadaombreira', name: 'Altura da ombreira', kind: 'status', crit: 'Passa / Não passa', sec: SECAO_DIMENSIONAIS },
     // ---- outros modelos iAuditor ----
     { key: 'medidaencontradanareguadebitola', name: 'Medida encontrada na régua de bitola', unit: 'mm', crit: 'Bitola Larga: 1599 a 1602 mm / Bitola Métrica: 999 a 1002 mm' },
     // ---- conclusão ----
@@ -153,6 +157,7 @@
     { keys: ['quantidadeproduzida'], label: 'Quantidade produzida' },
     { keys: ['quantidadereprovada'], label: 'Quantidade reprovada' },
     { keys: ['seriedelotes'], label: 'Série de lotes' },
+    { keys: ['odormentefoiproduzidocomcuratermica', 'curatermica'], label: 'Cura térmica' },
   ];
 
   function metaLabelFor(text) {
@@ -562,6 +567,253 @@
     return campos;
   }
 
+  /* =====================================================================
+     Formulários do SafetyCulture — é o PDF novo, como o "Formulário 32905"
+     do ensaio de liberação da Cavan. Ele não traz mais tabela: cada
+     pergunta ocupa uma ou mais linhas na margem e a resposta vem logo
+     abaixo, recuada. Os critérios estão escritos dentro da própria
+     pergunta ("Carga 234,80 kN", "Tolerância +- 6mm", "Cavan 4,54 à
+     5,55"), então é de lá que eles são lidos — inclusive a faixa que muda
+     entre Cavan e Conprem.
+     ===================================================================== */
+
+  function ehLinhaNumeroFormulario(texto) { return /^formul[aá]rio\s*\d+/i.test(clean(texto)); }
+  function ehLinhaDeFotos(texto) { return /^\d+\s*[-–]\s*fotos?$/i.test(clean(texto)); }
+
+  function linhasDoFormulario(pages) {
+    const linhas = [];
+    for (const pg of pages) {
+      for (const row of pg.rows) {
+        if (rowIsFooterOrNoise(row, pg)) continue;
+        linhas.push({ page: pg.pageNum, top: row.top, x: row.x, texto: clean(row.text) });
+      }
+    }
+    return linhas;
+  }
+
+  // A pergunta fica na margem e a resposta recua ~15pt: descobre as duas colunas.
+  function margensDoFormulario(linhas) {
+    const xs = [...new Set(linhas.map((l) => Math.round(l.x)))].sort((a, b) => a - b);
+    const rotulo = xs.length ? xs[0] : 0;
+    const valor = xs.find((x) => x - rotulo >= 6 && x - rotulo <= 60);
+    return { rotulo, valor: valor == null ? rotulo + 15 : valor };
+  }
+
+  function paresDoFormulario(linhas, margens) {
+    const pares = [];
+    let rotulo = [], valores = [], pos = null;
+    const fechar = () => {
+      if (rotulo.length && valores.length) {
+        pares.push({ rotulo: clean(rotulo.join(' ')), valor: clean(valores.join(' ')), page: pos.page, top: pos.top });
+      }
+      rotulo = []; valores = []; pos = null;
+    };
+    for (const l of linhas) {
+      if (ehLinhaNumeroFormulario(l.texto)) continue;
+      if (l.x - margens.rotulo <= 3) {
+        if (valores.length) fechar();
+        if (ehLinhaDeFotos(l.texto)) { rotulo = []; pos = null; continue; }
+        if (!rotulo.length) pos = { page: l.page, top: l.top };
+        rotulo.push(l.texto);
+      } else if (Math.abs(l.x - margens.valor) <= 8 && rotulo.length) {
+        valores.push(l.texto);
+      }
+      // cabeçalho centralizado e numeração de página ficam de fora
+    }
+    fechar();
+    return pares;
+  }
+
+  function tituloDoFormulario(pages) {
+    const pg = pages[0];
+    if (!pg) return '';
+    const partes = pg.rows
+      .filter((row) => !rowIsFooterOrNoise(row, pg) && row.top < 120 && !ehLinhaNumeroFormulario(row.text))
+      .map((row) => clean(row.text));
+    return clean(partes.join(' ')).replace(/\s*\|\s*/g, ' | ');
+  }
+
+  function rotuloMetaDoFormulario(texto) {
+    const n = norm(texto);
+    for (const m of META) {
+      if (m.keys.some((k) => n === k || n.indexOf(k) === 0)) return m.label;
+    }
+    return null;
+  }
+
+  function numeroTexto(n) {
+    if (n == null || isNaN(n)) return '';
+    return String(Math.round(n * 1000) / 1000).replace('.', ',');
+  }
+
+  function unidadeDoRotulo(texto) {
+    if (/\d\s*k\s*n\b/i.test(texto)) return 'kN';
+    if (/\d\s*n\s*[.\u00b7]?\s*m\b/i.test(texto)) return 'N\u00b7m';
+    if (/\d\s*mm\b/i.test(texto) || /\bmm\b/i.test(texto)) return 'mm';
+    return '';
+  }
+
+  // "Conprem 0,3 à 1,8 | Cavan 4,54 à 5,55" e "1mm Cavan | 4,00 à 6,00 Conprem"
+  function faixaDoFornecedor(texto, fornecedor) {
+    const n = norm(fornecedor || '');
+    const marca = n.indexOf('cavan') !== -1 ? 'cavan' : (n.indexOf('conprem') !== -1 ? 'conprem' : '');
+    if (!marca) return null;
+    const t = clean(texto);
+    const num = '(-?\\d+(?:[.,]\\d+)?)';
+    const ate = '\\s*(?:a|\u00e0|ate|at\u00e9)\\s*';
+    let m = t.match(new RegExp(marca + '\\s*' + num + ate + num, 'i'));
+    if (m) return { min: toNumber(m[1]), max: toNumber(m[2]), rotulo: marca };
+    m = t.match(new RegExp(num + ate + num + '\\s*(?:mm\\s*)?' + marca, 'i'));
+    if (m) return { min: toNumber(m[1]), max: toNumber(m[2]), rotulo: marca };
+    m = t.match(new RegExp(num + '\\s*mm\\s*' + marca, 'i'));
+    if (m) return { max: toNumber(m[1]), rotulo: marca };
+    return null;
+  }
+
+  function faixaDaTolerancia(texto) {
+    const t = clean(texto);
+    // "250mm ... (Tolerância +6mm/-3mm)"
+    let m = t.match(/(\d[\d.,]*)\s*mm[^()]*\(\s*toler[âa]ncia\s*\+\s*(\d[\d.,]*)\s*mm?\s*\/\s*[-–]\s*(\d[\d.,]*)/i);
+    if (m) { const base = toNumber(m[1]); return { min: base - toNumber(m[3]), max: base + toNumber(m[2]) }; }
+    // "2.800mm (Tolerância +- 6mm)"
+    m = t.match(/(\d[\d.,]*)\s*mm[^()]*\(\s*toler[âa]ncia\s*\+\s*[-–]\s*(\d[\d.,]*)/i);
+    if (m) { const base = toNumber(m[1]), tol = toNumber(m[2]); return { min: base - tol, max: base + tol }; }
+    // "(154,50mm +1,5mm -0,5mm)"
+    m = t.match(/\(\s*(\d[\d.,]*)\s*mm\s*\+\s*(\d[\d.,]*)\s*mm\s*[-–]\s*(\d[\d.,]*)\s*mm/i);
+    if (m) { const base = toNumber(m[1]); return { min: base - toNumber(m[3]), max: base + toNumber(m[2]) }; }
+    // "Máximo de 0,025mm"
+    m = t.match(/m[aá]ximo\s*(?:de\s*)?(\d[\d.,]*)/i);
+    if (m) return { max: toNumber(m[1]) };
+    return null;
+  }
+
+  function cargaDoRotulo(texto) {
+    const achados = clean(texto).match(/carga\s*(?:de\s*)?(-?\d+(?:[.,]\d+)?)\s*(?:k\s*n|n\s*[.\u00b7]?\s*m)\b/gi);
+    if (!achados || !achados.length) return null;
+    const ultimo = achados[achados.length - 1].match(/(-?\d+(?:[.,]\d+)?)/);
+    return ultimo ? toNumber(ultimo[1]) : null;
+  }
+
+  function criterioDoRotulo(texto, fornecedor) {
+    const crit = { unidade: unidadeDoRotulo(texto) };
+    if (/\(\s*passa\s*\/\s*n[aã]o\s*passa\s*\)/i.test(texto)) { crit.status = true; return crit; }
+    if (/fissura/i.test(texto) && /\?\s*$/.test(clean(texto))) { crit.bool = true; return crit; }
+    const faixa = faixaDoFornecedor(texto, fornecedor) || faixaDaTolerancia(texto);
+    if (faixa) return Object.assign(crit, faixa);
+    const carga = cargaDoRotulo(texto);
+    if (carga != null) crit.carga = carga;
+    return crit;
+  }
+
+  function textoDoCriterio(crit, entry) {
+    const un = crit.unidade ? ' ' + crit.unidade : '';
+    const quem = crit.rotulo ? ' (' + crit.rotulo.charAt(0).toUpperCase() + crit.rotulo.slice(1) + ')' : '';
+    if (crit.status) return 'Passa / Não passa';
+    if (crit.bool) return 'Esperado: Não';
+    if (crit.min != null && crit.max != null) return 'Entre ' + numeroTexto(crit.min) + ' e ' + numeroTexto(crit.max) + un + quem;
+    if (crit.max != null) return 'Máx. ' + numeroTexto(crit.max) + un + quem;
+    if (crit.min != null) return 'Mín. ' + numeroTexto(crit.min) + un + quem;
+    if (crit.carga != null) return 'Carga ' + numeroTexto(crit.carga) + un;
+    return (entry && entry.crit) || '—';
+  }
+
+  function nomeDoRotulo(texto, entry) {
+    if (entry) return entry.name;
+    let nome = clean(texto).replace(/\s*\([^)]{40,}\)\s*/g, ' ');
+    nome = clean(nome.replace(/\s*carga\s*[-–]?\s*\d+(?:[.,]\d+)?\s*(?:k\s*n|n\s*[.\u00b7]?\s*m)\.?\s*$/i, ''));
+    if (nome.length > 120) nome = clean(nome.slice(0, 117)) + '…';
+    return nome || clean(texto);
+  }
+
+  function secaoDoRotulo(texto, entry) {
+    if (entry && entry.sec) return entry.sec;
+    const n = norm(texto);
+    if (/^(momento|ancoragem|naancoragem|aderencia|ensaiodearrancamento|arrancamento|fissura)/.test(n)) return SECAO_CARGAS;
+    if (/(inclinacao|empeno|torcao|comprimento|altura|distancia|ombreira|gabarito|dimensional)/.test(n)) return SECAO_DIMENSIONAIS;
+    if (/(momento|carga|fissura)/.test(n)) return SECAO_CARGAS;
+    return 'Outros ensaios';
+  }
+
+  function linhaDoFormulario(nome, valor, entry, crit) {
+    const efetivo = entry ? Object.assign({}, entry, { unit: entry.unit || crit.unidade }) : { unit: crit.unidade };
+    const linha = {
+      ensaio: clean(nome),
+      valor: formatValue(valor, efetivo),
+      criterio: textoDoCriterio(crit, entry),
+      situacao: 'info',
+      situacaoLabel: 'Medido',
+    };
+    const nv = norm(valor);
+    if (crit.bool || (entry && entry.kind === 'bool')) {
+      linha.situacao = nv === 'nao' ? 'ok' : 'fail';
+      linha.situacaoLabel = linha.situacao === 'ok' ? 'Conforme' : 'Atenção';
+      return linha;
+    }
+    if (toNumber(valor) === null && RE_STATUS.test(clean(valor))) {
+      linha.situacao = /^(aprovado|conforme|sim|ok|passa)$/i.test(clean(valor)) ? 'ok' : 'fail';
+      linha.situacaoLabel = clean(valor);
+      return linha;
+    }
+    if (crit.min != null || crit.max != null) { applyRangeSituation(linha, valor, crit); return linha; }
+    if (entry && (entry.min != null || entry.max != null)) { applyRangeSituation(linha, valor, entry); return linha; }
+    if (crit.carga != null) {
+      const medido = toNumber(valor);
+      if (medido != null) {
+        const atingiu = medido >= crit.carga * 0.99;
+        linha.situacao = atingiu ? 'ok' : 'fail';
+        linha.situacaoLabel = atingiu ? 'Carga atingida' : 'Abaixo da carga';
+      }
+      return linha;
+    }
+    return linha;
+  }
+
+  function conclusaoDoFormulario(valor) {
+    const nv = norm(valor);
+    return {
+      ensaio: 'Lote aprovado?',
+      valor: clean(valor),
+      criterio: '—',
+      situacao: (nv === 'sim' || nv === 'aprovado') ? 'ok' : 'fail',
+      situacaoLabel: clean(valor),
+    };
+  }
+
+  function extrairFormularioSafetyCulture(pages, meta, sections, dedupe) {
+    if (!pages.some((pg) => pg.rows.some((row) => ehLinhaNumeroFormulario(row.text)))) return null;
+    const cabecalho = tituloDoFormulario(pages);
+    // a inspeção de pista usa o mesmo formulário, mas já tem leitor próprio abaixo
+    if (pages.some((pg) => ehCabecalhoFormularioPista(pg.rows.map((row) => row.text).join(' ')))) return null;
+
+    const linhas = linhasDoFormulario(pages);
+    const margens = margensDoFormulario(linhas);
+    const pares = paresDoFormulario(linhas, margens);
+    if (!pares.length) return null;
+
+    if (cabecalho) meta['Tipo de relatório'] = cabecalho;
+    const numero = (pages[0].rows.find((row) => ehLinhaNumeroFormulario(row.text)) || {}).text;
+    const digitos = numero && clean(numero).match(/\d+/);
+    if (digitos) meta['Formulário'] = digitos[0];
+
+    // o fornecedor vem antes dos ensaios: a faixa aceita muda entre Cavan e Conprem
+    const parFornecedor = pares.find((par) => norm(par.rotulo) === 'fornecedor');
+    const fornecedor = parFornecedor ? parFornecedor.valor : '';
+
+    const campos = {};
+    let conclusao = null;
+    for (const par of pares) {
+      campos[par.rotulo] = par.valor;
+      if (norm(par.rotulo).indexOf('loteaprovado') === 0) { conclusao = conclusaoDoFormulario(par.valor); continue; }
+      const rotuloMeta = rotuloMetaDoFormulario(par.rotulo);
+      if (rotuloMeta) { if (!meta[rotuloMeta]) meta[rotuloMeta] = par.valor; continue; }
+      const entry = matchDict(norm(par.rotulo));
+      const crit = criterioDoRotulo(par.rotulo, fornecedor);
+      const linha = linhaDoFormulario(nomeDoRotulo(par.rotulo, entry), par.valor, entry, crit);
+      addRow(sections, secaoDoRotulo(par.rotulo, entry), linha, dedupe, 'formulario:' + par.page + ':' + Math.round(par.top));
+    }
+    return { campos, conclusao };
+  }
+
   /* ---------- parser principal ---------- */
   function parse(pagesRaw) {
     const pages = (pagesRaw || []).map((pg) => ({
@@ -575,6 +827,19 @@
     const headers = detectHeaders(pages);
     const sections = {};
     const dedupe = new Set();
+
+    // o formulário novo do SafetyCulture é rótulo em cima e resposta embaixo:
+    // a leitura por layout de tabela não vale aqui e o leitor próprio resolve tudo.
+    const formulario = extrairFormularioSafetyCulture(pages, meta, sections, dedupe);
+    if (formulario) {
+      return {
+        meta,
+        sections: sortSectionTitles(Object.keys(sections)).map((title) => ({ title, rows: sections[title] })),
+        conclusao: formulario.conclusao,
+        camposFormulario: formulario.campos,
+      };
+    }
+
     const camposFormulario = extrairFormularioPista(pages, meta, sections, dedupe);
     let conclusao = null;
     let bitolaContext = '';

@@ -234,6 +234,41 @@ A página `ensaios-liberacao.html` agora possui um importador de PDF iAuditor in
 - A opção de cadastro manual permanece disponível no botão “Novo ensaio manual”.
 - Como a tabela existente `ensaios_liberacao` não possui uma coluna específica para “tipo de ensaio”, o tipo do relatório e o resumo das leituras importadas são gravados no campo `observacoes`.
 
+### O formulário novo do SafetyCulture (ex.: `Formulário 32905`)
+
+O PDF que o SafetyCulture exporta hoje não é mais a tabela do iAuditor antigo:
+cada pergunta ocupa uma ou mais linhas na margem e a resposta vem logo abaixo,
+recuada. O leitor reconhece esse formato pela linha `Formulário <número>` e passa
+a ler pares pergunta/resposta em vez de colunas — é assim que o ensaio de
+liberação da Cavan (`MATERIAIS | DORMENTE CONCRETO - ENSAIO FERRONORTE`) entra no
+sistema.
+
+Do formulário saem, sem digitação:
+
+- **Identificação** — destino, fiscal responsável, fornecedor, tipo de dormente,
+  data do ensaio, lote, molde, cavidade, pista, data de produção, série de lotes
+  e se o lote teve cura térmica.
+- **Ensaios de cargas** — momentos positivo/negativo no apoio e no centro com as
+  perguntas de fissura, ancoragem, aderência e arrancamento nas ombreiras.
+- **Ensaios dimensionais** — inclinação, empeno, torção nas ombreiras,
+  comprimento, base, alturas, distâncias entre ombreiras e altura da ombreira.
+- **Conclusão** — a resposta de `Lote aprovado?`, que define o resultado sugerido.
+
+**O critério é lido de dentro da pergunta.** O formulário escreve o limite junto
+do enunciado (`Carga 234,80 kN`, `Tolerância +- 6mm`, `(154,50mm +1,5mm -0,5mm)`,
+`Máximo de 0,025mm`, `Passa/Não passa`), então é de lá que ele sai — e não de uma
+tabela fixa no código. Isso vale também para os limites que **mudam por fábrica**:
+em `Conprem 0,3 à 1,8 | Cavan 4,54 à 5,55` o leitor aplica a faixa do fornecedor
+que o próprio formulário declarou. A mesma leitura de 5,26 fica conforme para a
+Cavan e fora do limite para a Conprem.
+
+A inspeção de pista usa o mesmo formulário, mas continua no leitor dela
+(`extrairFormularioPista`), que alimenta os campos daquela tela.
+
+Regressão coberta por `tests/leitor-ensaio-liberacao.test.cjs`, com os itens de
+texto do PDF real em `tests/fixtures/ensaio-ferronorte-32905.json`
+(`node --test tests/`).
+
 Arquivos adicionados/alterados nesta integração:
 
 - `js/iauditor-parser.js`
