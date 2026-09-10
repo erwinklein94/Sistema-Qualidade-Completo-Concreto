@@ -579,7 +579,7 @@ function montarObservacoesIauditor({ fileName, meta, tipoEnsaio, classificacao, 
     `Classificação: ${classificacao.tipoClassificado}`,
     `Motivo da classificação: ${classificacao.motivo}`,
   ];
-  const metaTxt = Object.keys(meta || {}).slice(0, 12).map(k => `${k}: ${meta[k]}`).join(' | ');
+  const metaTxt = Object.keys(meta || {}).slice(0, 20).map(k => `${k}: ${meta[k]}`).join(' | ');
   const detalhes = (linhas || []).slice(0, 40).map(l =>
     `- ${l.secao} · ${l.ensaio}: ${l.valor} (${l.situacaoLabel || 'Medido'}; critério: ${l.criterio || '—'})`
   );
