@@ -232,7 +232,7 @@ A página `ensaios-liberacao.html` agora possui um importador de PDF iAuditor in
 - Somente relatórios classificados como ensaio estrutural de liberação, com momentos/cargas do dormente, habilitam o botão de registro automático.
 - Relatórios de inspeção de pista, concretagem, bitola e ensaios complementares são exibidos como leitura de apoio, sem liberar lote nessa aba.
 - A opção de cadastro manual permanece disponível no botão “Novo ensaio manual”.
-- Como a tabela existente `ensaios_liberacao` não possui uma coluna específica para “tipo de ensaio”, o tipo do relatório e o resumo das leituras importadas são gravados no campo `observacoes`.
+- O resumo das leituras e o tipo do relatório continuam no campo `observacoes`, mas cada ensaio também é gravado em coluna própria (ver abaixo).
 
 ### O formulário novo do SafetyCulture (ex.: `Formulário 32905`)
 
@@ -269,12 +269,56 @@ Regressão coberta por `tests/leitor-ensaio-liberacao.test.cjs`, com os itens de
 texto do PDF real em `tests/fixtures/ensaio-ferronorte-32905.json`
 (`node --test tests/`).
 
+### As leituras do ensaio têm coluna própria
+
+O resumo em `observacoes` continua sendo gravado, mas ele é só leitura humana:
+não dá para filtrar, somar nem cruzar por medida. Por isso cada ensaio do
+formulário tem **coluna própria** em `ensaios_liberacao` — e em
+`conprem_ensaios_liberacao`, que é cópia dela.
+
+Rode `supabase/2026-09-10-ensaios-liberacao-colunas-do-ensaio.sql` no SQL Editor
+antes de usar (é tudo `add column if not exists`, nada é obrigatório e nenhum
+registro antigo muda).
+
+| Grupo | Colunas |
+|---|---|
+| Identificação | `formulario_numero`, `destino`, `tipo_dormente`, `molde`, `cavidade`, `pista`, `data_producao`, `cura_termica` |
+| Cargas | `momento_pos_apoio`, `momento_neg_apoio`, `momento_pos_centro`, `momento_neg_centro` (e o `_fissura` de cada um), `ancoragem_carga`, `ancoragem_fissura`, `aderencia_escorregamento`, `arrancamento_ombreira_a/b/c` |
+| Dimensionais | `inclinacao_base`, `empeno_transversal`, `torcao_ombreira_a/b/c`, `comprimento`, `base_testeira`, `altura_entre_ombreiras`, `altura_centro`, `altura_plataforma`, `dist_interna_ombreiras_apoio`, `dist_interna_ombreiras_externas`, `altura_ombreira` |
+
+Medida é `numeric` e resposta de formulário ("Sim"/"Não",
+"Aprovado"/"Reprovado") é `text`, mesmo critério de
+`conprem_ensaios_dormentes`. O que o formulário não perguntou fica nulo — o
+ensaio da Cavan preenche 32 das 35 colunas.
+
+O de-para mora em `COLUNAS_LEITURA` e `COLUNAS_IDENTIFICACAO`, em
+`js/ensaios-liberacao.js`, na chave do nome que o leitor dá ao ensaio. As mesmas
+listas montam a seção "Leituras do ensaio" da ficha e as colunas do Excel — no
+Excel entra só o que algum registro do recorte tem preenchido.
+
+**Editar um ensaio não apaga a leitura.** As colunas só entram no `update` quando
+o registro veio de uma leitura de PDF; corrigir a série ou o responsável pela
+tela deixa as medidas como estavam.
+
+Consultas que isso passa a permitir:
+
+```sql
+select lote_ensaiado, inclinacao_base from ensaios_liberacao
+ where inclinacao_base > 5.4 order by inclinacao_base desc;
+
+select ano, semana, round(avg(momento_pos_apoio), 2) as media_kn
+  from ensaios_liberacao where momento_pos_apoio is not null
+ group by ano, semana order by ano desc, semana desc;
+```
+
 Arquivos adicionados/alterados nesta integração:
 
 - `js/iauditor-parser.js`
 - `js/ensaios-liberacao.js`
 - `ensaios-liberacao.html`
 - `css/style.css`
+- `supabase/2026-09-10-ensaios-liberacao-colunas-do-ensaio.sql`
+- `tests/leitor-ensaio-liberacao.test.cjs` e `tests/fixtures/ensaio-ferronorte-32905.json`
 
 
 ## Fluxo de Liberação Automático

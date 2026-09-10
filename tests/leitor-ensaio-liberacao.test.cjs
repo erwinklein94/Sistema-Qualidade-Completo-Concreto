@@ -74,3 +74,52 @@ test('a inspeção de pista continua no leitor dela, mesmo sendo o mesmo formul�
   assert.equal(pista.meta['Formulário'],undefined);
   assert.deepEqual([pista.meta['Responsável'],pista.meta['Lote'],pista.meta['Quantidade produzida']],['ERWIN KLEIN','3304','275']);
 });
+
+
+// js/ensaios-liberacao.js é script de página, não módulo: roda num contexto com document,
+// window e um U de mentira (só o que o mapeamento encosta) e devolve as duas funções.
+const vm=require('node:vm');
+const contexto=vm.createContext({
+  console,
+  document:{addEventListener(){}},
+  window:{},
+  U:{
+    semanaOperacionalInfo:()=>({semana:37,ano:2026,ini:'2026-09-03',fim:'2026-09-09'}),
+    norm:v=>String(v==null?'':v).trim().toUpperCase(),
+    bitolaDe:reg=>reg.bitola||'',
+  },
+});
+vm.runInContext(
+  fs.readFileSync(path.join(__dirname,'../js/ensaios-liberacao.js'),'utf8')
+    +'\nwindow.__tela={leiturasEmColunas,mapEnsaioParaBanco};',
+  contexto);
+const tela=contexto.window.__tela;
+
+test('cada leitura do formulário cai na coluna certa de ensaios_liberacao',()=>{
+  const colunas=tela.leiturasEmColunas(lido.meta,lido.sections.flatMap(s=>s.rows));
+  assert.deepEqual(colunas,{
+    formulario_numero:'32905', destino:'FERRONORTE', tipo_dormente:'Bitola Larga - E-clip',
+    molde:'8', cavidade:'2', pista:'2', data_producao:'2026-08-25', cura_termica:'Sim',
+    momento_pos_apoio:234.8, momento_pos_apoio_fissura:'Não',
+    momento_neg_apoio:175, momento_neg_apoio_fissura:'Não',
+    momento_pos_centro:46.9, momento_pos_centro_fissura:'Não',
+    momento_neg_centro:67, momento_neg_centro_fissura:'Não',
+    ancoragem_carga:352.2, ancoragem_fissura:'Não',
+    aderencia_escorregamento:0, arrancamento_ombreira_a:53.4, arrancamento_ombreira_b:53.4,
+    inclinacao_base:5.26, empeno_transversal:0.76,
+    torcao_ombreira_a:'Aprovado', torcao_ombreira_b:'Aprovado',
+    comprimento:2800, base_testeira:300, altura_entre_ombreiras:250, altura_centro:220,
+    dist_interna_ombreiras_apoio:155, dist_interna_ombreiras_externas:'Aprovado', altura_ombreira:'Aprovado',
+  });
+  // o que o formulário não perguntou não vira coluna nula
+  assert.ok(!('arrancamento_ombreira_c' in colunas) && !('altura_plataforma' in colunas));
+});
+
+test('editar um ensaio já gravado não manda as colunas do ensaio, para não apagá-las',()=>{
+  const base={id:'abc',dataEnsaio:'2026-09-08',fornecedor:'Cavan SP',projeto:'FERRO NORTE',
+    bitola:'Bitola Larga',lote:'3301',resultado:'Aprovado',serieLiberada:'Série 01 - FN'};
+  const semLeitura=tela.mapEnsaioParaBanco(base);
+  assert.deepEqual(Object.keys(semLeitura).filter(k=>/^(momento_|inclinacao_base|cura_termica|comprimento)/.test(k)),[]);
+  const comLeitura=tela.mapEnsaioParaBanco({...base,leituras:{inclinacao_base:5.26,cura_termica:'Sim'}});
+  assert.deepEqual([comLeitura.inclinacao_base,comLeitura.cura_termica],[5.26,'Sim']);
+});

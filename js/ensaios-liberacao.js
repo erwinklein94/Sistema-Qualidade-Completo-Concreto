@@ -6,6 +6,8 @@ let PRODUCAO_LOTES = [];
 let ENSAIOS_CARREGANDO = false;
 let ENSAIOS_ERRO = '';
 let IAUDITOR_RELATORIO_ATUAL = null;
+// leituras do PDF esperando o "Editar antes de salvar": o formulário não tem campo para elas
+let LEITURAS_PENDENTES = null;
 
 const CAMPOS = [
   'producaoLoteId', 'dataEnsaio', 'fornecedor', 'projeto', 'bitola', 'lote',
@@ -253,6 +255,7 @@ function atualizarAvisoAcompanhamento(l) {
 
 function abrirNovo() {
   if (!Auth.pode('criar')) { App.toast(Auth.mensagemSemPermissao('criar registros'), 'aviso'); return; }
+  LEITURAS_PENDENTES = null;
   document.getElementById('form').reset();
   document.getElementById('id').value = '';
   popularSelectLotes();
@@ -268,6 +271,7 @@ function editar(id) {
   const r = obterEnsaio(id);
   if (!r) return;
   if (SafetyCultureSync.bloquearAlteracao(r)) return;
+  LEITURAS_PENDENTES = null;
   document.getElementById('form').reset();
   document.getElementById('id').value = r.id;
   popularSelectLotes(r.producaoLoteId || '');
@@ -298,6 +302,7 @@ async function salvar() {
   }
 
   const reg = { id: document.getElementById('id').value || undefined };
+  if (LEITURAS_PENDENTES && !reg.id) reg.leituras = LEITURAS_PENDENTES;
   CAMPOS.forEach(c => { const el = document.getElementById(c); if (el) reg[c] = el.value; });
 
   const prod = obterProducao(reg.producaoLoteId) || encontrarProducaoPorLote(reg.lote, reg.fornecedor);
@@ -370,6 +375,7 @@ function ver(id) {
       ${item('Resultado', badgeResultado(r.resultado))}${item('Série liberada', U.esc(r.serieLiberada))}${item('Quantidade ensaiada', U.esc(r.quantidadeEnsaiada))}
       ${item('Responsável', U.esc(r.responsavel))}${item('Relatório', linkRelatorio(r))}
     </div>
+    ${fichaLeituras(r)}
     ${r.observacoes ? `<div class="detalhe-secao">Observações</div><p style="font-size:13.5px;color:var(--cinza-texto);line-height:1.7">${U.esc(r.observacoes)}</p>` : ''}
     <div class="form-acoes"><button class="btn btn-secundario" onclick="fecharVer()">Fechar</button>${SafetyCultureSync.podeEditarRegistro(r) ? `<button class="btn btn-primario" onclick="fecharVer(); editar('${r.id}')">Editar</button>` : ''}</div>`;
   document.getElementById('modalVer').classList.add('aberto');
@@ -462,6 +468,159 @@ async function extrairPaginasPdfIauditor(file) {
   return pages;
 }
 
+/* ===================== LEITURAS DO ENSAIO EM COLUNAS =====================
+   O que o leitor tira do formulário não fica só no texto de `observacoes`:
+   cada ensaio tem coluna própria em `ensaios_liberacao`, para dar para
+   filtrar, somar e cruzar por medida (ver
+   supabase/2026-09-10-ensaios-liberacao-colunas-do-ensaio.sql).
+
+   O par é [coluna no Supabase, tipo]. A chave é o nome que o parser dá ao
+   ensaio — os apelidos abaixo existem porque o formulário antigo e o novo
+   escrevem a mesma medida com nomes diferentes.
+   ======================================================================== */
+const COLUNAS_IDENTIFICACAO = {
+  'Formulário': ['formulario_numero', 'texto'],
+  'Destino': ['destino', 'texto'],
+  'Tipo de dormente': ['tipo_dormente', 'texto'],
+  'Molde': ['molde', 'texto'],
+  'Cavidade': ['cavidade', 'texto'],
+  'Pista': ['pista', 'texto'],
+  'Data de produção': ['data_producao', 'data'],
+  'Cura térmica': ['cura_termica', 'texto'],
+};
+
+const COLUNAS_LEITURA = {
+  // cargas
+  'Momento positivo no apoio dos trilhos': ['momento_pos_apoio', 'numero'],
+  '↳ Apresentou fissuras? (apoio, positivo)': ['momento_pos_apoio_fissura', 'texto'],
+  'Momento negativo no apoio dos trilhos': ['momento_neg_apoio', 'numero'],
+  '↳ Apresentou fissuras? (apoio, negativo)': ['momento_neg_apoio_fissura', 'texto'],
+  'Momento positivo no centro do dormente': ['momento_pos_centro', 'numero'],
+  '↳ Apresentou fissuras? (centro, positivo)': ['momento_pos_centro_fissura', 'texto'],
+  'Momento negativo no centro do dormente': ['momento_neg_centro', 'numero'],
+  '↳ Apresentou fissuras? (centro, negativo)': ['momento_neg_centro_fissura', 'texto'],
+  'Ancoragem (carga 50% acima do mom. positivo)': ['ancoragem_carga', 'numero'],
+  'Ancoragem (momento positivo nos apoios)': ['ancoragem_carga', 'numero'],
+  '↳ Ancoragem: fissura > 0,5 mm após descarga?': ['ancoragem_fissura', 'texto'],
+  'Aderência — escorregamento do aço': ['aderencia_escorregamento', 'numero'],
+  'Arrancamento na ombreira A': ['arrancamento_ombreira_a', 'numero'],
+  'Arrancamento na ombreira B': ['arrancamento_ombreira_b', 'numero'],
+  'Arrancamento na ombreira C': ['arrancamento_ombreira_c', 'numero'],
+  // dimensionais
+  'Inclinação da base de apoio dos trilhos': ['inclinacao_base', 'numero'],
+  'Empeno transversal (torção) entre apoios': ['empeno_transversal', 'numero'],
+  'Torção na ombreira A': ['torcao_ombreira_a', 'texto'],
+  'Torção na ombreira B': ['torcao_ombreira_b', 'texto'],
+  'Torção na ombreira C': ['torcao_ombreira_c', 'texto'],
+  'Comprimento do dormente': ['comprimento', 'numero'],
+  'Base retangular': ['base_testeira', 'numero'],
+  'Base retangular na testeira': ['base_testeira', 'numero'],
+  'Altura entre ombreiras': ['altura_entre_ombreiras', 'numero'],
+  'Altura na seção do centro': ['altura_centro', 'numero'],
+  'Altura na seção da plataforma': ['altura_plataforma', 'numero'],
+  'Dist. interna entre ombreiras (mesmo apoio)': ['dist_interna_ombreiras_apoio', 'numero'],
+  'Dist. interna entre ombreiras do mesmo trilho': ['dist_interna_ombreiras_apoio', 'numero'],
+  'Dist. interna entre ombreiras externas': ['dist_interna_ombreiras_externas', 'texto'],
+  'Altura da ombreira': ['altura_ombreira', 'texto'],
+};
+
+// Os rótulos das colunas na ficha e no Excel, na ordem em que o ensaio acontece.
+const ROTULOS_LEITURA = [
+  ['momento_pos_apoio', 'Momento positivo no apoio (kN)'],
+  ['momento_pos_apoio_fissura', 'Fissura no apoio (positivo)'],
+  ['momento_neg_apoio', 'Momento negativo no apoio (kN)'],
+  ['momento_neg_apoio_fissura', 'Fissura no apoio (negativo)'],
+  ['momento_pos_centro', 'Momento positivo no centro (kN)'],
+  ['momento_pos_centro_fissura', 'Fissura no centro (positivo)'],
+  ['momento_neg_centro', 'Momento negativo no centro (kN)'],
+  ['momento_neg_centro_fissura', 'Fissura no centro (negativo)'],
+  ['ancoragem_carga', 'Ancoragem (kN)'],
+  ['ancoragem_fissura', 'Fissura na ancoragem'],
+  ['aderencia_escorregamento', 'Aderência — escorregamento (mm)'],
+  ['arrancamento_ombreira_a', 'Arrancamento ombreira A (kN)'],
+  ['arrancamento_ombreira_b', 'Arrancamento ombreira B (kN)'],
+  ['arrancamento_ombreira_c', 'Arrancamento ombreira C (kN)'],
+  ['inclinacao_base', 'Inclinação da base'],
+  ['empeno_transversal', 'Empeno transversal (mm)'],
+  ['torcao_ombreira_a', 'Torção ombreira A'],
+  ['torcao_ombreira_b', 'Torção ombreira B'],
+  ['torcao_ombreira_c', 'Torção ombreira C'],
+  ['comprimento', 'Comprimento (mm)'],
+  ['base_testeira', 'Base na testeira (mm)'],
+  ['altura_entre_ombreiras', 'Altura entre ombreiras (mm)'],
+  ['altura_centro', 'Altura no centro (mm)'],
+  ['altura_plataforma', 'Altura na plataforma (mm)'],
+  ['dist_interna_ombreiras_apoio', 'Dist. interna ombreiras (mm)'],
+  ['dist_interna_ombreiras_externas', 'Dist. interna ombreiras externas'],
+  ['altura_ombreira', 'Altura da ombreira'],
+];
+
+const ROTULOS_IDENTIFICACAO = [
+  ['formulario_numero', 'Formulário'],
+  ['destino', 'Destino'],
+  ['tipo_dormente', 'Tipo de dormente'],
+  ['molde', 'Molde'],
+  ['cavidade', 'Cavidade'],
+  ['pista', 'Pista'],
+  ['data_producao', 'Data de produção'],
+  ['cura_termica', 'Cura térmica'],
+];
+
+const COLUNAS_ENSAIO = ROTULOS_IDENTIFICACAO.concat(ROTULOS_LEITURA);
+
+// O valor vem formatado do leitor ("234,8 kN", "2800,0 mm"): a coluna quer o número.
+function numeroLeitura(v) {
+  const s = String(v == null ? '' : v)
+    .replace(/[^0-9.,-]/g, '')
+    .replace(/\.(?=\d{3}\b)/g, '')
+    .replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function valorDaColuna(valor, tipo) {
+  if (tipo === 'numero') return numeroLeitura(valor);
+  if (tipo === 'data') return dataPtParaISO(valor) || null;
+  return textoOuNull(valor);
+}
+
+function leiturasEmColunas(meta, linhas) {
+  const leituras = {};
+  Object.entries(COLUNAS_IDENTIFICACAO).forEach(([rotulo, [coluna, tipo]]) => {
+    const v = valorDaColuna(meta?.[rotulo], tipo);
+    if (v != null) leituras[coluna] = v;
+  });
+  (linhas || []).forEach(l => {
+    const par = COLUNAS_LEITURA[l.ensaio];
+    if (!par) return;
+    const v = valorDaColuna(l.valor, par[1]);
+    if (v != null && leituras[par[0]] == null) leituras[par[0]] = v;
+  });
+  return leituras;
+}
+
+function leiturasDoRegistro(r) {
+  const leituras = {};
+  COLUNAS_ENSAIO.forEach(([coluna]) => { if (r[coluna] != null && r[coluna] !== '') leituras[coluna] = r[coluna]; });
+  return leituras;
+}
+
+// Na ficha só aparece o que o ensaio realmente mediu: coluna vazia não vira linha.
+function fichaLeituras(r) {
+  const lidos = r.leituras || {};
+  const item = (rot, val) => `<div class="detalhe-item"><div class="rot">${U.esc(rot)}</div><div class="val">${U.esc(val)}</div></div>`;
+  const mostrar = (coluna) => coluna === 'data_producao'
+    ? U.dataBR(lidos[coluna])
+    : String(lidos[coluna]).replace('.', ',');
+  const preenchidos = (lista) => lista
+    .filter(([coluna]) => lidos[coluna] != null && lidos[coluna] !== '')
+    .map(([coluna, rotulo]) => item(rotulo, mostrar(coluna)));
+  const identificacao = preenchidos(ROTULOS_IDENTIFICACAO);
+  const leituras = preenchidos(ROTULOS_LEITURA);
+  return (identificacao.length ? `<div class="detalhe-secao">Dados do formulário</div><div class="detalhe-grid">${identificacao.join('')}</div>` : '')
+    + (leituras.length ? `<div class="detalhe-secao">Leituras do ensaio</div><div class="detalhe-grid">${leituras.join('')}</div>` : '');
+}
+
 function montarRegistroAPartirDoIauditor(data, fileName, textoBruto) {
   const meta = data?.meta || {};
   const tipoEnsaio = inferirTipoRelatorio(meta, data);
@@ -497,7 +656,9 @@ function montarRegistroAPartirDoIauditor(data, fileName, textoBruto) {
     observacoes: montarObservacoesIauditor({ fileName, meta, tipoEnsaio, classificacao, linhas })
   };
 
-  return { ...reg, tipoEnsaio, classificacao, linhas, acompanhamento14 };
+  const leituras = leiturasEmColunas(meta, linhas);
+
+  return { ...reg, tipoEnsaio, classificacao, linhas, acompanhamento14, leituras };
 }
 
 function linhasRelatorioIauditor(data) {
@@ -690,6 +851,7 @@ function preencherModalComLeituraIauditor() {
     return;
   }
   const r = limparRegistroIauditorParaSalvar(atual.registro);
+  LEITURAS_PENDENTES = r.leituras || null;
   document.getElementById('form').reset();
   document.getElementById('id').value = '';
   popularSelectLotes(r.producaoLoteId || '');
@@ -702,6 +864,7 @@ function preencherModalComLeituraIauditor() {
 function limparRegistroIauditorParaSalvar(r) {
   const reg = {};
   CAMPOS.forEach(c => { reg[c] = r[c] != null ? r[c] : ''; });
+  if (r.leituras && Object.keys(r.leituras).length) reg.leituras = r.leituras;
   return reg;
 }
 
@@ -916,6 +1079,7 @@ function mapEnsaioDoBanco(r) {
     safecultureAuditId: r.safeculture_audit_id || '',
     safecultureTemplateId: r.safeculture_template_id || '',
     safecultureModifiedAt: r.safeculture_modified_at || '',
+    leituras: leiturasDoRegistro(r),
   };
 }
 
@@ -942,6 +1106,8 @@ function mapEnsaioParaBanco(reg) {
     observacoes: textoOuNull(reg.observacoes),
     origem_dados: reg.origemDados || (/importado do leitor/i.test(reg.observacoes || '') ? 'pdf' : 'manual'),
   };
+  // só entram quando a leitura trouxe: assim editar um registro não apaga o ensaio já gravado
+  if (reg.leituras) Object.assign(payload, reg.leituras);
   if (reg.id) payload.id = reg.id;
   return payload;
 }
@@ -999,6 +1165,11 @@ function registrarExportacaoEnsaiosLiberacao(lista) {
     key: `observacaoCampo${indice}`,
     label: rotulo
   }));
+  // as colunas do ensaio só entram no Excel quando algum registro do recorte tem leitura
+  const colunasEnsaio = COLUNAS_ENSAIO
+    .filter(([coluna]) => lista.some(r => r.leituras && r.leituras[coluna] != null && r.leituras[coluna] !== ''))
+    .map(([coluna, rotulo]) => ({ key: coluna, label: rotulo }));
+
 
   Exportacoes.registrar({
     titulo: 'Ensaios de Liberação',
@@ -1018,6 +1189,7 @@ function registrarExportacaoEnsaiosLiberacao(lista) {
         { key: 'quantidadeEnsaiada', label: 'Quantidade ensaiada' },
         { key: 'responsavel', label: 'Responsável' },
         { key: 'linkRelatorio', label: 'Link relatório SharePoint/iAuditor' },
+        ...colunasEnsaio,
         ...colunasObservacoes,
         { key: 'observacoesAdicionais', label: 'Observações adicionais' },
         { key: 'vinculoExport', label: 'Vínculo' }
@@ -1025,12 +1197,18 @@ function registrarExportacaoEnsaiosLiberacao(lista) {
       rows: lista.map((r, linha) => {
         const obs = observacoesExportacao[linha];
         const camposSeparados = {};
+        const leiturasExport = {};
+        colunasEnsaio.forEach(({ key }) => {
+          const v = r.leituras && r.leituras[key];
+          leiturasExport[key] = v == null ? '' : (key === 'data_producao' ? U.dataBR(v) : v);
+        });
         camposObservacoes.forEach((rotulo, indice) => {
           camposSeparados[`observacaoCampo${indice}`] = obs.campos[rotulo] || '';
         });
         return {
           ...r,
           ...camposSeparados,
+          ...leiturasExport,
           dataEnsaioExport: U.dataBR(r.dataEnsaio),
           semanaExport: rotuloSemana(r),
           bitolaExport: bitolaRegistro(r),
