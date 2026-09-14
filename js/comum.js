@@ -48,6 +48,8 @@ const App = {
         group: 'madeira',
         desc: 'Recebimento, qualidade e histórico de dormentes de madeira'
       },
+      { k: 'madeira-lei-dashboard', t: 'Dashboard Operacional', ic: ICN.dashboard, href: 'madeira-lei.html#dashboard', group: 'madeira' },
+      { k: 'madeira-lei-registros', t: 'Registros Operacionais', ic: ICN.producao, href: 'madeira-lei.html#registros', group: 'madeira' },
       { k: 'madeira-visao', t: 'Dashboard Madeira', ic: ICN.dashboard, href: 'dormentes-madeira.html', group: 'madeira' },
       { k: 'madeira-inspecoes', t: 'Histórico de Inspeções', ic: ICN.check, href: 'madeira-inspecoes.html', group: 'madeira' },
 

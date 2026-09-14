@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Dashboard e registros operacionais de dormentes de madeira de lei.">
+  <title>Operação Madeira de Lei · Controle de Qualidade Rumo</title>
+  <script>
+    (function(){
+      try{
+        if(localStorage.getItem('temaControleDormentes')==='escuro'){
+          document.documentElement.setAttribute('data-theme','dark');
+        }
+      }catch(e){}
+    })();
+  </script>
+  <link rel="stylesheet" href="css/madeira-lei-operacao.css?v=20260914-integrado-v1">
+</head>
+<body class="sidebar-collapsed auth-loading">
+  <div id="integracaoEstado" class="integracao-loading" role="status" aria-live="polite">Validando acesso pelo Sistema de Qualidade…</div>
+  <div class="app">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar__brand"><img class="sidebar__logo" src="assets/rumo/rumo-logo-branco.png" alt="Rumo"></div>
+      <a class="sidebar__back-link" href="dormentes-madeira.html">← Área Dormentes de Madeira</a>
+      <div class="sidebar__rule"></div>
+      <nav class="nav" aria-label="Operação de madeira de lei">
+        <a class="nav__item" href="#dashboard" data-view="dashboard"><svg class="nav__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-dashboard"></use></svg> Dashboard</a>
+        <a class="nav__item" href="#registros" data-view="registros"><svg class="nav__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-records"></use></svg> Registros</a>
+        <div class="nav__sep"></div>
+        <button id="btn-tema" class="nav__item nav__theme" type="button">
+          <svg class="nav__ico" id="tema-ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-sun"></use></svg>
+          <span id="tema-txt">Tema claro</span>
+        </button>
+      </nav>
+    </aside>
+    <button class="sidebar-backdrop" type="button" aria-label="Fechar menu" tabindex="-1"></button>
+    <main class="main">
+      <div class="top-menu">
+        <button id="btn-menu" class="btn btn--ghost menu-toggle" type="button" aria-controls="sidebar" aria-expanded="false"><svg class="btn__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-menu"></use></svg> Menu</button>
+        <span class="top-menu__module">Dormentes de Madeira · Operação</span>
+        <div class="top-menu__user">
+          <div class="top-menu__account" aria-label="Conta conectada">
+            <svg class="top-menu__account-icon" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-user"></use></svg>
+            <span id="user-chip" class="user-chip"></span>
+            <button class="btn btn--ghost btn--sm top-menu__logout" type="button" onclick="Auth.sair()"><svg class="btn__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-logout"></use></svg>Sair</button>
+          </div>
+        </div>
+      </div>
+      <!-- ============================ TELA: REGISTROS ============================ -->
+      <section id="view-registros" class="view">
+        <header class="page-head">
+          <div>
+            <div class="page-head__eyebrow">Registros</div>
+            <h1>Pedidos em inspeção e transporte</h1>
+            <p class="page-head__sub">Histórico oficial aprovado pela equipe Rumo e lançado diretamente pelos fiscais.</p>
+          </div>
+        </header>
+
+        <!-- Filtros da tabela -->
+        <section class="card filters">
+          <div class="filters__field">
+            <label for="rf-fiscal">Fiscal</label>
+            <select id="rf-fiscal"><option value="">Todos</option></select>
+          </div>
+          <div class="filters__field">
+            <label for="rf-fornecedor">Fornecedor</label>
+            <select id="rf-fornecedor"><option value="">Todos</option></select>
+          </div>
+          <div class="filters__field">
+            <label for="rf-local">Local</label>
+            <select id="rf-local"><option value="">Todos</option></select>
+          </div>
+          <div class="filters__field">
+            <label for="rf-pedido">Pedido</label>
+            <select id="rf-pedido"><option value="">Todos</option></select>
+          </div>
+          <div class="filters__spacer"></div>
+          <button id="rf-limpar" class="btn btn--ghost btn--sm" type="button">Limpar filtros</button>
+        </section>
+
+        <!-- Tabela -->
+        <section class="card">
+          <div class="card__head">
+            <div class="chart-head-flex">
+              <div>
+                <h2 class="card__title">Registros cadastrados</h2>
+                <p class="card__hint" id="contador">Nenhum registro.</p>
+              </div>
+              <button id="btn-exportar" class="btn btn--success btn--sm" type="button">Exportar Excel</button>
+            </div>
+          </div>
+          <div class="card__body">
+            <div id="tabela-area"></div>
+          </div>
+        </section>
+      </section>
+
+
+      <!-- ============================ TELA: DASHBOARD ============================ -->
+      <section id="view-dashboard" class="view" hidden>
+        <header class="page-head">
+          <div>
+            <div class="page-head__eyebrow">Dashboard</div>
+            <h1>Visão geral da operação</h1>
+          </div>
+          <div class="page-head__actions">
+            <div id="dashboard-last-update" class="dashboard-last-update" aria-live="polite">
+              <span>Última atualização dos dados</span>
+              <strong id="dashboard-last-update-value">Consultando…</strong>
+            </div>
+          </div>
+        </header>
+
+        <!-- Estado vazio -->
+        <div id="empty-state" class="card" hidden>
+          <div class="empty">
+            <div class="empty__title">Sem dados para exibir</div>
+            <div class="empty__txt">Os registros operacionais migrados aparecerão aqui quando estiverem disponíveis.</div>
+            <a class="btn btn--success" href="#registros" data-view="registros">Ver Registros</a>
+          </div>
+        </div>
+
+        <!-- Conteúdo do dashboard -->
+        <div id="dash-content">
+          <!-- Filtros -->
+          <section class="card filters">
+            <div class="filters__field">
+              <label for="f-fiscal">Fiscal</label>
+              <select id="f-fiscal"><option value="">Todos</option></select>
+            </div>
+            <div class="filters__field">
+              <label for="f-fornecedor">Fornecedor</label>
+              <select id="f-fornecedor"><option value="">Todos</option></select>
+            </div>
+            <div class="filters__field">
+              <label for="f-local">Local</label>
+              <select id="f-local"><option value="">Todos</option></select>
+            </div>
+            <div class="filters__field">
+              <label for="f-pedido">Pedido</label>
+              <select id="f-pedido"><option value="">Todos</option></select>
+            </div>
+            <div class="filters__field">
+              <label for="f-semana">Semana</label>
+              <select id="f-semana"><option value="">Todas</option></select>
+            </div>
+            <div class="filters__spacer"></div>
+            <button id="f-limpar" class="btn btn--ghost btn--sm" type="button">Limpar filtros</button>
+            <div class="filters__count" id="filtro-count"></div>
+          </section>
+
+          <!-- KPIs -->
+          <div class="kpi-grid" id="kpi-grid"></div>
+
+          <!-- Grade compacta: todos os gráficos cabem na primeira tela do Dashboard -->
+          <div class="dashboard-grid">
+            <section class="card chart-card funnel-card" data-modal-chart="funnel">
+              <div class="card__head">
+                <h2 class="card__title">Funil de volume</h2>
+                <p class="card__hint">O pedido é 100%: A fabricar + Fabricado + Estoque + Transportado dividem esse total. Inspecionado não entra na soma.</p>
+              </div>
+              <div class="card__body">
+                <div class="funnel" id="funnel"></div>
+              </div>
+            </section>
+
+            <section class="card chart-card" data-modal-chart="fornecedor">
+              <div class="card__head">
+                <h2 class="card__title">Volume por fornecedor</h2>
+                <p class="card__hint">Pedido x transportado, com saldo a transportar.</p>
+              </div>
+              <div class="card__body"><div class="chart-box"><canvas id="chart-fornecedor"></canvas></div></div>
+            </section>
+
+            <section class="card chart-card" data-modal-chart="conclforn">
+              <div class="card__head">
+                <h2 class="card__title">Distribuição e conclusão por fornecedor</h2>
+                <p class="card__hint">Barra: volume do pedido · dentro: volume concluído · ao lado: % concluído.</p>
+              </div>
+              <div class="card__body"><div class="chart-box"><canvas id="chart-conclforn"></canvas></div></div>
+            </section>
+
+            <section class="card chart-card chart-card--wide" data-modal-chart="tendencia">
+              <div class="card__head">
+                <div class="chart-head-flex">
+                  <div>
+                    <h2 class="card__title">Conclusão por Pedido</h2>
+                    <p class="card__hint">Volume, saldo a concluir e % de conclusão por pedido.</p>
+                  </div>
+                </div>
+              </div>
+              <div class="card__body"><div class="chart-box"><canvas id="chart-tendencia"></canvas></div></div>
+            </section>
+
+            <section class="card chart-card" data-modal-chart="historico">
+              <div class="card__head">
+                <h2 class="card__title">Transportado acumulado</h2>
+                <p class="card__hint">Acumulado real comparado à tendência histórica, sem projeção futura.</p>
+              </div>
+              <div class="card__body"><div class="chart-box"><canvas id="chart-historico"></canvas></div></div>
+            </section>
+
+            <section class="card chart-card" data-modal-chart="ritmo">
+              <div class="card__head">
+                <h2 class="card__title">Ritmo de transporte</h2>
+                <p class="card__hint">Volume transportado por semana.</p>
+              </div>
+              <div class="card__body"><div class="chart-box"><canvas id="chart-ritmo"></canvas></div></div>
+            </section>
+
+            <section class="card chart-card" data-modal-chart="entregasforn">
+              <div class="card__head">
+                <h2 class="card__title">Entregas semanais por fornecedor</h2>
+                <p class="card__hint">Dormentes entregues por semana, por fornecedor.</p>
+              </div>
+              <div class="card__body"><div class="chart-box"><canvas id="chart-entregasforn"></canvas></div></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+
+    </main>
+  </div>
+  <!-- Modal para visualização expandida dos gráficos -->
+  <div id="chart-modal" class="chart-modal" hidden aria-hidden="true">
+    <div class="chart-modal__overlay" data-modal-close></div>
+    <div class="chart-modal__panel" role="dialog" aria-modal="true" aria-labelledby="chart-modal-title">
+      <button class="chart-modal__close" type="button" data-modal-close aria-label="Fechar gráfico expandido">✕</button>
+      <div class="chart-modal__head">
+        <div>
+          <div class="chart-modal__eyebrow">Gráfico expandido</div>
+          <h2 id="chart-modal-title">Gráfico</h2>
+          <p id="chart-modal-hint"></p>
+        </div>
+      </div>
+      <div class="chart-modal__body">
+        <div id="chart-modal-funnel" class="funnel chart-modal__funnel" hidden></div>
+        <div id="chart-modal-canvas-wrap" class="chart-modal__box">
+          <canvas id="chart-modal-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/auth.js?v=20260908-sem-auditoria-v1"></script>
+  <script src="js/madeira-lei-bootstrap.js?v=20260914-integrado-v1"></script>
+</body>
+</html>

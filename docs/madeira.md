@@ -1,5 +1,17 @@
 # Área de Dormentes de Madeira
 
+## Operação de madeira de lei
+
+`madeira-lei.html#dashboard` e `madeira-lei.html#registros` incorporam as duas
+telas úteis do antigo `Controle_madeira_de_lei`. Elas usam exclusivamente o
+login do Sistema de Qualidade e o cliente do projeto Supabase principal.
+
+Não foram incorporados login ou contas de fornecedor, área do fornecedor,
+comentários, pendências, programação semanal ou administração de contas. Os 92
+registros operacionais foram preservados em `madeira_lei_registros`, com acesso
+somente de leitura para usuários ativos. A última sincronização conhecida foi
+preservada em `madeira_lei_sincronizacao`.
+
 `dormentes-madeira.html` apresenta o dashboard e `madeira-inspecoes.html` apresenta o histórico detalhado. As telas seguem o login, o layout e os filtros das áreas AMV e Lastro.
 
 ## Fontes e versões
