@@ -24,3 +24,17 @@ test('exportação envia datas ISO para o Power Automate não inverter dia e mê
   assert.equal(linha.ruptura14Comp, '2026-09-25');
   assert.equal(linha.ruptura28Comp, '2026-10-09');
 });
+
+test('função do Supabase entrega datas como números seriais do Excel', () => {
+  const funcao = fs.readFileSync(
+    path.join(__dirname, '..', 'supabase', 'functions', 'power-automate-producao', 'index.ts'),
+    'utf8'
+  );
+
+  assert.match(funcao, /function dateExcelSerial[\s\S]*Date\.UTC\(1899, 11, 30\)/);
+  assert.match(funcao, /dateExcelSerial\(row\.data_fabricacao\)/);
+  assert.match(funcao, /function ruptureDateExcelSerial[\s\S]*dateExcelSerial\(addDaysIso\(row\.data_fabricacao, days\)\)/);
+  assert.doesNotMatch(funcao, /dateBr\(row\.data_fabricacao\)/);
+  assert.doesNotMatch(funcao, /ruptureDateBr\(/);
+  assert.doesNotMatch(funcao, /ruptureDateIso\(/);
+});
