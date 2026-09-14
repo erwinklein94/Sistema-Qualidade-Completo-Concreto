@@ -1834,40 +1834,6 @@
 })();
 
 /* =====================================================================
-   MENU RETRÁTIL
-   ===================================================================== */
-(function () {
-  "use strict";
-
-  var btn = document.getElementById("btn-menu");
-  var backdrop = document.querySelector(".sidebar-backdrop");
-  if (!btn) return;
-
-  function sync() {
-    var open = !document.body.classList.contains("sidebar-collapsed");
-    btn.setAttribute("aria-expanded", String(open));
-    if (backdrop) backdrop.setAttribute("aria-hidden", String(!open));
-  }
-
-  function close() {
-    document.body.classList.add("sidebar-collapsed");
-    sync();
-  }
-
-  btn.addEventListener("click", function () {
-    document.body.classList.toggle("sidebar-collapsed");
-    sync();
-  });
-
-  if (backdrop) backdrop.addEventListener("click", close);
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && !document.body.classList.contains("sidebar-collapsed")) close();
-  });
-
-  sync();
-})();
-
-/* =====================================================================
    (4) ROTEADOR — alterna entre as telas (via hash #registros / #dashboard)
    ===================================================================== */
 (function () {
@@ -1889,12 +1855,8 @@
       views[k].hidden = (k !== view);
     });
 
-    var items = document.querySelectorAll(".nav__item");
-    for (var i = 0; i < items.length; i++) {
-      items[i].classList.toggle("is-active", items[i].getAttribute("data-view") === view);
-    }
-
     document.body.classList.toggle("dashboard-mode", view === "dashboard");
+    if (window.MadeiraLeiAtualizarCabecalho) window.MadeiraLeiAtualizarCabecalho(view);
 
     if (view === "dashboard" && window.DashboardUI) window.DashboardUI.refresh();
     if (view === "registros" && window.RegistrosUI) window.RegistrosUI.render();
@@ -1902,18 +1864,11 @@
     if (!preserveScroll) window.scrollTo(0, 0);
   }
 
-  // Cliques em qualquer elemento com data-view (sidebar, botões, empty-state)
+  // Cliques em botões internos que alternam entre Dashboard e Registros.
   document.addEventListener("click", function (e) {
     var link = e.target.closest("[data-view]");
     if (!link) return;
     e.preventDefault();
-
-    // Ao clicar em qualquer opção do menu lateral, o menu fecha sozinho.
-    if (link.closest(".sidebar")) {
-      document.body.classList.add("sidebar-collapsed");
-      var menuButton = document.getElementById("btn-menu");
-      if (menuButton) menuButton.setAttribute("aria-expanded", "false");
-    }
 
     var v = link.getAttribute("data-view");
     if (location.hash !== "#" + v) {

@@ -5,57 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Dashboard e registros operacionais de dormentes de madeira de lei.">
   <title>Operação Madeira de Lei · Controle de Qualidade Rumo</title>
-  <script>
-    (function(){
-      try{
-        if(localStorage.getItem('temaControleDormentes')==='escuro'){
-          document.documentElement.setAttribute('data-theme','dark');
-        }
-      }catch(e){}
-    })();
-  </script>
-  <link rel="stylesheet" href="css/madeira-lei-operacao.css?v=20260914-integrado-v1">
+  <link rel="stylesheet" href="css/style.css?v=20260914-dm-lei-cabecalho-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+  <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
+  <link rel="stylesheet" href="css/madeira-lei-integrado.css?v=20260914-dm-lei-cabecalho-v1">
 </head>
-<body class="sidebar-collapsed auth-loading">
+<body class="auth-loading" data-pagina="madeira-lei" data-sem-empresa="1">
   <div id="integracaoEstado" class="integracao-loading" role="status" aria-live="polite">Validando acesso pelo Sistema de Qualidade…</div>
-  <div class="app">
-    <aside id="sidebar" class="sidebar">
-      <div class="sidebar__brand"><img class="sidebar__logo" src="assets/rumo/rumo-logo-branco.png" alt="Rumo"></div>
-      <a class="sidebar__back-link" href="dormentes-madeira.html">← Área Dormentes de Madeira</a>
-      <div class="sidebar__rule"></div>
-      <nav class="nav" aria-label="Operação de madeira de lei">
-        <a class="nav__item" href="#dashboard" data-view="dashboard"><svg class="nav__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-dashboard"></use></svg> Dashboard</a>
-        <a class="nav__item" href="#registros" data-view="registros"><svg class="nav__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-records"></use></svg> Registros</a>
-        <div class="nav__sep"></div>
-        <button id="btn-tema" class="nav__item nav__theme" type="button">
-          <svg class="nav__ico" id="tema-ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-sun"></use></svg>
-          <span id="tema-txt">Tema claro</span>
-        </button>
-      </nav>
-    </aside>
-    <button class="sidebar-backdrop" type="button" aria-label="Fechar menu" tabindex="-1"></button>
-    <main class="main">
-      <div class="top-menu">
-        <button id="btn-menu" class="btn btn--ghost menu-toggle" type="button" aria-controls="sidebar" aria-expanded="false"><svg class="btn__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-menu"></use></svg> Menu</button>
-        <span class="top-menu__module">Dormentes de Madeira · Operação</span>
-        <div class="top-menu__user">
-          <div class="top-menu__account" aria-label="Conta conectada">
-            <svg class="top-menu__account-icon" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-user"></use></svg>
-            <span id="user-chip" class="user-chip"></span>
-            <button class="btn btn--ghost btn--sm top-menu__logout" type="button" onclick="Auth.sair()"><svg class="btn__ico" aria-hidden="true"><use href="assets/madeira-lei/rumo-icons.svg#icon-logout"></use></svg>Sair</button>
-          </div>
-        </div>
-      </div>
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina madeira-lei-pagina">
       <!-- ============================ TELA: REGISTROS ============================ -->
       <section id="view-registros" class="view">
-        <header class="page-head">
-          <div>
-            <div class="page-head__eyebrow">Registros</div>
-            <h1>Pedidos em inspeção e transporte</h1>
-            <p class="page-head__sub">Histórico oficial aprovado pela equipe Rumo e lançado diretamente pelos fiscais.</p>
-          </div>
-        </header>
-
         <!-- Filtros da tabela -->
         <section class="card filters">
           <div class="filters__field">
@@ -98,28 +59,6 @@
 
       <!-- ============================ TELA: DASHBOARD ============================ -->
       <section id="view-dashboard" class="view" hidden>
-        <header class="page-head">
-          <div>
-            <div class="page-head__eyebrow">Dashboard</div>
-            <h1>Visão geral da operação</h1>
-          </div>
-          <div class="page-head__actions">
-            <div id="dashboard-last-update" class="dashboard-last-update" aria-live="polite">
-              <span>Última atualização dos dados</span>
-              <strong id="dashboard-last-update-value">Consultando…</strong>
-            </div>
-          </div>
-        </header>
-
-        <!-- Estado vazio -->
-        <div id="empty-state" class="card" hidden>
-          <div class="empty">
-            <div class="empty__title">Sem dados para exibir</div>
-            <div class="empty__txt">Os registros operacionais migrados aparecerão aqui quando estiverem disponíveis.</div>
-            <a class="btn btn--success" href="#registros" data-view="registros">Ver Registros</a>
-          </div>
-        </div>
-
         <!-- Conteúdo do dashboard -->
         <div id="dash-content">
           <!-- Filtros -->
@@ -217,9 +156,19 @@
             </section>
           </div>
         </div>
+
+        <!-- Estado vazio -->
+        <div id="empty-state" class="card" hidden>
+          <div class="empty">
+            <div class="empty__title">Sem dados para exibir</div>
+            <div class="empty__txt">Os registros operacionais migrados aparecerão aqui quando estiverem disponíveis.</div>
+            <a class="btn btn--success" href="#registros" data-view="registros">Ver Registros</a>
+          </div>
+        </div>
       </section>
 
 
+      </div>
     </main>
   </div>
   <!-- Modal para visualização expandida dos gráficos -->
@@ -250,6 +199,8 @@
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
   <script src="js/auth.js?v=20260908-sem-auditoria-v1"></script>
-  <script src="js/madeira-lei-bootstrap.js?v=20260914-integrado-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/comum.js?v=20260914-dm-lei-cabecalho-v1"></script>
+  <script src="js/madeira-lei-bootstrap.js?v=20260914-dm-lei-cabecalho-v1"></script>
 </body>
 </html>

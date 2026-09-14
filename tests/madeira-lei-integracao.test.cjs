@@ -23,6 +23,17 @@ test('integra somente Dashboard e Registros, sem login de fornecedor',()=>{
   assert.match(bootstrap,/window\.sbClient=cliente/);
 });
 
+test('usa o cabeçalho global e começa cada tela pelos filtros',()=>{
+  assert.match(html,/id="conteudo"/);
+  assert.match(html,/css\/style\.css/);
+  assert.match(html,/js\/config\.js/);
+  assert.match(html,/js\/comum\.js/);
+  assert.match(bootstrap,/App\.montarLayout\(pagina\.menu,pagina\.titulo,pagina\.subtitulo\)/);
+  assert.doesNotMatch(html,/class="top-menu"|class="sidebar"|class="page-head"/);
+  assert.match(html,/id="view-registros"[\s\S]*?<!-- Filtros da tabela -->\s*<section class="card filters">/);
+  assert.match(html,/id="view-dashboard"[\s\S]*?<!-- Conteúdo do dashboard -->[\s\S]*?<!-- Filtros -->\s*<section class="card filters">/);
+});
+
 test('usa tabelas isoladas no Supabase principal',()=>{
   assert.match(app,/from\("madeira_lei_registros"\)/);
   assert.match(app,/from\("madeira_lei_sincronizacao"\)/);

@@ -1,0 +1,24 @@
+@import url("madeira-lei-operacao.css?v=20260914-dm-lei-cabecalho-v1") layer(madeira-lei-legado);
+
+/* Integra o conteúdo operacional ao layout global sem deixar os estilos
+   originais alterarem o cabeçalho, os menus e a conta do sistema. */
+.madeira-lei-pagina {
+  width: 100%;
+  max-width: none;
+}
+
+.madeira-lei-pagina .view {
+  width: 100%;
+}
+
+.madeira-lei-pagina .filters {
+  margin-top: 0;
+}
+
+body[data-tema="escuro"] .madeira-lei-pagina {
+  color-scheme: dark;
+}
+
+body.auth-loading .app {
+  visibility: hidden;
+}
