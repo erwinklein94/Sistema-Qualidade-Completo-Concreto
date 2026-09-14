@@ -15,6 +15,16 @@
   margin-top: 0;
 }
 
+/* Os títulos dos gráficos ficam limpos, sem a barra decorativa herdada. */
+.madeira-lei-pagina .chart-card .card__head {
+  padding-top: 0;
+}
+
+.madeira-lei-pagina .chart-card .card__head::before {
+  content: none;
+  display: none;
+}
+
 body[data-tema="escuro"] .madeira-lei-pagina {
   color-scheme: dark;
 }
