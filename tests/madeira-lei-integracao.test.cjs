@@ -40,7 +40,9 @@ test('migração preserva os 92 registros operacionais',()=>{
   assert.match(migration,/2026-08-12 12:04:02\.789\+00/);
 });
 
-test('menu principal expõe as duas telas na área de madeira',()=>{
+test('menu principal agrupa as duas telas na seção DM Lei',()=>{
   assert.match(menu,/madeira-lei\.html#dashboard/);
   assert.match(menu,/madeira-lei\.html#registros/);
+  assert.match(menu,/group: 'madeira-lei'/);
+  assert.match(menu,/\{ grupo: 'madeira-lei', titulo: 'DM Lei' \}/);
 });

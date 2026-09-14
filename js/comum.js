@@ -48,10 +48,10 @@ const App = {
         group: 'madeira',
         desc: 'Recebimento, qualidade e histórico de dormentes de madeira'
       },
-      { k: 'madeira-lei-dashboard', t: 'Dashboard Operacional', ic: ICN.dashboard, href: 'madeira-lei.html#dashboard', group: 'madeira' },
-      { k: 'madeira-lei-registros', t: 'Registros Operacionais', ic: ICN.producao, href: 'madeira-lei.html#registros', group: 'madeira' },
       { k: 'madeira-visao', t: 'Dashboard Madeira', ic: ICN.dashboard, href: 'dormentes-madeira.html', group: 'madeira' },
       { k: 'madeira-inspecoes', t: 'Histórico de Inspeções', ic: ICN.check, href: 'madeira-inspecoes.html', group: 'madeira' },
+      { k: 'madeira-lei-dashboard', t: 'Dashboard Operacional', ic: ICN.dashboard, href: 'madeira-lei.html#dashboard', group: 'madeira-lei' },
+      { k: 'madeira-lei-registros', t: 'Registros Operacionais', ic: ICN.producao, href: 'madeira-lei.html#registros', group: 'madeira-lei' },
 
       {
         sec: 'LASTRO',
@@ -157,7 +157,15 @@ const App = {
           { grupo: 'conprem', titulo: 'Conprem MG' },
         ],
       },
-      { grupo: 'madeira', titulo: 'Dormentes de Madeira', ic: ICN.producao },
+      {
+        grupo: 'madeira',
+        titulo: 'Dormentes de Madeira',
+        ic: ICN.producao,
+        subgrupos: [
+          { grupo: 'madeira' },
+          { grupo: 'madeira-lei', titulo: 'DM Lei' },
+        ],
+      },
       { grupo: 'lastro', titulo: 'Lastro', ic: ICN.vazioBox },
       { grupo: 'amv', titulo: 'AMV', ic: ICN.trem },
       { grupo: 'subcomponentes', titulo: 'Subcomponentes', ic: ICN.vazioBox },
