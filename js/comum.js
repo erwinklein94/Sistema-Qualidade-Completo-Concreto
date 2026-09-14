@@ -11,7 +11,7 @@ const App = {
         group: 'concreto',
         desc: 'Produção, cura, ensaios, liberação e reprovas da Cavan SP'
       },
-      { k: 'dashboard', t: 'Dashboard Concreto', ic: ICN.dashboard, href: 'index.html', group: 'concreto' },
+      { k: 'dashboard', t: 'Dashboard Cavan', ic: ICN.dashboard, href: 'index.html', group: 'concreto' },
       { k: 'semanal', t: 'Indicador Semanal', ic: ICN.semanal, href: 'semanal.html', group: 'concreto' },
       { k: 'painelSeries', t: 'Fluxo de Liberação', ic: ICN.ensaios, href: 'ensaios.html', group: 'concreto' },
       { k: 'fluxoLiberacao', t: 'Painel de Séries', ic: ICN.trem, href: 'fluxo-liberacao.html', group: 'concreto' },
