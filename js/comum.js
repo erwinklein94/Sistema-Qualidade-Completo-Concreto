@@ -95,6 +95,7 @@ const App = {
       { k: 'ferramenta-equipamentos', t: 'Controle de Equipamentos', ic: ICN.config, href: 'controle-equipamentos.html', group: 'ferramentas' },
       { k: 'ferramenta-leitor-laboratorio', t: 'Leitor de relatórios de laboratório - subcomponentes', ic: ICN.olho, href: 'https://erwinklein94.github.io/Homologacao-de-materiais/index.html', group: 'ferramentas', external: true },
       { k: 'ferramenta-guia-inspetor', t: 'Guia do Inspetor Padrão', ic: ICN.alerta, href: 'https://www.guiadoinspetorpadrao.com.br', group: 'ferramentas', external: true },
+      { k: 'ferramenta-painel-sites', t: 'Painel de Sites', ic: ICN.dashboard, href: 'https://erwinklein94.github.io/Painel-Sites-Rumo/', group: 'ferramentas', external: true, adminOnly: true },
 
       {
         sec: 'ADMINISTRAÇÃO DO SISTEMA',
