@@ -1161,9 +1161,11 @@ function linhaPlanilhaAntigaProducao(r) {
     projeto: r.projeto || '',
     tipo: r.tipo || '',
     total: r.total || '',
-    dataFabricacao: U.dataBR(r.dataFabricacao),
-    cura14: U.dataBR(r.cura14),
-    cura28: U.dataBR(r.cura28),
+    // O Power Automate/Excel Online pode interpretar dd/MM/yyyy como MM/dd/yyyy.
+    // Datas ISO são inequívocas e a planilha continua podendo exibi-las como dd/MM/yyyy.
+    dataFabricacao: dataExportacaoISO(r.dataFabricacao),
+    cura14: dataExportacaoISO(r.cura14),
+    cura28: dataExportacaoISO(r.cura28),
     comUsp: r.comUsp || '',
     uspLote: r.uspLote || '',
     ombreira: r.ombreira || '',
@@ -1181,11 +1183,11 @@ function linhaPlanilhaAntigaProducao(r) {
     desproMeio: r.desproMeio || '',
     desproFim: r.desproFim || '',
     tempoCura: r.tempoCura || '',
-    ruptura7Comp: dataRupturaBR(r, 7),
-    ruptura14Comp: U.dataBR(r.cura14) || dataRupturaBR(r, 14),
-    ruptura14Tracao: U.dataBR(r.cura14) || dataRupturaBR(r, 14),
-    ruptura28Comp: U.dataBR(r.cura28) || dataRupturaBR(r, 28),
-    ruptura28Tracao: U.dataBR(r.cura28) || dataRupturaBR(r, 28),
+    ruptura7Comp: dataRupturaISO(r, 7),
+    ruptura14Comp: dataExportacaoISO(r.cura14) || dataRupturaISO(r, 14),
+    ruptura14Tracao: dataExportacaoISO(r.cura14) || dataRupturaISO(r, 14),
+    ruptura28Comp: dataExportacaoISO(r.cura28) || dataRupturaISO(r, 28),
+    ruptura28Tracao: dataExportacaoISO(r.cura28) || dataRupturaISO(r, 28),
     comp7: r.comp7 || '',
     comp14: r.comp14 || '',
     tracao14: r.tracao14 || '',
@@ -1202,11 +1204,16 @@ function linhaPlanilhaAntigaProducao(r) {
   };
 }
 
-function dataRupturaBR(reg, dias) {
+function dataExportacaoISO(valor) {
+  const data = String(valor || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(data) ? data : '';
+}
+
+function dataRupturaISO(reg, dias) {
   const base = reg?.dataFabricacao;
   if (!base || !/^\d{4}-\d{2}-\d{2}$/.test(String(base))) return '';
   const [ano, mes, dia] = String(base).split('-').map(Number);
   const d = new Date(ano, mes - 1, dia);
   d.setDate(d.getDate() + dias);
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
