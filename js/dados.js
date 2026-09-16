@@ -244,8 +244,6 @@ const TABELAS_SITE_COMPLETO = [
   { aba: 'RNC Dormentes', tabela: 'rnc_dormentes', pagina: 'RNC (Dormentes)' },
   { aba: 'Espec Dormentes', tabela: 'especificacoes_dormentes', pagina: 'Especificações e Limites' },
   { aba: 'Glossário Defeitos', tabela: 'glossario_defeitos', pagina: 'Dormentes Reprovados · Glossário' },
-  { aba: 'Data Books Inspeções', tabela: 'data_book_inspecoes', pagina: 'Data Books · Inspeções' },
-  { aba: 'Data Books Itens', tabela: 'data_book_itens', pagina: 'Data Books · Itens' },
   { aba: 'Empresas Sub', tabela: 'empresas_subcomponentes', pagina: 'Subcomponentes · Empresas' },
   { aba: 'Materiais Sub', tabela: 'materiais_subcomponentes', pagina: 'Subcomponentes · Materiais' },
   { aba: 'Estoque Sub', tabela: 'estoque_subcomponentes', pagina: 'Subcomponentes · Estoque' },
