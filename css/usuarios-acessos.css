@@ -1,0 +1,22 @@
+/* Usuários e Perfis: último acesso e páginas acessadas */
+.usuarios-acessos-nota { margin:2px 0 0; font-size:12px; color:var(--cinza-texto-claro); }
+.usuarios-tabela { min-width:1180px; }
+.usuarios-acesso-ultimo strong { display:block; font-size:12.5px; white-space:nowrap; }
+.usuarios-acesso-ultimo small { display:block; max-width:220px; font-size:11.5px; color:var(--cinza-texto); white-space:normal; }
+.usuarios-acesso-paginas { display:flex; flex-direction:column; align-items:flex-start; gap:6px; }
+.usuarios-acesso-paginas span { font-size:12.5px; white-space:nowrap; }
+.usuarios-acessos-vazio { font-size:12.5px; color:var(--cinza-texto-claro); }
+
+.usuarios-acessos-dialog { width:min(820px,94vw); max-height:90vh; margin:auto; padding:0; border:1px solid var(--cinza-borda); border-radius:16px; background:var(--cinza-card); color:var(--azul-escuro); }
+.usuarios-acessos-dialog::backdrop { background:rgba(0,20,35,.65); }
+.usuarios-acessos-dialog .modal-cab { position:sticky; top:0; z-index:1; background:inherit; }
+.usuarios-acessos-dialog .fechar-modal { font-size:24px; line-height:1; }
+.usuarios-acessos-resumo { margin:0 0 16px; font-size:13.5px; color:var(--cinza-texto); }
+.usuarios-acessos-titulo { margin:18px 0 8px; font-size:14px; }
+.usuarios-acessos-tabela { min-width:0; }
+.usuarios-acessos-tabela td { white-space:normal; vertical-align:top; }
+.usuarios-acessos-arquivo { display:block; font-size:11px; color:var(--cinza-texto-claro); }
+
+body[data-tema="escuro"] .usuarios-acessos-dialog { background:#102b3d; color:#e7f0f5; }
+body[data-tema="escuro"] .usuarios-acessos-resumo,
+body[data-tema="escuro"] .usuarios-acesso-ultimo small { color:#a8bbcf; }

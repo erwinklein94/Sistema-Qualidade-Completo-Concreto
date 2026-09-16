@@ -216,6 +216,7 @@ var Auth = (() => {
       }
 
       window.USUARIO_ATUAL = { session, perfil };
+      registrarAcesso(perfil);
       notificarPerfilAtualizado(perfil);
       montarStatusUsuario();
       if (window.App?.atualizarMenuPorPermissoes) window.App.atualizarMenuPorPermissoes();
@@ -225,6 +226,32 @@ var Auth = (() => {
       console.error('Erro ao validar login', err);
       location.replace(`${LOGIN_PAGE}?erro=${encodeURIComponent('Não foi possível validar sua sessão. Faça login novamente.')}`);
       return false;
+    }
+  }
+
+  // Acessos para a tela Usuários e Perfis: cada página (e aba #hash) aberta por
+  // quem não é admin. Grava só o arquivo e o #hash simples, nunca parâmetros da
+  // URL. As várias chamadas de exigirLogin da mesma página contam uma vez só.
+  let ultimaPaginaRegistrada = '';
+  let registroPorHashConfigurado = false;
+
+  function paginaDoAcesso() {
+    const hash = /^#[A-Za-z0-9_-]{1,60}$/.test(location.hash) ? location.hash : '';
+    const pagina = paginaAtual() + hash;
+    return /^[A-Za-z0-9._-]{1,120}(#[A-Za-z0-9_-]{1,60})?$/.test(pagina) ? pagina : '';
+  }
+
+  function registrarAcesso(perfil) {
+    if (!perfil || normalizarPerfil(perfil) === 'admin' || ehLogin() || !configurado()) return;
+    const pagina = paginaDoAcesso();
+    if (!pagina || pagina === ultimaPaginaRegistrada) return;
+    ultimaPaginaRegistrada = pagina;
+    const titulo = String(document.title || '').split(' · ')[0].trim().slice(0, 200) || null;
+    cliente().from('usuarios_acessos').insert({ pagina, titulo })
+      .then(({ error }) => { if (error) console.warn('Acesso não registrado:', error.message); }, () => {});
+    if (!registroPorHashConfigurado) {
+      registroPorHashConfigurado = true;
+      window.addEventListener('hashchange', () => registrarAcesso(window.USUARIO_ATUAL?.perfil));
     }
   }
 

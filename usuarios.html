@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1" />
   <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
   <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
+  <link rel="stylesheet" href="css/usuarios-acessos.css?v=20260916-v1">
 </head>
 <body>
   <div class="app" id="app">
@@ -146,6 +147,7 @@
                 <span class="acento">Usuários cadastrados no sistema</span>
               </div>
               <p id="usuariosStatus" class="usuarios-status">Carregando usuários...</p>
+              <p id="usuariosAcessosNota" class="usuarios-acessos-nota">Acessos registrados a partir de 16/09/2026, por página aberta. Os acessos de usuários Admin não são registrados.</p>
             </div>
             <button class="btn btn-secundario btn-sm" onclick="carregarUsuarios()">Atualizar</button>
           </div>
@@ -178,6 +180,8 @@
                   <th>Usuário</th>
                   <th>Perfil</th>
                   <th>Status</th>
+                  <th>Último acesso</th>
+                  <th>Páginas acessadas</th>
                   <th>UID</th>
                   <th>Atualizado em</th>
                   <th>Ações</th>
@@ -191,18 +195,26 @@
     </main>
   </div>
 
+  <dialog id="dialogAcessosUsuario" class="usuarios-acessos-dialog" aria-labelledby="tituloAcessosUsuario">
+    <div class="modal-cab">
+      <h2 id="tituloAcessosUsuario">Acessos do usuário</h2>
+      <button type="button" class="fechar-modal" onclick="document.getElementById('dialogAcessosUsuario').close()" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-corpo" id="corpoAcessosUsuario"></div>
+  </dialog>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
   <script src="js/supabase-config.js?v=20260523-3"></script>
-  <script src="js/auth.js?v=20260908-sem-auditoria-v1"></script>
+  <script src="js/auth.js?v=20260916-acessos-v1"></script>
   <script>Auth.exigirLogin();</script>
   <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
-  <script src="js/store-supabase.js?v=20260908-sem-auditoria-v1"></script>
+  <script src="js/store-supabase.js?v=20260916-acessos-v1"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260908-sem-auditoria-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/usuarios.js?v=20260526-usuarios-ui"></script>
+  <script src="js/usuarios.js?v=20260916-acessos-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>

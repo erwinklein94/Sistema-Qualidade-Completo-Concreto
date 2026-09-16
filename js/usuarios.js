@@ -2,6 +2,9 @@
    USUARIOS.JS — Administração de perfis do sistema
    ===================================================================== */
 let usuarios = [];
+// usuario_id -> { total, ultimo, paginas: [{ pagina, titulo, acessos, ultimo_acesso }] }
+let acessosPorUsuario = new Map();
+let acessosErro = '';
 
 const PERFIL_BADGE = {
   admin: 'usuarios-badge-admin',
@@ -38,8 +41,15 @@ async function carregarUsuarios() {
   if (tbody) tbody.innerHTML = '';
 
   try {
-    usuarios = await StoreSupabase.listarUsuariosApp();
+    const [lista, acessos] = await Promise.all([
+      StoreSupabase.listarUsuariosApp(),
+      StoreSupabase.listarResumoAcessos().then(dados => ({ dados }), err => ({ err })),
+    ]);
+    usuarios = lista;
     usuarios.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+    acessosErro = acessos.err ? 'Não foi possível carregar os acessos dos usuários.' : '';
+    if (acessos.err) console.error('Erro ao carregar acessos', acessos.err);
+    acessosPorUsuario = agruparAcessos(acessos.dados || []);
     atualizarResumoUsuarios();
     renderUsuarios();
     registrarExportacaoUsuarios();
@@ -121,19 +131,111 @@ function renderUsuarios() {
         </td>
         <td><span class="badge ${badgePerfil}">${U.esc(perfilRotulo)}</span></td>
         <td><span class="badge ${ativoBadge}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
+        ${celulasAcessos(u, perfil)}
         <td><code class="usuarios-uid">${U.esc(u.id || '')}</code></td>
         <td>${formatarDataHora(u.atualizado_em)}</td>
         <td><button class="btn btn-secundario btn-sm" onclick="editarUsuario('${u.id}')">Editar</button></td>
       </tr>`;
   }).join('') || `
     <tr>
-      <td colspan="6">
+      <td colspan="8">
         <div class="vazio compacto">
           <h3>Nenhum usuário encontrado</h3>
           <p>Ajuste os filtros ou cadastre um novo perfil.</p>
         </div>
       </td>
     </tr>`;
+}
+
+/* ---------- Acessos (usuarios_acessos) ---------- */
+function agruparAcessos(linhas) {
+  const mapa = new Map();
+  for (const l of linhas) {
+    if (!mapa.has(l.usuario_id)) mapa.set(l.usuario_id, { total: 0, ultimo: null, paginas: [] });
+    const item = mapa.get(l.usuario_id);
+    item.total += Number(l.acessos) || 0;
+    item.paginas.push(l);
+    if (!item.ultimo || String(l.ultimo_acesso) > String(item.ultimo.ultimo_acesso)) item.ultimo = l;
+  }
+  mapa.forEach(item => item.paginas.sort((a, b) => String(b.ultimo_acesso).localeCompare(String(a.ultimo_acesso))));
+  return mapa;
+}
+
+// Nome amigável da página: título do menu (inclui abas #hash); senão o título gravado.
+function nomePaginaAcesso(pagina, titulo) {
+  if (!nomePaginaAcesso.mapa) {
+    nomePaginaAcesso.mapa = new Map();
+    const grupos = { conprem: ' · Conprem', 'madeira-lei': ' · DM Lei' };
+    (window.App?.menuBase?.() || []).forEach(m => {
+      if (m.href && !m.external && !nomePaginaAcesso.mapa.has(m.href)) nomePaginaAcesso.mapa.set(m.href, m.t + (grupos[m.group] || ''));
+    });
+  }
+  const mapa = nomePaginaAcesso.mapa;
+  const [arquivo, hash] = String(pagina || '').split('#');
+  if (mapa.has(pagina)) return mapa.get(pagina);
+  const base = mapa.get(arquivo) || titulo || arquivo || '—';
+  return hash && !mapa.has(pagina) && mapa.get(arquivo) ? `${base} #${hash}` : base;
+}
+
+function celulasAcessos(u, perfil) {
+  if (perfil === 'admin') return '<td colspan="2"><span class="usuarios-acessos-vazio">Admin: acessos não registrados</span></td>';
+  if (acessosErro) return '<td colspan="2"><span class="usuarios-acessos-vazio">Indisponível</span></td>';
+  const a = acessosPorUsuario.get(u.id);
+  if (!a) return '<td colspan="2"><span class="usuarios-acessos-vazio">Nenhum acesso registrado</span></td>';
+  const nome = nomePaginaAcesso(a.ultimo.pagina, a.ultimo.titulo);
+  return `
+    <td>
+      <div class="usuarios-acesso-ultimo">
+        <strong>${formatarDataHora(a.ultimo.ultimo_acesso)}</strong>
+        <small>em ${U.esc(nome)}</small>
+      </div>
+    </td>
+    <td>
+      <div class="usuarios-acesso-paginas">
+        <span>${a.paginas.length} ${a.paginas.length === 1 ? 'página' : 'páginas'} · ${a.total} ${a.total === 1 ? 'acesso' : 'acessos'}</span>
+        <button class="btn btn-secundario btn-sm" type="button" onclick="abrirAcessosUsuario('${U.esc(u.id)}')">Ver acessos</button>
+      </div>
+    </td>`;
+}
+
+async function abrirAcessosUsuario(id) {
+  const u = usuarios.find(x => x.id === id);
+  const a = acessosPorUsuario.get(id);
+  const dialog = document.getElementById('dialogAcessosUsuario');
+  const corpo = document.getElementById('corpoAcessosUsuario');
+  if (!u || !a || !dialog || !corpo) return;
+  document.getElementById('tituloAcessosUsuario').textContent = `Acessos de ${u.nome || u.email || 'usuário'}`;
+  corpo.innerHTML = `
+    <p class="usuarios-acessos-resumo">Último acesso em <strong>${formatarDataHora(a.ultimo.ultimo_acesso)}</strong>, na página ${U.esc(nomePaginaAcesso(a.ultimo.pagina, a.ultimo.titulo))}. ${a.paginas.length} ${a.paginas.length === 1 ? 'página diferente' : 'páginas diferentes'}, ${a.total} ${a.total === 1 ? 'acesso' : 'acessos'} no total.</p>
+    <h3 class="usuarios-acessos-titulo">Páginas acessadas</h3>
+    <div class="tabela-wrap"><table class="tabela usuarios-acessos-tabela">
+      <thead><tr><th>Página</th><th class="right">Acessos</th><th>Primeiro acesso</th><th>Último acesso</th></tr></thead>
+      <tbody>${a.paginas.map(p => `<tr>
+        <td><strong>${U.esc(nomePaginaAcesso(p.pagina, p.titulo))}</strong><small class="usuarios-acessos-arquivo">${U.esc(p.pagina)}</small></td>
+        <td class="right">${Number(p.acessos) || 0}</td>
+        <td>${formatarDataHora(p.primeiro_acesso)}</td>
+        <td>${formatarDataHora(p.ultimo_acesso)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <h3 class="usuarios-acessos-titulo">Últimos acessos</h3>
+    <div id="historicoAcessosUsuario"><p class="usuarios-acessos-vazio">Carregando histórico...</p></div>`;
+  if (!dialog.open) dialog.showModal();
+  try {
+    const historico = await StoreSupabase.listarAcessosUsuario(id, 100);
+    const alvo = document.getElementById('historicoAcessosUsuario');
+    if (!alvo) return;
+    alvo.innerHTML = historico.length ? `
+      <div class="tabela-wrap"><table class="tabela usuarios-acessos-tabela">
+        <thead><tr><th>Data e hora</th><th>Página</th></tr></thead>
+        <tbody>${historico.map(h => `<tr><td>${formatarDataHora(h.acessado_em)}</td><td>${U.esc(nomePaginaAcesso(h.pagina, h.titulo))}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <p class="usuarios-acessos-vazio">${historico.length === 100 ? 'Mostrando os 100 acessos mais recentes.' : `${historico.length} ${historico.length === 1 ? 'acesso' : 'acessos'}.`}</p>`
+      : '<p class="usuarios-acessos-vazio">Nenhum acesso encontrado.</p>';
+  } catch (err) {
+    console.error('Erro ao carregar histórico de acessos', err);
+    const alvo = document.getElementById('historicoAcessosUsuario');
+    if (alvo) alvo.innerHTML = '<p class="usuarios-acessos-vazio">Não foi possível carregar o histórico.</p>';
+  }
 }
 
 function iniciaisUsuario(nome) {
@@ -215,10 +317,27 @@ function registrarExportacaoUsuarios() {
         { key: 'email', label: 'E-mail' },
         { key: 'perfilRotulo', label: 'Perfil' },
         { key: 'ativo', label: 'Ativo' },
+        { key: 'ultimoAcesso', label: 'Último acesso' },
+        { key: 'paginaUltimoAcesso', label: 'Página do último acesso' },
+        { key: 'paginasAcessadas', label: 'Páginas acessadas' },
+        { key: 'totalAcessos', label: 'Total de acessos' },
         { key: 'id', label: 'UID' },
         { key: 'atualizado_em', label: 'Atualizado em' },
       ],
-      rows: usuarios.map(u => ({ ...u, perfilRotulo: Auth.rotuloPerfil(u.perfil), ativo: u.ativo ? 'Sim' : 'Não', atualizado_em: formatarDataHora(u.atualizado_em) }))
+      rows: usuarios.map(u => {
+        const admin = Auth.normalizarPerfil(u.perfil) === 'admin';
+        const a = acessosPorUsuario.get(u.id);
+        return {
+          ...u,
+          perfilRotulo: Auth.rotuloPerfil(u.perfil),
+          ativo: u.ativo ? 'Sim' : 'Não',
+          ultimoAcesso: admin ? 'Não registrado (admin)' : a ? formatarDataHora(a.ultimo.ultimo_acesso) : '—',
+          paginaUltimoAcesso: a ? nomePaginaAcesso(a.ultimo.pagina, a.ultimo.titulo) : '',
+          paginasAcessadas: a ? a.paginas.map(p => `${nomePaginaAcesso(p.pagina, p.titulo)} (${p.acessos})`).join('; ') : '',
+          totalAcessos: a ? a.total : '',
+          atualizado_em: formatarDataHora(u.atualizado_em),
+        };
+      })
     }]
   });
 }

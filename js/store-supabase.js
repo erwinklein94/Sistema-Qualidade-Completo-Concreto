@@ -753,6 +753,34 @@ const StoreSupabase = (() => {
     return data;
   }
 
+  /* Acessos dos usuários não admin (usuarios_acessos). Leitura só do admin. */
+  async function listarResumoAcessos() {
+    exigirPermissao('gerenciarUsuarios', 'ver os acessos dos usuários');
+    const linhas = [];
+    for (let inicio = 0; ; inicio += 1000) {
+      const { data, error } = await db()
+        .from('usuarios_acessos_resumo')
+        .select('usuario_id,pagina,titulo,acessos,primeiro_acesso,ultimo_acesso')
+        .order('usuario_id').order('pagina')
+        .range(inicio, inicio + 999);
+      if (error) throw error;
+      linhas.push(...(data || []));
+      if (!data || data.length < 1000) return linhas;
+    }
+  }
+
+  async function listarAcessosUsuario(usuarioId, limite = 100) {
+    exigirPermissao('gerenciarUsuarios', 'ver os acessos dos usuários');
+    const { data, error } = await db()
+      .from('usuarios_acessos')
+      .select('pagina,titulo,acessado_em')
+      .eq('usuario_id', usuarioId)
+      .order('acessado_em', { ascending: false })
+      .limit(limite);
+    if (error) throw error;
+    return data || [];
+  }
+
   /* ===================================================================
      Especificações / Limites / Equipamentos — tabelas consultivas.
      Leitura: qualquer usuário ativo. Escrita/exclusão: somente admin.
@@ -886,6 +914,8 @@ const StoreSupabase = (() => {
     salvarConfiguracaoSistema,
     listarUsuariosApp,
     salvarUsuarioApp,
+    listarResumoAcessos,
+    listarAcessosUsuario,
     listarConfiguracoes,
     listarEspecDormentes,
     salvarEspecDormente,
