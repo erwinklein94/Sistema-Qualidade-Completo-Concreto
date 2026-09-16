@@ -1,0 +1,42 @@
+/* Página Data books (Ferramentas) */
+.dbc-abas { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+.dbc-aba { display:inline-flex; align-items:center; gap:10px; min-height:40px; padding:8px 16px; border:1px solid var(--cinza-borda); border-radius:999px; background:var(--cinza-card); color:var(--azul-escuro); font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; transition:var(--transicao); }
+.dbc-aba:hover { border-color:var(--azul-claro); }
+.dbc-aba:focus-visible { outline:3px solid var(--azul-claro); outline-offset:2px; }
+.dbc-aba[aria-selected="true"] { background:var(--azul-escuro); border-color:var(--azul-escuro); color:#fff; }
+.dbc-aba-total { padding:1px 8px; border-radius:999px; background:rgba(0,56,101,.08); font-size:11.5px; font-variant-numeric:tabular-nums; }
+.dbc-aba[aria-selected="true"] .dbc-aba-total { background:rgba(255,255,255,.18); }
+.dbc-fonte { margin:0 0 16px; font-size:12.5px; color:var(--cinza-texto); }
+.dbc-nota:empty { display:none; }
+.dbc-nota { margin:0 0 14px; font-size:13px; color:var(--cinza-texto); }
+.dbc-estado:not(:empty) { padding:18px; border:1px solid #c77700; border-radius:8px; margin-bottom:16px; }
+#filtrosDataBooks [hidden] { display:none !important; }
+body[data-pagina="controle-data-books"] #kpisDataBooks { grid-template-columns:repeat(4,minmax(0,1fr)); }
+
+.tabela-dbc td { vertical-align:top; }
+.tabela-dbc td:not(.nowrap) { white-space:normal; }
+.tabela-dbc th.right { text-align:right; }
+.dbc-nome { display:block; min-width:200px; font-weight:700; overflow-wrap:anywhere; }
+.dbc-itens { min-width:240px; }
+.dbc-itens-total { margin-bottom:5px; font-size:11.5px; color:var(--cinza-texto); }
+.dbc-chips { display:flex; flex-wrap:wrap; gap:4px; }
+.dbc-chip { display:inline-flex; align-items:baseline; gap:3px; padding:1px 7px; border:1px solid var(--cinza-borda); border-radius:6px; background:var(--cinza-bg); font-size:11.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dbc-chip small { font-size:10px; color:var(--cinza-texto); }
+.dbc-chip--achado { border-color:#FBD300; background:#FFF4B5; color:#3d3300; font-weight:700; }
+.dbc-chip--achado small, body[data-tema="escuro"] .dbc-chip--achado small { color:inherit; }
+.dbc-mais summary { margin-top:6px; font-size:12px; font-weight:700; color:var(--azul-escuro); cursor:pointer; }
+.dbc-mais[open] summary { margin-bottom:5px; }
+.dbc-link { white-space:nowrap; }
+
+body[data-tema="escuro"] .dbc-aba { background:#082a4d; color:#e7f0f5; }
+body[data-tema="escuro"] .dbc-aba[aria-selected="true"] { background:#7FE06C; border-color:#7FE06C; color:#03162b; }
+body[data-tema="escuro"] .dbc-aba[aria-selected="true"] .dbc-aba-total { background:rgba(3,22,43,.14); }
+body[data-tema="escuro"] .dbc-aba-total { background:rgba(255,255,255,.1); }
+body[data-tema="escuro"] .dbc-fonte, body[data-tema="escuro"] .dbc-nota, body[data-tema="escuro"] .dbc-itens-total { color:#a8bbcf; }
+body[data-tema="escuro"] .dbc-chip { background:rgba(255,255,255,.06); color:#e7f0f5; }
+body[data-tema="escuro"] .dbc-chip small { color:#a8bbcf; }
+body[data-tema="escuro"] .dbc-chip--achado { border-color:#FBD300; background:#FBD300; color:#03162b; }
+body[data-tema="escuro"] .dbc-mais summary { color:#7FE06C; }
+
+@media(max-width:1000px) { body[data-pagina="controle-data-books"] #kpisDataBooks { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:480px) { body[data-pagina="controle-data-books"] #kpisDataBooks { grid-template-columns:1fr; } .dbc-aba { flex:1 1 100%; justify-content:space-between; } }

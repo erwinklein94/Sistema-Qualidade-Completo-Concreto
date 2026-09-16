@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Data books de dormentes de concreto, dormentes de madeira e ombreiras, com os links dos relatórios.">
+<title>Data books · Controle de Qualidade Rumo</title>
+<link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1">
+<link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+<link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
+<link rel="stylesheet" href="css/controle-data-books.css?v=20260916-v1">
+</head><body data-pagina="controle-data-books" data-sem-empresa="1">
+<div class="app" id="app"><main class="conteudo" id="conteudo"><div class="pagina">
+<div class="dbc-abas" id="abasDataBooks" role="tablist" aria-label="Áreas dos data books"></div>
+<p class="dbc-fonte" id="fonteDataBooks"></p>
+<form id="filtrosDataBooks" class="barra-filtros" onsubmit="return false">
+<div class="campo busca-rapida"><label for="buscaDataBooks">Buscar</label><input id="buscaDataBooks" type="search" autocomplete="off"></div>
+<div class="campo"><label for="anoDataBooks">Ano</label><select id="anoDataBooks"><option value="">Todos</option></select></div>
+<div class="campo"><label for="mesDataBooks">Mês</label><select id="mesDataBooks"><option value="">Todos</option></select></div>
+<div class="campo"><label for="fornecedorDataBooks" id="rotuloFornecedorDataBooks">Fornecedor</label><select id="fornecedorDataBooks"><option value="">Todos</option></select></div>
+<div class="campo" id="campoInspecaoDataBooks" hidden><label for="inspecaoDataBooks">Inspecionado por</label><select id="inspecaoDataBooks"><option value="">Todos</option></select></div>
+<button type="button" class="btn btn-secundario btn-sm" id="limparDataBooks">Limpar filtros</button>
+</form>
+<div id="estadoDataBooks" class="dbc-estado" role="status" aria-live="polite"></div>
+<div class="grid-kpi" id="kpisDataBooks"></div>
+<section class="card" id="painelDataBooks" role="tabpanel"><div class="card-titulo"><span id="tituloListaDataBooks">Data books</span><span class="txt-mini" id="contadorDataBooks"></span></div>
+<p class="dbc-nota" id="notaDataBooks"></p><div id="listaDataBooks"></div></section>
+</div></main></div>
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+<script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
+<script src="js/auth.js?v=20260908-sem-auditoria-v1"></script>
+<script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
+<script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
+<script src="js/exportacoes.js?v=20260531-topo-limpo-v1"></script>
+<script src="js/comum.js?v=20260916-data-books-v1"></script>
+<script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
+<script src="js/controle-data-books-comum.js?v=20260916-v1"></script>
+<script src="js/store-controle-data-books-supabase.js?v=20260916-v1"></script>
+<script src="js/controle-data-books-pagina.js?v=20260916-v1"></script>
+<script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
+</body></html>
