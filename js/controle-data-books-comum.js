@@ -59,6 +59,29 @@ const ControleDataBooks = (() => {
     return p.length === 3 && p[0] ? `${p[2]}/${p[1]}/${p[0]}` : '';
   }
 
+  // planilha: linha da planilha Controle Databooks; pasta: arquivo da pasta Databook_Cavan.
+  const origemDe = r => (r?.origem === 'pasta' ? 'pasta' : 'planilha');
+
+  // Lotes grafados como "M-182" (planilha de lotes HF) e "M182" (Controle Databooks) são o mesmo lote.
+  const normalizarLote = valor => texto(valor).replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+
+  // Certificados da pasta (linhas de ombreiras com link) por subcomponente + lote, sem repetir arquivo.
+  function certificadosPorLote(registros) {
+    const mapa = new Map();
+    for (const r of registros || []) {
+      if (r.area !== 'ombreiras' || origemDe(r) !== 'pasta' || !linkSeguro(r.link) || !normalizarLote(r.lote)) continue;
+      const k = `${chave(r.subcomponente)}|${normalizarLote(r.lote)}`;
+      if (!mapa.has(k)) mapa.set(k, []);
+      if (!mapa.get(k).some(c => c.link === r.link)) mapa.get(k).push({ data_book: texto(r.data_book), nota_fiscal: texto(r.nota_fiscal), link: texto(r.link) });
+    }
+    mapa.forEach(lista => lista.sort((a, b) => comparar(a.nota_fiscal, b.nota_fiscal)));
+    return mapa;
+  }
+
+  function certificadosDoRegistro(mapa, r) {
+    return mapa.get(`${chave(r?.subcomponente)}|${normalizarLote(r?.lote)}`) || [];
+  }
+
   function termosBusca(busca) {
     return chave(busca).split(' ').filter(Boolean);
   }
@@ -76,6 +99,7 @@ const ControleDataBooks = (() => {
   function filtrar(registros, f = {}) {
     const termos = termosBusca(f.busca);
     return (registros || []).filter(r => (!f.area || r.area === f.area)
+      && (!f.origem || origemDe(r) === f.origem)
       && (!f.ano || String(anoDe(r)) === String(f.ano))
       && (!f.mes || chave(mesDe(r)) === chave(f.mes))
       && (!f.fornecedor || chave(r.fornecedor) === f.fornecedor)
@@ -128,7 +152,9 @@ const ControleDataBooks = (() => {
     const datas = lista.map(r => String(r.data_referencia || '').slice(0, 10)).filter(Boolean).sort();
     return {
       registros: lista.length,
+      comLote: lista.filter(r => texto(r.lote)).length,
       documentos: distintos(lista, r => r.data_book || r.link),
+      documentosPasta: distintos(lista.filter(r => origemDe(r) === 'pasta'), r => r.data_book || r.link),
       comLink: lista.filter(r => linkSeguro(r.link)).length,
       semLink: lista.filter(r => !linkSeguro(r.link)).length,
       fornecedores: distintos(lista, 'fornecedor'),
@@ -157,16 +183,23 @@ const ControleDataBooks = (() => {
     return lista.sort((a, b) => comparar(a.rotulo, b.rotulo));
   }
 
-  // Última importação carregada: arquivo de origem e data da carga.
-  function fonte(registros) {
-    let ultimo = null;
-    for (const r of registros || []) if (r.importado_em && (!ultimo || r.importado_em > ultimo.importado_em)) ultimo = r;
-    return ultimo ? { arquivo: texto(ultimo.fonte_arquivo), importadoEm: ultimo.importado_em } : null;
+  // Última carga de cada origem: arquivo/pasta, data da carga e quantos arquivos com link vieram dela.
+  function fontes(registros) {
+    const saida = {};
+    for (const r of registros || []) {
+      const o = origemDe(r);
+      if (!saida[o]) saida[o] = { arquivo: '', importadoEm: '', links: new Set() };
+      if (r.importado_em && r.importado_em > saida[o].importadoEm) Object.assign(saida[o], { arquivo: texto(r.fonte_arquivo), importadoEm: r.importado_em });
+      if (linkSeguro(r.link)) saida[o].links.add(r.link);
+    }
+    Object.values(saida).forEach(f => { f.arquivos = f.links.size; delete f.links; });
+    return saida;
   }
 
   return {
-    MESES, AREAS, area, texto, chave, linkSeguro, mesNumero, anoDe, mesDe, dataBR,
-    termosBusca, contemTermos, filtrar, agrupar, ordenarPorData, resumo, opcoes, fonte,
+    MESES, AREAS, area, texto, chave, linkSeguro, mesNumero, anoDe, mesDe, dataBR, origemDe, normalizarLote,
+    certificadosPorLote, certificadosDoRegistro, termosBusca, contemTermos, filtrar, agrupar, ordenarPorData,
+    resumo, opcoes, fontes,
   };
 })();
 if (typeof window !== 'undefined') window.ControleDataBooks = ControleDataBooks;

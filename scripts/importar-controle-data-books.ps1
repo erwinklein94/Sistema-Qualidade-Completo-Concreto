@@ -4,7 +4,9 @@
 
 .DESCRIPTION
   Lê as abas DORMENTE MADEIRA, DORMENTE CONCRETO e OMBREIRAS e escreve um SQL que
-  substitui, numa única transação, todo o conteúdo de public.controle_data_books.
+  substitui, numa única transação, as linhas de origem 'planilha' de
+  public.controle_data_books. As linhas de origem 'pasta' (arquivos da pasta
+  Databook_Cavan que não estavam na planilha) não são tocadas.
   Cada linha preenchida da planilha vira um registro; as linhas vazias do fim das
   tabelas (só com o ano) são ignoradas.
 
@@ -311,7 +313,7 @@ try {
   [void]$sb.AppendLine("-- Fonte: $NomeFonte (SHA-256 $sha256).")
   [void]$sb.AppendLine('-- Contém links internos do SharePoint: não versionar.')
   [void]$sb.AppendLine('begin;')
-  [void]$sb.AppendLine('delete from public.controle_data_books;')
+  [void]$sb.AppendLine("delete from public.controle_data_books where origem = 'planilha';")
   [void]$sb.AppendLine("insert into public.controle_data_books ($($colunas -join ', '), fonte_arquivo, fonte_sha256) values")
   $fonte = "$(Sql $NomeFonte), $(Sql $sha256)"
   for ($i = 0; $i -lt $registros.Count; $i++) {
@@ -325,8 +327,8 @@ try {
   [void]$sb.AppendLine('begin')
   foreach ($id in $resumo.Keys) {
     $esperado = $resumo[$id]
-    [void]$sb.AppendLine("  if (select count(*) from public.controle_data_books where area = '$id') <> $($esperado.registros)")
-    [void]$sb.AppendLine("     or (select count(*) from public.controle_data_books where area = '$id' and link is not null) <> $($esperado.comLink) then")
+    [void]$sb.AppendLine("  if (select count(*) from public.controle_data_books where origem = 'planilha' and area = '$id') <> $($esperado.registros)")
+    [void]$sb.AppendLine("     or (select count(*) from public.controle_data_books where origem = 'planilha' and area = '$id' and link is not null) <> $($esperado.comLink) then")
     [void]$sb.AppendLine("    raise exception 'Carga de $id divergente do arquivo.';")
     [void]$sb.AppendLine('  end if;')
   }
