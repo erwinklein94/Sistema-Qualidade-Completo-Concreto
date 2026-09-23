@@ -46,7 +46,7 @@ const StoreSupabase = (() => {
   async function listarProducao(filtros = {}) {
     let q = db()
       .from(tab('producao_lotes'))
-      .select('*')
+      .select(filtros.colunas || '*')
       .order('data_fabricacao', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
       .limit(filtros.limite || 5000);
@@ -144,7 +144,7 @@ const StoreSupabase = (() => {
   async function listarReprovados(filtros = {}) {
     let q = db()
       .from(tab('reprovados'))
-      .select('*')
+      .select(filtros.colunas || '*')
       .order('data_producao', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
       .limit(filtros.limite || 5000);
@@ -254,7 +254,7 @@ const StoreSupabase = (() => {
   async function listarEnsaiosDormentesConprem(filtros = {}) {
     let q = db()
       .from('conprem_ensaios_dormentes')
-      .select('*')
+      .select(filtros.colunas || '*')
       .order('data_ensaio', { ascending: false, nullsFirst: false })
       .order('criado_em', { ascending: false, nullsFirst: false })
       .limit(filtros.limite || 5000);

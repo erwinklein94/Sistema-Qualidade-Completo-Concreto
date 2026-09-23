@@ -14,26 +14,20 @@
     <main class="conteudo" id="conteudo">
       <div class="pagina">
 
-        <div class="card">
-          <div class="card-titulo">
-            <span class="acento">Recebimento semanal da CONPREM</span>
-            <span class="card-sub">Produção, ensaios, refugo e planejamento — a partir dos três relatórios</span>
-          </div>
-          <p class="txt-cinza" style="font-size:14px;line-height:1.7">
-            Este painel fala dos relatórios que a CONPREM envia: o <strong>Mapa de Rastreabilidade</strong>
-            diz quanto chegou e com que insumos, o <strong>Ensaio de Dormentes</strong> diz quantos foram
-            ensaiados e aprovados, e o <strong>Resumo Semanal</strong> traz o refugo e o planejamento.
-            Não há cura de 14/28 dias nem série de liberação aqui — esse fluxo é da Cavan.
-          </p>
+        <div class="barra-filtros">
+          <div class="campo"><label for="fProjeto">Projeto</label><select id="fProjeto"></select></div>
+          <div class="campo"><label for="fBitola">Bitola</label><select id="fBitola"></select></div>
+          <div class="campo"><label for="fPedido">Pedido</label><select id="fPedido"></select></div>
+          <div class="campo"><label for="fSemana">Semana</label><select id="fSemana"></select></div>
+          <div class="campo"><label for="fPeriodoIni">Período inicial</label><input type="date" id="fPeriodoIni"></div>
+          <div class="campo"><label for="fPeriodoFim">Período fim</label><input type="date" id="fPeriodoFim"></div>
+          <button class="btn btn-secundario btn-sm" id="btnUltimaSemana" type="button">Última semana</button>
+          <button class="btn btn-secundario btn-sm" id="btnLimparFiltros" type="button">Limpar filtros</button>
         </div>
 
         <div class="grid-kpi" id="kpis"></div>
-
-        <div class="barra-filtros">
-          <div class="campo"><label>Semana</label><select id="fSemana"></select></div>
-        </div>
-
         <div id="painel"></div>
+        <section id="quadroAvisosDashboard" class="dashboard-avisos" aria-live="polite"></section>
 
       </div>
     </main>
@@ -51,11 +45,11 @@
   <script src="js/area.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
   <script src="js/store.js"></script>
-  <script src="js/store-supabase.js?v=20260908-sem-auditoria-v1"></script>
+  <script src="js/store-supabase.js?v=20260923-conprem-dashboard-v1"></script>
   <script src="js/exportacoes.js?v=20260528-dashboard-pdf-graficos"></script>
   <script src="js/comum.js?v=20260908-sem-auditoria-v1"></script>
   <script src="js/festa-hexa.js?v=20260610-copa-hexa-v2"></script>
-  <script src="js/conprem-dashboard.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/conprem-dashboard.js?v=20260923-graficos-avisos-v1"></script>
   <script src="js/subir-pagina.js?v=20260619-subir-pagina-v1"></script>
 </body>
 </html>
