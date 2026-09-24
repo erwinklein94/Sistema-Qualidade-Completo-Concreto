@@ -793,41 +793,13 @@ function ver(id) {
 function exportarLoteVerPDF(id) {
   const r = obterProducao(id);
   if (!r) return;
-  const it = (rot, val) => ({ rot, val });
-  Exportacoes.exportarFichaPDF({
-    titulo: `Lote ${r.lote || '—'} — ${r.projeto || 'Sem projeto'}`,
-    nomeArquivo: `lote-${r.lote || id}`,
-    secoes: [
-      { titulo: 'Identificação', itens: [
-        it('Fornecedor', r.fornecedor), it('Pista', r.pista), it('N° Pedido', r.pedido), it('Lote', r.lote),
-        it('Projeto', r.projeto), it('Bitola', U.bitolaDe(r)), it('Tipo', r.tipo), it('Total Produção', r.total),
-      ]},
-      { titulo: 'Datas e Cura', itens: [
-        it('Fabricação', U.dataBR(r.dataFabricacao)), it('Cura 14d', U.dataBR(r.cura14)),
-        it('Cura 28d', U.dataBR(r.cura28)), it('Tempo de Cura (h)', r.tempoCura),
-        it('Cura Térmica', r.curaTermica ? 'Sim' : 'Não'),
-      ]},
-      { titulo: 'USP / Ombreiras', itens: [
-        it('Com USP', r.comUsp), it('USP (Lote)', r.uspLote), it('Ombreira', r.ombreira), it('Lote Ombreira', r.loteOmbreira),
-      ]},
-      { titulo: 'Temperatura (°C)', itens: [it('Inicial', r.tempIni), it('Meio', r.tempMeio), it('Final', r.tempFim)] },
-      { titulo: 'Slump Test (mm)', itens: [
-        it('Início Abat.', r.slumpIniA), it('Início Esp.', r.slumpIniE),
-        it('Meio Abat.', r.slumpMeioA), it('Meio Esp.', r.slumpMeioE),
-        it('Fim Abat.', r.slumpFimA), it('Fim Esp.', r.slumpFimE),
-      ]},
-      { titulo: 'Desprotensão', itens: [it('Início Pista', r.desproIni), it('Meio Pista', r.desproMeio), it('Fim Pista', r.desproFim)] },
-      { titulo: 'Resistências', itens: [
-        it('Comp. 7d', r.comp7), it('Comp. 14d', r.comp14), it('Tração 14d', r.tracao14),
-        it('Comp. 28d', r.comp28), it('Tração 28d', r.tracao28),
-      ]},
-      { titulo: 'Ensaio / Resultado', itens: [
-        it('Série', r.serie), it('iAuditor', r.iauditor), it('Ensaiados', r.ensaiados),
-        it('A Analisar', r.aAnalisar), it('Reprovados', r.reprovados), it('Aprovado', r.aprovado),
-      ]},
-      { titulo: 'Status', itens: [it('Status', r.status)] },
-      ...(r.motivo ? [{ titulo: 'Motivo / Especificação', itens: [it('Motivo', r.motivo)] }] : []),
-    ],
+  RelatorioLote.abrirCavan(r, {
+    producao: PRODUCAO_REGISTROS,
+    ensaios: PRODUCAO_ENSAIOS_LIBERACAO,
+    pedidos: PRODUCAO_PEDIDOS,
+  }).catch(err => {
+    console.error('Erro ao gerar relatório do lote', err);
+    App.toast(err?.message || 'Não foi possível gerar o relatório do lote.', 'erro');
   });
 }
 

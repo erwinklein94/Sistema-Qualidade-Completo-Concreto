@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     obrigatorios: ['lote', 'projeto'],
     substantivo: 'lote(s)',
     nomeArquivo: 'conprem-producao',
+    relatorioLote: true,
     rotuloNovo: 'Novo lote',
     tituloNovo: 'Novo lote da Conprem',
     tituloEditar: r => `Editar lote ${r.lote}`,

@@ -369,6 +369,10 @@ const ConpremTela = (() => {
 
   function exportarFicha(id) {
     const r = obter(id);
+    if (r && cfg.relatorioLote && window.RelatorioLote) {
+      RelatorioLote.abrirConprem(r, cfg.campos);
+      return;
+    }
     if (!r || !window.Exportacoes?.exportarFichaPDF) return;
     Exportacoes.exportarFichaPDF({
       titulo: cfg.tituloFicha ? cfg.tituloFicha(r) : cfg.titulo,
