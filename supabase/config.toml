@@ -2,3 +2,7 @@ project_id = "sistema-qualidade-completo"
 
 [functions.safeculture-sync]
 verify_jwt = true
+
+# O Power Automate não envia JWT; a função valida o cabeçalho x-power-automate-secret.
+[functions.power-automate-reprovados]
+verify_jwt = false
