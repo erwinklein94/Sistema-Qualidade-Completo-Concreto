@@ -148,12 +148,15 @@ const App = {
   // `subgrupos` junta vários grupos do menu embaixo de um botão só, mantendo
   // cada um separado por um subtítulo dentro do painel — é assim que Cavan e
   // Conprem convivem no botão único de Dormentes de Concreto.
+  // `colunas: true` põe cada subgrupo em sua própria coluna, lado a lado
+  // (no celular as colunas voltam a empilhar).
   gruposDropdown() {
     return [
       {
         grupo: 'dormentes-concreto',
         titulo: 'Dormentes de Concreto',
         ic: ICN.producao,
+        colunas: true,
         subgrupos: [
           { grupo: 'concreto', titulo: 'Cavan SP' },
           { grupo: 'conprem', titulo: 'Conprem MG' },
@@ -189,19 +192,23 @@ const App = {
       subgrupos.forEach(s => {
         const doSubgrupo = links.filter(m => m.group === s.grupo);
         if (!doSubgrupo.length) return;
+        let coluna = '';
         if (s.titulo) {
-          opcoes += `<div class="menu-dd-subtitulo menu-dd-subtitulo--${s.grupo}" role="presentation">${s.titulo}</div>`;
+          coluna += `<div class="menu-dd-subtitulo menu-dd-subtitulo--${s.grupo}" role="presentation">${s.titulo}</div>`;
         }
         doSubgrupo.forEach(m => {
           const classes = ['menu-dd-link', m.k === this.paginaAtiva ? 'ativo' : '', `nav-link--${m.group}`].filter(Boolean).join(' ');
           const externalAttrs = m.external ? ' target="_blank" rel="noopener" data-external="true"' : '';
-          opcoes += `<a href="${m.href}" class="${classes}" role="menuitem"${externalAttrs} onclick="App.fecharDropdowns()">${m.ic}<span>${m.t}</span></a>`;
+          coluna += `<a href="${m.href}" class="${classes}" role="menuitem"${externalAttrs} onclick="App.fecharDropdowns()">${m.ic}<span>${m.t}</span></a>`;
         });
+        opcoes += g.colunas
+          ? `<div class="menu-dd-coluna" role="group"${s.titulo ? ` aria-label="${s.titulo}"` : ''}>${coluna}</div>`
+          : coluna;
       });
       blocos += `
         <div class="menu-dd menu-dd--${g.grupo}" data-grupo="${g.grupo}">
           <button type="button" class="btn btn-secundario btn-sm menu-dd-botao${ativoNoGrupo ? ' ativo' : ''}" aria-haspopup="true" aria-expanded="false" onclick="App.alternarDropdown('${g.grupo}', event)">${g.ic}<span>${g.titulo}</span>${chevron}</button>
-          <div class="menu-dd-painel" id="dd-${g.grupo}" role="menu">${opcoes}</div>
+          <div class="menu-dd-painel${g.colunas ? ' menu-dd-painel--colunas' : ''}" id="dd-${g.grupo}" role="menu">${opcoes}</div>
         </div>`;
     });
     return `<div class="menu-dropdowns" id="menuDropdowns">${blocos}</div>`;
