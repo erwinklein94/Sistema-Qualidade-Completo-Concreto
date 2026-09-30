@@ -73,9 +73,12 @@
       viewer.setAttribute('interaction-prompt', 'none');
       viewer.addEventListener('load', () => {
         if (atual !== sessao || !modal.open) return;
-        // Cinza-claro em espaço linear para preservar os detalhes sob a iluminação 3D.
+        // Ferro fundido limpo: cinza neutro, reflexo metálico discreto e superfície fosca.
         for (const material of viewer.model.materials) {
-          material.pbrMetallicRoughness.setBaseColorFactor([0.45, 0.45, 0.45, 1]);
+          const acabamento = material.pbrMetallicRoughness;
+          acabamento.setBaseColorFactor([0.32, 0.32, 0.32, 1]);
+          acabamento.setMetallicFactor(0.9);
+          acabamento.setRoughnessFactor(0.65);
         }
         status.textContent = 'Modelo pronto para explorar.';
         reset.disabled = false;
