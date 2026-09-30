@@ -73,6 +73,10 @@
       viewer.setAttribute('interaction-prompt', 'none');
       viewer.addEventListener('load', () => {
         if (atual !== sessao || !modal.open) return;
+        // Cinza-claro em espaço linear para preservar os detalhes sob a iluminação 3D.
+        for (const material of viewer.model.materials) {
+          material.pbrMetallicRoughness.setBaseColorFactor([0.45, 0.45, 0.45, 1]);
+        }
         status.textContent = 'Modelo pronto para explorar.';
         reset.disabled = false;
       });
