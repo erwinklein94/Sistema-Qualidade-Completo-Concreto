@@ -5,7 +5,7 @@
 .glos-sub-3d-corpo { padding: 16px 24px 24px; }
 .glos-sub-3d-corpo p { margin: 0 0 8px; font-size: 13px; }
 .glos-sub-3d-status { min-height: 20px; }
-.glos-sub-3d-cena { height: clamp(220px, 52dvh, 540px); margin: 12px 0; background: radial-gradient(ellipse at center, #fff, #dae5ee); border-radius: 12px; overflow: hidden; }
+.glos-sub-3d-cena { height: clamp(220px, 52dvh, 540px); margin: 12px 0; background: radial-gradient(ellipse at center, #374151, #111827); border-radius: 12px; overflow: hidden; }
 .glos-sub-3d model-viewer { display: block; width: 100%; height: 100%; touch-action: none; }
 body[data-tema="escuro"] .glos-sub-3d { background: #132b40; color: #e5edf5; }
 @media (max-width: 600px) {
