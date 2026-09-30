@@ -119,6 +119,7 @@
   }
 
   function fechar() {
+    document.getElementById('glosSub3D')?.close();
     fecharForm();
     document.getElementById('glosSubOverlay')?.classList.remove('aberto');
     document.body.classList.remove('glossario-aberto');
@@ -181,7 +182,10 @@
             ${acoes}
           </div>
           ${d.descricao ? `<p class="defeito-desc">${esc(d.descricao)}</p>` : '<p class="defeito-desc txt-cinza">Sem descrição.</p>'}
-          ${urlSegura(d.link) ? `<a class="btn btn-secundario btn-sm" style="align-self:flex-start" href="${esc(urlSegura(d.link))}" target="_blank" rel="noopener noreferrer">${ic('olho')}<span>Ver relatório</span></a>` : ''}
+          <div class="glos-sub-acoes">
+            ${urlSegura(d.link) ? `<a class="btn btn-secundario btn-sm" href="${esc(urlSegura(d.link))}" target="_blank" rel="noopener noreferrer">${ic('olho')}<span>Ver relatório</span></a>` : ''}
+            ${/\bSAP\s*127542\b/i.test(d.titulo) ? '<button type="button" class="btn btn-secundario btn-sm" onclick="abrirModeloGlosSub(this)">Visualizar em 3D</button>' : ''}
+          </div>
         </div>
       </article>`;
     }).join('')}</div>`;
@@ -314,6 +318,7 @@
 
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Escape') return;
+    if (document.getElementById('glosSub3D')?.open) return;
     if (document.getElementById('glosSubForm')?.classList.contains('aberto')) { fecharForm(); return; }
     if (document.getElementById('glosSubOverlay')?.classList.contains('aberto')) fechar();
   });
