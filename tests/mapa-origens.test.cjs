@@ -20,6 +20,7 @@ function ambiente({ login = true, admin = false, biblioteca = true } = {}) {
   const chamadas = { mapas: 0, removidos: 0, centralizados: 0, tamanhos: 0 };
   const camadas = new Set();
   const mapa = {
+    on() {}, getBounds: () => ({ contains: () => true }),
     fitBounds() { chamadas.centralizados++; return this; },
     invalidateSize() { chamadas.tamanhos++; }, remove() { chamadas.removidos++; },
     hasLayer: layer => camadas.has(layer), removeLayer: layer => camadas.delete(layer)
@@ -28,8 +29,9 @@ function ambiente({ login = true, admin = false, biblioteca = true } = {}) {
   const L = {
     map() { chamadas.mapas++; return mapa; }, tileLayer() { return tiles; },
     control: { scale: () => ({ addTo() {} }) }, canvas: () => ({}),
+    layerGroup: () => ({ addTo() { return this; }, clearLayers() {} }),
     geoJSON: dados => ({
-      addTo() { camadas.add(this); }, getLayers: () => dados.features, getBounds: () => []
+      addTo() { camadas.add(this); }, getLayers: () => dados.features, getBounds: () => [], eachLayer() {}
     })
   };
   const contexto = {

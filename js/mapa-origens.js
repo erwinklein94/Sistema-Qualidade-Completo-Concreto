@@ -4,6 +4,7 @@
   let observador;
   let apresentando = false;
   let malha;
+  let rotulosMalha;
   let carregandoMalha = false;
   const brasil = [[-34, -74], [6, -34]];
   const permitido = () => Auth.pode('gerenciarSistema');
@@ -12,6 +13,7 @@
     mapa?.remove();
     mapa = null;
     malha = null;
+    rotulosMalha = null;
     observador?.disconnect();
     apresentando = false;
     document.body.classList.remove('mapa-apresentando');
@@ -75,7 +77,7 @@
           // Canvas evita milhares de elementos SVG ao exibir a malha completa.
           renderer: L.canvas({ padding: 0.5 }),
           pointToLayer: (_feature, latlng) => L.circleMarker(latlng, {
-            radius: 3, color: '#003865', weight: 1, fillColor: '#FBD300', fillOpacity: 0.9
+            radius: 4, color: '#003865', weight: 1, fillColor: '#32A6E6', fillOpacity: 0.9
           }),
           onEachFeature(feature, layer) {
             const conteudo = document.createElement('div');
@@ -100,12 +102,43 @@
     const exibir = !mapa.hasLayer(malha);
     if (exibir) malha.addTo(mapa);
     else mapa.removeLayer(malha);
+    atualizarRotulosMalha();
     botao.textContent = exibir ? 'Ocultar malha Rumo' : 'Mostrar malha Rumo';
     botao.setAttribute('aria-pressed', String(exibir));
     document.getElementById('mapaEnquadrarMalha').disabled = !exibir;
     status.textContent = exibir
-      ? `${malha.getLayers().length.toLocaleString('pt-BR')} pontos da malha Rumo visíveis. Clique em um ponto para consultar sua identificação.`
+      ? `${malha.getLayers().length.toLocaleString('pt-BR')} pontos da malha Rumo. Siglas visíveis automaticamente; aproxime para ver mais identificações. Clique para consultar os detalhes.`
       : 'Malha Rumo oculta.';
+  }
+
+  function atualizarRotulosMalha() {
+    rotulosMalha?.clearLayers();
+    if (!mapa || !malha || !mapa.hasLayer(malha)) return;
+    if (!rotulosMalha) rotulosMalha = L.layerGroup().addTo(mapa);
+    const limites = mapa.getBounds();
+    const ocupados = new Set();
+    // Apenas rótulos na área visível, com espaço para leitura entre vizinhos.
+    // Os pontos permanecem todos visíveis; o zoom revela mais identificações.
+    malha.eachLayer(layer => {
+      const posicao = layer.getLatLng();
+      if (!limites.contains(posicao)) return;
+      const pixel = mapa.latLngToContainerPoint(posicao);
+      const coluna = Math.floor(pixel.x / 24);
+      const linha = Math.floor(pixel.y / 12);
+      for (let x = coluna - 1; x <= coluna + 1; x++) {
+        for (let y = linha - 1; y <= linha + 1; y++) {
+          if (ocupados.has(`${x}:${y}`)) return;
+        }
+      }
+      ocupados.add(`${coluna}:${linha}`);
+      const nome = String(layer.feature.properties.nome || '').trim();
+      const rotulo = document.createElement('span');
+      rotulo.textContent = nome.split(/\s+-\s+/)[0] || 'Ponto';
+      L.tooltip({
+        permanent: true, direction: 'top', offset: [0, -5],
+        className: 'mapa-sigla-malha', opacity: 1, interactive: false
+      }).setLatLng(posicao).setContent(rotulo).addTo(rotulosMalha);
+    });
   }
 
   document.addEventListener('DOMContentLoaded', async () => {
@@ -138,6 +171,7 @@
       // O perfil pode mudar enquanto a biblioteca externa carrega.
       if (!permitido()) { bloquear(); return; }
       mapa = L.map('mapaTerreno', { minZoom: 3, maxZoom: 17 }).fitBounds(brasil);
+      mapa.on('moveend zoomend resize', atualizarRotulosMalha);
       const status = document.getElementById('mapaStatus');
       let falhou = false;
       const terreno = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {

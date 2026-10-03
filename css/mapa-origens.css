@@ -21,7 +21,18 @@
 .mapa-status { padding: 10px 20px; font-size: 13px; background: var(--cinza-bg); }
 .mapa-status:empty { display: none; }
 .mapa-rodape { padding: 12px 20px; border-top: 1px solid var(--cinza-borda); }
-.mapa-legenda-ponto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #fbd300; border: 1px solid #003865; }
+.mapa-legenda-ponto { display: inline-block; width: 11px; height: 11px; border-radius: 50%; background: #32a6e6; border: 1px solid #003865; }
+.leaflet-tooltip.mapa-sigla-malha {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0 2px;
+  color: #003865;
+  font: 700 11px/1.2 'Segoe UI', sans-serif;
+  text-shadow: -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white, 1px 1px 0 white, 0 0 3px white;
+  pointer-events: none;
+}
+.leaflet-tooltip.mapa-sigla-malha::before { display: none; }
 .mapa-futuro { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; color: var(--cinza-texto); }
 .mapa-futuro p { flex: 1 1 250px; font-size: 13px; }
 .mapa-futuro strong { display: block; margin-bottom: 4px; }
