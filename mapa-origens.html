@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapa de origens · Rumo</title>
+  <link rel="stylesheet" href="css/style.css?v=20260908-area-amv-v1">
+  <link rel="stylesheet" href="css/rumo-brand.css?v=20260730-brandbook-dark-v2">
+  <link rel="stylesheet" href="css/rumo-ui.css?v=20260908-compacto-v3">
+  <link rel="stylesheet" href="css/mapa-origens.css?v=20261003-v1">
+</head>
+<body data-sem-empresa="1">
+  <div class="app" id="app">
+    <main class="conteudo" id="conteudo">
+      <div class="pagina" id="paginaMapa" aria-live="polite">
+        <p>Verificando acesso...</p>
+      </div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if(!window.supabase){document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');}</script>
+  <script src="js/supabase-config.js?v=20260531-topo-limpo-v1"></script>
+  <script src="js/auth.js?v=20260908-sem-auditoria-v1"></script>
+  <script src="js/config.js?v=20260819-conprem-proprio-v1"></script>
+  <script src="js/comum.js?v=20261003-mapa-v1"></script>
+  <script src="js/mapa-origens.js?v=20261003-v1"></script>
+</body>
+</html>
