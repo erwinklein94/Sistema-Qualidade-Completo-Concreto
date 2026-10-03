@@ -1,4 +1,4 @@
-/* Mapa de apresentação. Nenhum dado operacional é consultado nesta etapa. */
+/* Mapa de terreno/ruas, malha ferroviária e camadas operacionais autenticadas. */
 (() => {
   let mapa;
   let observador;
@@ -10,6 +10,7 @@
   const permitido = () => Auth.pode('gerenciarSistema');
 
   function bloquear() {
+    window.MapaOperacional?.limpar();
     mapa?.remove();
     mapa = null;
     malha = null;
@@ -80,14 +81,7 @@
             radius: 4, color: '#003865', weight: 1, fillColor: '#32A6E6', fillOpacity: 0.9
           }),
           onEachFeature(feature, layer) {
-            const conteudo = document.createElement('div');
-            const titulo = document.createElement('strong');
-            titulo.textContent = feature.properties.nome || 'Ponto da malha Rumo';
-            const descricao = document.createElement('p');
-            descricao.textContent = feature.properties.descricao || 'Ponto informado no arquivo da malha.';
-            conteudo.appendChild(titulo);
-            conteudo.appendChild(descricao);
-            layer.bindPopup(conteudo);
+            layer.on('click', () => MapaOperacional.abrirMalha(feature));
           }
         });
       } catch (erro) {
@@ -148,22 +142,20 @@
     document.getElementById('paginaMapa').innerHTML = `
       <section class="mapa-painel" id="mapaPainel" aria-label="Mapa de origens em terreno">
         <div class="mapa-barra">
-          <div><h2>Visão do território</h2><p>Terreno · Brasil · Malha ferroviária Rumo</p></div>
+          <div><h2>Visão do território</h2><p>Malha Rumo · Fornecedores · Origem dos relatórios</p></div>
           <div class="mapa-acoes">
+            <label class="mapa-modo">Visualização<select id="mapaModo" disabled><option value="terreno">Terreno</option><option value="ruas">Mapa de ruas</option></select></label>
             <button class="btn btn-secundario" type="button" id="mapaBrasil" disabled>Centralizar no Brasil</button>
             <button class="btn btn-secundario" type="button" id="mapaMalha" aria-pressed="false" disabled>Mostrar malha Rumo</button>
             <button class="btn btn-secundario" type="button" id="mapaEnquadrarMalha" disabled>Enquadrar malha</button>
             <button class="btn btn-primario" type="button" id="mapaApresentar" aria-pressed="false" disabled>Modo apresentação</button>
           </div>
         </div>
+        <section id="mapaDadosPainel" class="mapa-dados-painel" aria-label="Camadas de fornecedores e relatórios"></section>
         <div id="mapaStatus" class="mapa-status" role="status">Carregando o mapa de terreno...</div>
         <div id="malhaStatus" class="mapa-status" role="status">Malha Rumo oculta. Ative a camada para visualizar os pontos do arquivo fornecido.</div>
         <div id="mapaTerreno" class="mapa-canvas" role="region" aria-label="Mapa interativo de terreno. Use as setas para navegar e os botões para ajustar o zoom."></div>
         <div class="mapa-rodape"><span class="mapa-legenda-ponto" aria-hidden="true"></span> Malha Rumo: pontos originais do arquivo KMZ. Arraste para explorar e use + / − para aproximar. Na apresentação, pressione Esc para sair.</div>
-      </section>
-      <section class="mapa-futuro" aria-label="Próximas integrações">
-        <p><strong>Origem dos relatórios</strong>Em breve, visualize de onde vêm as informações registradas no sistema.</p>
-        <p><strong>Localização dos fornecedores</strong>Os pontos serão adicionados quando os endereços ou coordenadas forem vinculados.</p>
       </section>`;
     window.addEventListener('auth:perfilAtualizado', () => { if (!permitido()) bloquear(); });
     try {
@@ -173,18 +165,34 @@
       mapa = L.map('mapaTerreno', { minZoom: 3, maxZoom: 17 }).fitBounds(brasil);
       mapa.on('moveend zoomend resize', atualizarRotulosMalha);
       const status = document.getElementById('mapaStatus');
-      let falhou = false;
       const terreno = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
         maxZoom: 17,
         attribution: 'Dados: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, SRTM | Mapa: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
       });
-      terreno.on('loading', () => { falhou = false; status.textContent = 'Carregando o terreno...'; });
-      terreno.on('tileerror', () => {
-        falhou = true;
-        status.textContent = 'Parte do terreno não carregou. Verifique sua conexão ou recarregue a página para tentar novamente.';
+      const ruas = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       });
-      terreno.on('load', () => { if (!falhou) status.textContent = ''; });
+      let baseAtiva = terreno;
+      for (const camada of [terreno, ruas]) {
+        let falhou = false;
+        camada.on('loading', () => { falhou = false; if (camada === baseAtiva) status.textContent = 'Carregando o mapa...'; });
+        camada.on('tileerror', () => {
+          falhou = true;
+          if (camada === baseAtiva) status.textContent = 'Parte do mapa não carregou. Verifique a conexão ou alterne a visualização.';
+        });
+        camada.on('load', () => { if (!falhou && camada === baseAtiva) status.textContent = ''; });
+      }
       terreno.addTo(mapa);
+      document.getElementById('mapaModo').disabled = false;
+      document.getElementById('mapaModo').addEventListener('change', ev => {
+        mapa.removeLayer(baseAtiva);
+        baseAtiva = ev.target.value === 'ruas' ? ruas : terreno;
+        status.textContent = '';
+        baseAtiva.addTo(mapa);
+        document.getElementById('mapaTerreno').setAttribute('aria-label', `Mapa interativo: ${ev.target.value === 'ruas' ? 'ruas' : 'terreno'}`);
+      });
+      MapaOperacional.iniciar(mapa);
       L.control.scale({ imperial: false }).addTo(mapa);
       document.getElementById('mapaBrasil').disabled = false;
       document.getElementById('mapaApresentar').disabled = false;

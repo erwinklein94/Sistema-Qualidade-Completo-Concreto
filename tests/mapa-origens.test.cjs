@@ -26,8 +26,9 @@ function ambiente({ login = true, admin = false, biblioteca = true } = {}) {
     hasLayer: layer => camadas.has(layer), removeLayer: layer => camadas.delete(layer)
   };
   const tiles = { eventos: {}, on(tipo, fn) { this.eventos[tipo] = fn; }, addTo() {} };
+  let numeroTiles = 0;
   const L = {
-    map() { chamadas.mapas++; return mapa; }, tileLayer() { return tiles; },
+    map() { chamadas.mapas++; return mapa; }, tileLayer() { return numeroTiles++ === 0 ? tiles : { on() {}, addTo() {} }; },
     control: { scale: () => ({ addTo() {} }) }, canvas: () => ({}),
     layerGroup: () => ({ addTo() { return this; }, clearLayers() {} }),
     geoJSON: dados => ({
@@ -42,6 +43,7 @@ function ambiente({ login = true, admin = false, biblioteca = true } = {}) {
     },
     Auth: { exigirLogin: async () => login, pode: () => admin },
     App: { montarLayout() {} },
+    MapaOperacional: { iniciar() {}, limpar() {} },
     document: {
       body: { classList: classes() },
       getElementById: elemento,
@@ -111,7 +113,7 @@ test('informa falhas de biblioteca e de imagens do terreno', async () => {
   b.tiles.eventos.loading();
   b.tiles.eventos.tileerror();
   b.tiles.eventos.load();
-  assert.match(b.elemento('mapaStatus').textContent, /Parte do terreno/);
+  assert.match(b.elemento('mapaStatus').textContent, /Parte do mapa/);
   b.tiles.eventos.loading();
   b.tiles.eventos.load();
   assert.equal(b.elemento('mapaStatus').textContent, '');

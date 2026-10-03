@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   await carregar();
+  const idOrigem = new URLSearchParams(location.search).get('id');
+  if (idOrigem && INSP_REGISTROS.some(i => i.id === idOrigem)) ver(idOrigem);
 });
 
 function configurarAcoesTopo() {

@@ -50,7 +50,51 @@
 .mapa-painel.apresentacao .mapa-barra { background: #003865; color: white; }
 .mapa-painel.apresentacao .mapa-barra h2 { color: white; }
 .mapa-canvas:focus-visible { outline: 3px solid #32a6e6; outline-offset: -3px; }
+.mapa-modo { font-size: 12px; display: grid; gap: 3px; }
+.mapa-modo select, .mapa-filtros input, .mapa-filtros select, .mapa-form-local input { padding: 8px; border: 1px solid var(--cinza-borda); border-radius: 6px; background: var(--cinza-card); color: var(--cinza-texto); }
+.mapa-dados-painel { padding: 12px 20px; border-top: 1px solid var(--cinza-borda); }
+.mapa-camadas { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+.mapa-camadas label { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; cursor: pointer; }
+.mapa-camadas input { width: 18px; height: 18px; accent-color: #003865; }
+.mapa-camadas small { color: var(--cinza-texto); }
+#mapaDadosStatus, #mapaListaResumo, .mapa-fonte { font-size: 12px; margin-top: 8px; }
+.mapa-legenda { display: inline-block; width: 12px; height: 12px; }
+.mapa-legenda.fornecedor { background: #00795d; border-radius: 3px; }
+.mapa-legenda.relatorio { background: #a34213; border-radius: 50%; }
+.mapa-marcador { color: white; border: 2px solid white; box-shadow: 0 1px 5px #0008; text-align: center; font: 700 11px/22px 'Segoe UI', sans-serif; }
+.mapa-marcador-fornecedores { background: #00795d; border-radius: 5px; }
+.mapa-marcador-relatorios { background: #a34213; border-radius: 50%; }
+.mapa-catalogo { margin-top: 10px; }
+.mapa-catalogo > summary, .mapa-modal summary { cursor: pointer; font-weight: 600; }
+.mapa-filtros { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.mapa-filtros label { display: grid; gap: 5px; font-size: 12px; }
+.mapa-filtros label:last-child { display: flex; align-items: center; }
+.mapa-lista { max-height: 260px; overflow: auto; display: grid; gap: 6px; margin: 8px 0; }
+.mapa-registro { display: grid; text-align: left; justify-content: start; white-space: normal; }
+.mapa-registro span { font-size: 12px; font-weight: 400; }
+.mapa-painel.apresentacao .mapa-dados-painel { max-height: 35vh; overflow: auto; flex-shrink: 0; }
+.mapa-painel.apresentacao .mapa-canvas { min-height: 180px; }
+.mapa-modal { position: fixed; inset: 0; margin: auto; width: min(880px, 94vw); max-height: 90dvh; border: 1px solid var(--cinza-borda); border-radius: 16px; padding: 0; color: var(--cinza-texto); background: var(--cinza-card); box-shadow: 0 20px 80px #0006; }
+.mapa-modal::backdrop { background: #001b35b3; }
+.mapa-modal[open] { display: flex; flex-direction: column; }
+.mapa-modal header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--cinza-borda); }
+.mapa-modal h2 { font-size: 20px; margin: 0; color: var(--cinza-texto); }
+#mapaModalCorpo { padding: 22px; overflow: auto; }
+.mapa-detalhes { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr); gap: 8px 16px; margin: 0 0 20px; }
+.mapa-detalhes dt { font-weight: 600; }
+.mapa-detalhes dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mapa-links { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.mapa-modal details { border-top: 1px solid var(--cinza-borda); padding: 14px 0; }
+.mapa-form-local { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.mapa-form-local label { display: grid; gap: 4px; }
+.mapa-form-local label:last-of-type { grid-column: 1 / -1; }
+.mapa-relacionados { display: grid; gap: 6px; margin: 12px 0; }
+.mapa-relacionados button { text-align: left; justify-content: start; white-space: normal; }
 @media (max-width: 600px) {
+  .mapa-detalhes { grid-template-columns: 1fr; gap: 3px; }
+  .mapa-detalhes dd { margin-bottom: 10px; }
+  .mapa-form-local { grid-template-columns: 1fr; }
+  .mapa-camadas { align-items: start; }
   .mapa-barra { padding: 12px; gap: 10px; }
   .mapa-acoes { width: 100%; }
   .mapa-acoes .btn { flex: 1; }
